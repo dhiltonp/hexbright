@@ -186,15 +186,14 @@ void overheat_protection() {
   if(DEBUG==DEBUG_TEMP) {
     Serial.print("Current temperature: ");
     Serial.println(new_temperature);
-    Serial.print("Estimated safe light level: ");
-    Serial.println(safe_light_level);
   }
 #endif
 
   // if safe_light_level has changed, guarantee a light adjustment:
   if(safe_light_level < MAX_LIGHT_LEVEL) {
 #ifdef DEBUG
-  DEBUG==DEBUG_LIGHT || DEBUG==DEBUG_TEMP ? Serial.println("safe light level not maximum, adjust"):0;
+    Serial.print("Estimated safe light level: ");
+    Serial.println(safe_light_level);
 #endif
     change_done  = min(change_done , change_duration);
   }
