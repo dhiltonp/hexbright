@@ -184,10 +184,10 @@ void overheat_protection() {
   safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
 #ifdef DEBUG
   if(DEBUG==DEBUG_TEMP) {
-    Serial.print("Estimated safe light level: ");
-    Serial.println(safe_light_level);
     Serial.print("Current temperature: ");
     Serial.println(new_temperature);
+    Serial.print("Estimated safe light level: ");
+    Serial.println(safe_light_level);
   }
 #endif
 
@@ -281,10 +281,17 @@ void setup()
   Serial.begin(9600);
   Wire.begin();
   Serial.println("DEBUG MODE ON");
+  if(DEBUG==DEBUG_LIGHT) {
+    // do a full light range sweep
+    set_light_adjust(0,1000,1000);
+  } else if (DEBUG==DEBUG_TEMP) {
+    // turn up the heat!
+    set_light_adjust(0,1000,1);
+  }
 #endif
   
   last_time = millis();
-  set_light_adjust(0,1000,1000);
+  // setup initial light state
 }
 
 void loop() {
@@ -346,6 +353,7 @@ void control_action() {
 
 int mode = 0;
 
+// this doesn't work quite right when disconnected from USB, partially because I'm not setting an initial state in setup
 void control_action() {
   static int brightness = 0;
   if(button_released()) {
