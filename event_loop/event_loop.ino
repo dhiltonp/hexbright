@@ -370,10 +370,10 @@ void control_action() {
   if(button_released()) {
     if(button_held()<30/LOOP_DELAY) {
       // ignore, could be a bounce
-    }
-    if(button_held()<200/LOOP_DELAY) {
+    } else if(button_held()<250/LOOP_DELAY) {
       mode = CYCLE_MODE;
       brightness = (brightness + 250) % 1250;
+      led_off();
       set_light_adjust(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
     } else if (button_held() < 400/LOOP_DELAY) {
       mode = BLINKY_MODE;
@@ -382,12 +382,12 @@ void control_action() {
   if(mode == BLINKY_MODE) {
     static int i = 0;
     if(!i) {
-      set_light_adjust(MAX_LOW_LEVEL,0,5);
+      set_light_adjust(MAX_LOW_LEVEL,1,120/LOOP_DELAY);
       i=20;
     }
     i--;
   }
-  if(button_held()<5000/LOOP_DELAY) {
+  if(button_held()>5000/LOOP_DELAY) {
     mode = OFF_MODE;
     brightness = 0;
     set_light_adjust(0,0,1);
