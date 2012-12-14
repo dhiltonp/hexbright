@@ -358,7 +358,7 @@ void control_action() {
   if(button_released()) {
     if(button_held()<30) {
       mode = CYCLE_MODE;
-      brightness = (brightness + 250) % 1000;
+      brightness = (brightness + 250) % 1250;
       set_light_adjust(CURRENT_LEVEL, brightness, 30);
     } else if (button_held() < 100) {
       mode = BLINKY_MODE;
