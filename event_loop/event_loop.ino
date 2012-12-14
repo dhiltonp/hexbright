@@ -257,12 +257,13 @@ int get_temperature() {
 ///////////////////////////////////////////////
 
 // the point of LOOP_DELAY is to provide regular update speeds,
-// so if code takes longer to execute from one run to the next, 
-// the actual interface doesn't change (button click duration, 
-// brightness changes).  Set this from 1-30. very low is generally
+// so if code takes longer to execute from one run to the next,
+// the actual interface doesn't change (button click duration,
+// brightness changes). Set this from 1-30. very low is generally
 // fine (or great), BUT if you do any printing, the actual delay
-// will be greater than the value you set.  
+// will be greater than the value you set.
 // Consider using 100/LOOP_DELAY, where 100 is 100 milliseconds
+// btw, 100/LOOP_DELAY should be evaluated at compile time.
 #define LOOP_DELAY 30
 
 unsigned long last_time;
@@ -288,7 +289,7 @@ void setup()
   Wire.begin();
   Serial.println("DEBUG MODE ON");
   if(DEBUG==DEBUG_LIGHT) {
-    // do a full light range sweep
+    // do a full light range sweep, (printing all light intensity info)
     set_light_adjust(0,1000,1000);
   } else if (DEBUG==DEBUG_TEMP) {
     // turn up the heat!
@@ -362,15 +363,19 @@ void control_action() {
 
 int mode = 0;
 
-// this doesn't work quite right when disconnected from USB, partially because I'm not setting an initial state in setup
+// BLINKY_MODE has some issues when not connected to USB.  It detects a poweroff somehow.
+// very quick releases of buttons aren't working right, not sure why.
 void control_action() {
   static int brightness = 0;
   if(button_released()) {
-    if(button_held()<30) {
+    if(button_held()<30/LOOP_DELAY) {
+      // ignore, could be a bounce
+    }
+    if(button_held()<200/LOOP_DELAY) {
       mode = CYCLE_MODE;
       brightness = (brightness + 250) % 1250;
-      set_light_adjust(CURRENT_LEVEL, brightness, 30);
-    } else if (button_held() < 100) {
+      set_light_adjust(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
+    } else if (button_held() < 400/LOOP_DELAY) {
       mode = BLINKY_MODE;
     }
   }
@@ -382,7 +387,7 @@ void control_action() {
     }
     i--;
   }
-  if(button_held()>100) {
+  if(button_held()<5000/LOOP_DELAY) {
     mode = OFF_MODE;
     brightness = 0;
     set_light_adjust(0,0,1);
