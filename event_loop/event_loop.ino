@@ -256,7 +256,14 @@ int get_temperature() {
 ////////////////MAIN EXECUTION/////////////////
 ///////////////////////////////////////////////
 
-#define LOOP_DELAY 10
+// the point of LOOP_DELAY is to provide regular update speeds,
+// so if code takes longer to execute from one run to the next, 
+// the actual interface doesn't change (button click duration, 
+// brightness changes).  Set this from 1-30. very low is generally
+// fine (or great), BUT if you do any printing, the actual delay
+// will be greater than the value you set.  
+// Consider using 100/LOOP_DELAY, where 100 is 100 milliseconds
+#define LOOP_DELAY 30
 
 unsigned long last_time;
 
@@ -286,6 +293,9 @@ void setup()
   } else if (DEBUG==DEBUG_TEMP) {
     // turn up the heat!
     set_light_adjust(0,1000,1);
+  } else if (DEBUG==DEBUG_LOOP) {
+    // note the use of TIME_MS/LOOP_DELAY.
+    set_light_adjust(0,1000,2500/LOOP_DELAY);
   }
 #endif
   
@@ -321,7 +331,7 @@ void loop() {
     //run overheat protection, time display, track battery usage
     adjust_light(); // change light levels as requested
     read_button();
-    read_temperature();
+    read_temperature(); // takes about .2 ms to execute (fairly long, relative to the other steps)
     overheat_protection();    
     
     // take action based on mode/input
