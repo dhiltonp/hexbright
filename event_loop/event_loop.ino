@@ -34,7 +34,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // Pin assignments
-#define DPIN_RLED_SW 2
+#define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
 #define DPIN_GLED 5
 #define DPIN_PWR 8
 #define DPIN_DRV_MODE 9
@@ -46,7 +46,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_LOOP 1 // main loop
 #define DEBUG_LIGHT 2 // Light control
 #define DEBUG_TEMP 3  // temperature safety
-#define DEBUG_BUTTON 4 // button presses
+#define DEBUG_BUTTON 4 // button presses/rear led
 
 
 ///////////////////////////////////////////////
@@ -200,11 +200,100 @@ void overheat_protection() {
 }
 
 ///////////////////////////////////////////////
-////////////////BUTTON CNTL////////////////////
+/////////////BUTTON & LED CONTROL//////////////
 ///////////////////////////////////////////////
+// because the red LED and button share the same pin,
+// we need to share some logic, hence the merged section.
+// the switch cannot receive input while the red led is on.
 
-int time_held = 0;
-boolean released;
+int red_time = 0;
+boolean released = false; //button starts down
+
+//////////////////////LED//////////////////////
+
+int green_time = 0;
+
+
+void set_led(int led, int time) {
+// led = DPIN_GLED or DPIN_RLED_SW,
+// time = cycles before led is turned off (0=now)
+  if(time==0) {
+    _set_led(led,LOW);  
+  } else {
+    _set_led(led,HIGH);  
+  }
+  if(led==DPIN_RLED_SW) {
+    red_time = time; 
+  } else {
+    green_time = time; 
+  }
+}
+
+boolean get_led(int led) {
+  //returns true if the LED is on
+  if(led==DPIN_RLED_SW) {
+    return red_time;
+  } else {
+    return green_time;
+  }
+}
+
+void _set_led(int led, int state) {
+// Avoid calling directly, it's easy to mess up.  Call led_pulse, if possible.
+  if(led == DPIN_RLED_SW) {
+    if (!released) {
+      return; 
+    }
+    if(state == HIGH) {
+#ifdef DEBUG
+      if(DEBUG==DEBUG_BUTTON)
+        Serial.println("Red LED on");
+#endif
+      digitalWrite(DPIN_RLED_SW, state);
+      pinMode(DPIN_RLED_SW, OUTPUT);
+    } else {
+#ifdef DEBUG
+      if(DEBUG==DEBUG_BUTTON)
+        Serial.println("Red LED off");
+#endif
+      pinMode(DPIN_RLED_SW, state);
+      digitalWrite(DPIN_RLED_SW, LOW);
+    }
+  } else { // DPIN_GLED
+#ifdef DEBUG
+    if(DEBUG==DEBUG_BUTTON)
+      if(state==HIGH)
+        Serial.println("Green LED on");
+      else
+        Serial.println("Green LED off");
+#endif
+    digitalWrite(led, state);
+  }
+}
+
+void adjust_leds() {
+  // turn off led if it's expired
+  if(red_time == 1) {
+    _set_led(DPIN_RLED_SW, LOW);
+    red_time--; 
+  } else if(red_time == 0) {
+    // nothing...
+  } else {
+    red_time--; 
+  }
+  if(green_time == 1) {
+    _set_led(DPIN_GLED, LOW);
+    green_time--;
+  } else if (green_time == 0) {
+    // nothing 
+  } else {
+    green_time--;
+  }
+}
+
+/////////////////////BUTTON////////////////////
+
+int time_held = 1; // button starts down
 
 boolean button_released() {
   return time_held && released;
@@ -215,6 +304,9 @@ int button_held() {
 }
 
 void read_button() {
+  if(red_time > 0) {
+    return;
+  }
   byte button_on = digitalRead(DPIN_RLED_SW);
   if(button_on) {
 #ifdef DEBUG
@@ -331,6 +423,7 @@ void loop() {
     // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
     //run overheat protection, time display, track battery usage
     adjust_light(); // change light levels as requested
+    adjust_leds();
     read_button();
     read_temperature(); // takes about .2 ms to execute (fairly long, relative to the other steps)
     overheat_protection();    
@@ -367,15 +460,18 @@ int mode = 0;
 // very quick releases of buttons aren't working right, not sure why.
 void control_action() {
   static int brightness = 0;
+  // flash once (100 ms) for every 400 ms period the button has been down
+  if((button_held()-1)%(400/LOOP_DELAY)==0) {
+    set_led(DPIN_GLED, 100/LOOP_DELAY);
+  }
   if(button_released()) {
     if(button_held()<30/LOOP_DELAY) {
       // ignore, could be a bounce
     } else if(button_held()<250/LOOP_DELAY) {
       mode = CYCLE_MODE;
       brightness = (brightness + 250) % 1250;
-      led_off();
       set_light_adjust(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
-    } else if (button_held() < 400/LOOP_DELAY) {
+    } else if (button_held() < 500/LOOP_DELAY) {
       mode = BLINKY_MODE;
     }
   }
@@ -387,9 +483,10 @@ void control_action() {
     }
     i--;
   }
-  if(button_held()>5000/LOOP_DELAY) {
+  if(button_held()>500/LOOP_DELAY) {
     mode = OFF_MODE;
     brightness = 0;
     set_light_adjust(0,0,1);
   }
 }
+
