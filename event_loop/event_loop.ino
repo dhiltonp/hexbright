@@ -64,6 +64,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #ifdef DEBUG
 #define OVERHEAT_TEMPERATURE 265 // something low, to verify smoothing is working right
+#define OVERHEAT_TEMPERATURE 300 // something low, to verify smoothing is working right
 #else
 #define OVERHEAT_TEMPERATURE 330 // 340 in original code, 330 to give us some overhead for the adjustment algorithm
 #endif
@@ -176,16 +177,32 @@ int get_light_level() {
   // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
   // Here's an example: ambient temperature is > 
 void overheat_protection() {
-  int new_temperature = get_temperature();
+  int temperature = get_temperature();
   
-  safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-new_temperature);
+  safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LIGHT_LEVEL ? MAX_LIGHT_LEVEL : safe_light_level;
   safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
 #ifdef DEBUG
   if(DEBUG==DEBUG_TEMP) {
-    Serial.print("Current temperature: ");
-    Serial.println(new_temperature);
+    static float printed_temperature = 0;
+    static float average_temperature = -1;
+    if(average_temperature < 0) {
+      average_temperature = temperature;
+      Serial.println("Have you calibrated your thermometer?");
+      Serial.println("Instructions are in get_celsius.");
+    }
+    average_temperature = (average_temperature*4+temperature)/5;
+    if (abs(printed_temperature-average_temperature)>1) {
+      printed_temperature = average_temperature;
+      Serial.print("Current average reading: ");
+      Serial.print(printed_temperature);
+      Serial.print(" (celsius: ");
+      Serial.print(get_celsius(printed_temperature));
+      Serial.print(") (fahrenheit: ");
+      Serial.print(get_fahrenheit(printed_temperature));
+      Serial.println(")");
+    }
   }
 #endif
 
@@ -304,7 +321,7 @@ int button_held() {
 }
 
 void read_button() {
-  if(red_time > 0) {
+  if(red_time > 0) { // led is still on, wait
     return;
   }
   byte button_on = digitalRead(DPIN_RLED_SW);
@@ -337,6 +354,17 @@ void read_temperature() {
   // do not call this directly.  Call get_temperature()
   // read temperature setting
   temperature = analogRead(APIN_TEMP);
+}
+
+int get_celsius(int temp) {
+  // 0C ice water bath for 30 minutes: 153.
+  // 35C water bath for 30 minutes (measured by medical thermometer): 255
+  // intersection with 0: 52.5 = (35C-0C)/(255-153)*153
+  return temp * (35-0)/(255-153) - 53; 
+}
+
+int get_fahrenheit(int temp) {
+  return get_celsius(temp) * 18 / 10 + 32;
 }
 
 int get_temperature() {
@@ -465,7 +493,7 @@ void control_action() {
     set_led(DPIN_GLED, 100/LOOP_DELAY);
   }
   if(button_released()) {
-    if(button_held()<30/LOOP_DELAY) {
+    if(button_held()<2) {
       // ignore, could be a bounce
     } else if(button_held()<250/LOOP_DELAY) {
       mode = CYCLE_MODE;
