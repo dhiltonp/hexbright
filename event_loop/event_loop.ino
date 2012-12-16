@@ -230,6 +230,10 @@ void overheat_protection() {
 int red_time = 0;
 boolean released = false; //button starts down
 
+// How long LED should remain off after being on?  We'll 
+// report being on for this duration, to make printing easier.
+#define LED_WAIT 100/LOOP_DELAY
+
 //////////////////////LED//////////////////////
 
 int green_time = 0;
@@ -237,19 +241,23 @@ int green_time = 0;
 void set_led(int led, int time) {
 // led = DPIN_GLED or DPIN_RLED_SW,
 // time = cycles before led is turned off (0=now)
+#ifdef DEBUG
+  if(DEBUG==DEBUG_BUTTON)
+    Serial.println("activate led");
+#endif DEBUG
   if(time==0) {
     _set_led(led,LOW);  
   } else {
     _set_led(led,HIGH);  
   }
   if(led==DPIN_RLED_SW) {
-    red_time = time; 
+    red_time = time + LED_WAIT;
   } else {
-    green_time = time; 
+    green_time = time + LED_WAIT; 
   }
 }
 
-boolean get_led(int led) {
+int get_led(int led) {
   //returns true if the LED is on
   if(led==DPIN_RLED_SW) {
     return red_time;
@@ -262,6 +270,10 @@ void _set_led(int led, int state) {
 // Avoid calling directly, it's easy to mess up.  Call led_pulse, if possible.
   if(led == DPIN_RLED_SW) {
     if (!released) {
+#ifdef DEBUG
+      if(DEBUG==DEBUG_BUTTON)
+        Serial.println("can't set red led, switch is down");
+#endif
       return; 
     }
     if(state == HIGH) {
@@ -293,38 +305,56 @@ void _set_led(int led, int state) {
 
 void adjust_leds() {
   // turn off led if it's expired
-  if(red_time == 1) {
-    _set_led(DPIN_RLED_SW, LOW);
-    red_time--; 
-  } else if(red_time == 0) {
-    // nothing...
-  } else {
-    red_time--; 
+#ifdef DEBUG
+  if(DEBUG==DEBUG_BUTTON) {
+    if(green_time>0) {
+      Serial.print("green countdown: ");
+      Serial.println(green_time);
+    }
+    if(red_time>0) {
+      Serial.print("red countdown: ");
+      Serial.println(red_time);
+    }
   }
-  if(green_time == 1) {
-    _set_led(DPIN_GLED, LOW);
-    green_time--;
-  } else if (green_time == 0) {
-    // nothing 
-  } else {
-    green_time--;
+#endif
+  switch (red_time) {
+    case (0):
+      break;
+    case (LED_WAIT):
+      Serial.println("_set_led(DPIN_RLED_SW, LOW);");
+      _set_led(DPIN_RLED_SW, LOW);
+    default:
+      red_time--;
+  } 
+  switch (green_time) {
+    case (0):
+      break;
+    case (LED_WAIT):
+      _set_led(DPIN_GLED, LOW);
+    default:
+      green_time--;
   }
 }
 
 /////////////////////BUTTON////////////////////
 
-int time_held = 1; // button starts down
+int time_held = 0;
 
 boolean button_released() {
   return time_held && released;
 }
 
 int button_held() {
-  return time_held; 
+  return time_held;// && !red_time; 
 }
 
 void read_button() {
-  if(red_time > 0) { // led is still on, wait
+  if(red_time >= LED_WAIT) { // led is still on, wait
+#ifdef DEBUG
+   if(DEBUG==DEBUG_BUTTON) {
+      Serial.println("Red LED is active, no switch for you");
+   }
+#endif
     return;
   }
   byte button_on = digitalRead(DPIN_RLED_SW);
@@ -449,7 +479,7 @@ void update_number() {
       } else {
         wait(250/LOOP_DELAY);
       }
-      set_led(_color, 80/LOOP_DELAY);
+      set_led(_color, 120/LOOP_DELAY);
       _number--;
       if(_number && !(_number%10)) { // next digit?
         wait(500/LOOP_DELAY); 
@@ -537,7 +567,8 @@ int get_temperature() {
 // will be greater than the value you set.
 // Consider using 100/LOOP_DELAY, where 100 is 100 milliseconds
 // btw, 100/LOOP_DELAY should be evaluated at compile time.
-//#define LOOP_DELAY 5 // placed at top of file, because print_number needs it
+//#define LOOP_DELAY 5 // placed at top of file, because adjust_number 
+// and adjust_led need it
 
 unsigned long last_time;
 
@@ -605,8 +636,6 @@ void loop() {
 #endif
     // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
     //run overheat protection, time display, track battery usage
-    adjust_light(); // change light levels as requested
-    adjust_leds();
     read_button();
     read_temperature(); // takes about .2 ms to execute (fairly long, relative to the other steps)
     read_accelerometer();
@@ -617,6 +646,10 @@ void loop() {
     // take action based on mode/input
     control_action();
 
+    // change light levels as requested
+    adjust_light(); 
+    adjust_leds();
+    
     // update time
     last_time = time;
   }
@@ -626,26 +659,29 @@ void loop() {
 #define OFF_MODE 0
 #define BLINKY_MODE 1
 #define CYCLE_MODE 2
+#define THERMOMETER_MODE 3
 
 int mode = 0;
 
 // BLINKY_MODE has some issues when not connected to USB.  It detects a poweroff somehow.
-// very quick releases of buttons aren't working right, not sure why.
+// very quick releases of buttons aren't working quite right, not sure why.
 void control_action() {
   static int brightness = 0;
-  // flash once (100 ms) for every 400 ms period the button has been down
-  if((button_held()-1)%(400/LOOP_DELAY)==0) {
+  if((button_held()-1)%(333/LOOP_DELAY)==0) {
     set_led(DPIN_GLED, 100/LOOP_DELAY);
   }
   if(button_released()) {
     if(button_held()<2) {
       // ignore, could be a bounce
-    } else if(button_held()<250/LOOP_DELAY) {
+    } else if(button_held()<300/LOOP_DELAY) {
       mode = CYCLE_MODE;
       brightness = (brightness + 250) % 1250;
       set_light_adjust(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
-    } else if (button_held() < 500/LOOP_DELAY) {
+    } else if (button_held() < 700/LOOP_DELAY) {
       mode = BLINKY_MODE;
+    } else if (button_held() < 1000/LOOP_DELAY) {
+      mode = THERMOMETER_MODE;
+      set_light_adjust(CURRENT_LEVEL,1,120/LOOP_DELAY);
     }
   }
   if(mode == BLINKY_MODE) {
@@ -655,16 +691,15 @@ void control_action() {
       i=600/LOOP_DELAY;
     }
     i--;
+  } else if (mode == THERMOMETER_MODE) {
+    if(!printing_number()) {
+      print_number(get_fahrenheit(get_temperature()));
+    }
   }
-  if(button_held()>500/LOOP_DELAY) {
+  if(button_held()>1000/LOOP_DELAY) {
     mode = OFF_MODE;
     brightness = 0;
     set_light_adjust(0,0,1);
   }
-
-  if(!printing_number()) {
-    print_number(get_fahrenheit(get_temperature()));
-  }
-  
 }
 
