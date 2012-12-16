@@ -47,6 +47,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_LIGHT 2 // Light control
 #define DEBUG_TEMP 3  // temperature safety
 #define DEBUG_BUTTON 4 // button presses/rear led
+#define DEBUG_ACCEL 5 // accelerometer
 
 
 ///////////////////////////////////////////////
@@ -346,6 +347,78 @@ void read_button() {
 
 
 ///////////////////////////////////////////////
+////////////////ACCELEROMETER//////////////////
+///////////////////////////////////////////////
+
+// return degrees of movement
+//MOVE_TYPE, value returned from a successful detect_movement
+#define ACCEL_NONE   0 // nothing
+#define ACCEL_TWIST  1 // return degrees - light axis remains constant
+#define ACCEL_TURN   2 // return degrees - light axis changes
+#define ACCEL_DROP   3 // return change of velocity - period of no acceleration before impact?
+#define ACCEL_TAP    4 // return change of velocity - acceleration before impact
+
+boolean using_accelerometer = false;
+
+
+#define DPIN_ACC_INT 3
+
+#define ACC_ADDRESS             0x4C
+#define ACC_REG_XOUT            0
+#define ACC_REG_YOUT            1
+#define ACC_REG_ZOUT            2
+#define ACC_REG_TILT            3
+#define ACC_REG_INTS            6
+#define ACC_REG_MODE            7
+
+int detect_movement() {
+  /* // enable if we're receiving detect requests?
+  if(!using_accelerometer) {
+    enable_accelerometer();
+    return ACCEL_NONE; 
+  }*/
+  
+}
+
+float movement_change() {
+  
+}
+
+void read_accelerometer() {
+  
+  byte tapped = 0, shaked = 0;
+  if (!digitalRead(DPIN_ACC_INT))
+  {
+    Wire.beginTransmission(ACC_ADDRESS);
+    Wire.write(ACC_REG_TILT);
+    Wire.endTransmission(false);       // End, but do not stop!
+    Wire.requestFrom(ACC_ADDRESS, 1);  // This one stops.
+    byte tilt = Wire.read();
+    
+    static int i = 0; 
+    if(!i) {
+      tapped = !!(tilt & 0x20);
+      shaked = !!(tilt & 0x80);
+      Serial.println(tilt);  
+      if (tapped) Serial.println("Tap!");
+      if (shaked) Serial.println("Shake!");
+      
+      i=10;
+    }
+    i--;
+  } 
+}
+
+void enable_accelerometer() {
+  pinMode(DPIN_ACC_INT,  INPUT);
+  digitalWrite(DPIN_ACC_INT,  HIGH);
+}
+
+void disable_accelerometer() {
+  
+}
+
+///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////
 ///////////////////////////////////////////////
 
@@ -353,6 +426,8 @@ int temperature = 0;
 void read_temperature() {
   // do not call this directly.  Call get_temperature()
   // read temperature setting
+  // device data sheet: http://ww1.microchip.com/downloads/en/devicedoc/21942a.pdf
+  
   temperature = analogRead(APIN_TEMP);
 }
 
@@ -360,6 +435,7 @@ int get_celsius(int temp) {
   // 0C ice water bath for 30 minutes: 153.
   // 35C water bath for 30 minutes (measured by medical thermometer): 255
   // intersection with 0: 52.5 = (35C-0C)/(255-153)*153
+  // readings obtained with DEBUG_TEMP
   return temp * (35-0)/(255-153) - 53; 
 }
 
@@ -384,7 +460,7 @@ int get_temperature() {
 // will be greater than the value you set.
 // Consider using 100/LOOP_DELAY, where 100 is 100 milliseconds
 // btw, 100/LOOP_DELAY should be evaluated at compile time.
-#define LOOP_DELAY 30
+#define LOOP_DELAY 5
 
 unsigned long last_time;
 
@@ -402,6 +478,8 @@ void setup()
   pinMode(DPIN_DRV_EN, OUTPUT);
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
+  
+  enable_accelerometer();
   
 #ifdef DEBUG
   // Initialize serial busses
@@ -454,6 +532,7 @@ void loop() {
     adjust_leds();
     read_button();
     read_temperature(); // takes about .2 ms to execute (fairly long, relative to the other steps)
+    read_accelerometer();
     overheat_protection();    
     
     // take action based on mode/input
@@ -464,19 +543,6 @@ void loop() {
   }
 }
 
-
-/*
-void control_action() {
-  static int brightness = 100;
-  if(button_released() && button_held()<30) {
-    brightness = (CURRENT_LEVEL, brightness % 1000) + 100;
-    set_light_adjust(brightness, 25);
-  }
-  if(button_held()>30 && button_released()) {
-    set_light_adjust(0,0,1);
-    brightness = 100;
-  }
-} */
 
 #define OFF_MODE 0
 #define BLINKY_MODE 1
@@ -507,7 +573,7 @@ void control_action() {
     static int i = 0;
     if(!i) {
       set_light_adjust(MAX_LOW_LEVEL,1,120/LOOP_DELAY);
-      i=20;
+      i=600/LOOP_DELAY;
     }
     i--;
   }
