@@ -474,15 +474,15 @@ void update_number() {
     }
 #endif
     if(!waiting()) {
-      if(_number==1) {
-        wait(1500/LOOP_DELAY); 
+      if(_number==1) { // minimum delay between printing numbers
+        wait(2500/LOOP_DELAY); 
       } else {
-        wait(250/LOOP_DELAY);
+        wait(300/LOOP_DELAY); 
       }
       set_led(_color, 120/LOOP_DELAY);
       _number--;
       if(_number && !(_number%10)) { // next digit?
-        wait(500/LOOP_DELAY); 
+        wait(600/LOOP_DELAY);
         _color = flip_color(_color);
         _number = _number/10;
       }
@@ -500,11 +500,19 @@ int flip_color(int color) {
 
 void print_number(int number) {
   // reverse number (so it prints from left to right)
+  boolean negative = false;
+  if(number<0) {
+    number = 0-number;
+    negative = true; 
+  }
   _color = DPIN_GLED;
   while(number>0) {
     _number = _number * 10 + (number%10); 
     number = number/10;
     _color = flip_color(_color);
+  }
+  if(negative) {
+    set_led(flip_color(_color), 500/LOOP_DELAY); 
   }
 }
 
