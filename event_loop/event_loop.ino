@@ -48,6 +48,9 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_TEMP 3  // temperature safety
 #define DEBUG_BUTTON 4 // button presses/rear led
 #define DEBUG_ACCEL 5 // accelerometer
+#define DEBUG_NUMBER 6 // number printing utility
+
+#define LOOP_DELAY 5
 
 
 ///////////////////////////////////////////////
@@ -230,7 +233,6 @@ boolean released = false; //button starts down
 //////////////////////LED//////////////////////
 
 int green_time = 0;
-
 
 void set_led(int led, int time) {
 // led = DPIN_GLED or DPIN_RLED_SW,
@@ -419,6 +421,81 @@ void disable_accelerometer() {
 }
 
 ///////////////////////////////////////////////
+//////////////////UTILITIES////////////////////
+///////////////////////////////////////////////
+
+int _number = 0;
+int _color = DPIN_GLED;
+
+boolean printing_number() {
+  return _number || waiting(); 
+}
+
+void update_number() {
+  if(_number>0) { // we have something to do...
+#ifdef DEBUG
+    if(DEBUG==DEBUG_NUMBER) {
+      static int last_printed = 0;
+      if(last_printed != _number) {
+        last_printed = _number;
+        Serial.print("number remaining (read from right to left): ");
+        Serial.println(_number);
+      }
+    }
+#endif
+    if(!waiting()) {
+      if(_number==1) {
+        wait(1500/LOOP_DELAY); 
+      } else {
+        wait(250/LOOP_DELAY);
+      }
+      set_led(_color, 80/LOOP_DELAY);
+      _number--;
+      if(_number && !(_number%10)) { // next digit?
+        wait(500/LOOP_DELAY); 
+        _color = flip_color(_color);
+        _number = _number/10;
+      }
+    }
+  } 
+}
+
+int flip_color(int color) {
+  if (color == DPIN_GLED) {
+    return DPIN_RLED_SW; 
+  } else {
+    return DPIN_GLED;
+  }
+}
+
+void print_number(int number) {
+  // reverse number (so it prints from left to right)
+  _color = DPIN_GLED;
+  while(number>0) {
+    _number = _number * 10 + (number%10); 
+    number = number/10;
+    _color = flip_color(_color);
+  }
+}
+
+
+int _wait_time = 0;
+void wait(int time) {
+  _wait_time = time;
+}
+
+void update_wait() {
+  if(_wait_time) {
+    _wait_time--;
+  } 
+}
+
+boolean waiting() {
+  return _wait_time;
+}
+
+
+///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////
 ///////////////////////////////////////////////
 
@@ -460,7 +537,7 @@ int get_temperature() {
 // will be greater than the value you set.
 // Consider using 100/LOOP_DELAY, where 100 is 100 milliseconds
 // btw, 100/LOOP_DELAY should be evaluated at compile time.
-#define LOOP_DELAY 5
+//#define LOOP_DELAY 5 // placed at top of file, because print_number needs it
 
 unsigned long last_time;
 
@@ -534,6 +611,8 @@ void loop() {
     read_temperature(); // takes about .2 ms to execute (fairly long, relative to the other steps)
     read_accelerometer();
     overheat_protection();    
+    update_wait();
+    update_number();
     
     // take action based on mode/input
     control_action();
@@ -582,5 +661,10 @@ void control_action() {
     brightness = 0;
     set_light_adjust(0,0,1);
   }
+
+  if(!printing_number()) {
+    print_number(get_fahrenheit(get_temperature()));
+  }
+  
 }
 
