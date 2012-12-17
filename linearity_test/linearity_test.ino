@@ -110,7 +110,7 @@ void loop() {
   if(time-last_time >= LOOP_DELAY) {
     static int level = LOW;
     static unsigned long i=0;
-    static int maxnum = 600;
+    static int maxnum = 500;
     static double exponent = 2.5;
     if(level == LOW) {
       set_light(level, pow(i,exponent)*251/pow(maxnum,exponent)+4);
@@ -119,19 +119,19 @@ void loop() {
         // 7, 225, 30
         // 8, 232, 23
         i=7*maxnum/20;
-        maxnum = 600;
+//        maxnum = 600;
         level = HIGH;
-        exponent = 2;
+        exponent = 3;
       }
     }
     if(level == HIGH) {
 //      set_light(level, pow(i,exponent)*241/pow(maxnum,exponent)+14);
-      set_light(level, pow(i,exponent)*251/pow(maxnum,exponent)+4);
+      set_light(level, pow(i,exponent)*225/pow(maxnum,exponent)+30);
       i++;
       if(i>maxnum) {
         i=0;
         level = LOW;
-        maxnum = 600;
+//        maxnum = 600;
         exponent = 2.5;
       }
     }
