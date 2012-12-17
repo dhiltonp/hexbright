@@ -453,7 +453,7 @@ void disable_accelerometer() {
 //////////////////UTILITIES////////////////////
 ///////////////////////////////////////////////
 
-int _number = 0;
+long _number = 0;
 int _color = DPIN_GLED;
 
 boolean printing_number() {
@@ -474,7 +474,9 @@ void update_number() {
 #endif
     if(!waiting()) {
       if(_number==1) { // minimum delay between printing numbers
-        wait(2500/LOOP_DELAY); 
+        wait(2500/LOOP_DELAY);
+        _number = 0;
+        return;
       } else {
         wait(300/LOOP_DELAY); 
       }
@@ -507,7 +509,8 @@ int flip_color(int color) {
   }
 }
 
-void print_number(int number) {
+void print_number(long number) {
+  // the largest number printable is +/-999,999,999, as the left-most digit is reserved for internal use.
   // reverse number (so it prints from left to right)
   boolean negative = false;
   if(number<0) {
@@ -515,6 +518,7 @@ void print_number(int number) {
     negative = true; 
   }
   _color = DPIN_GLED;
+  _number=1; // to guarantee printing when dealing with trailing zeros (100 can't be stored as 001, use 1001)
   while(number>0) {
     _number = _number * 10 + (number%10); 
     number = number/10;
@@ -717,4 +721,3 @@ void control_action() {
     set_light_adjust(0,0,1);
   }
 }
-
