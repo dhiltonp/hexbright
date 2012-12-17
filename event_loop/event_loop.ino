@@ -67,10 +67,9 @@ either expressed or implied, of the FreeBSD Project.
 #define CURRENT_LEVEL -1
 
 #ifdef DEBUG
-#define OVERHEAT_TEMPERATURE 265 // something low, to verify smoothing is working right
-#define OVERHEAT_TEMPERATURE 300 // something low, to verify smoothing is working right
+#define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
 #else
-#define OVERHEAT_TEMPERATURE 330 // 340 in original code, 330 to give us some overhead for the adjustment algorithm
+#define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
 #endif
 
 
@@ -479,8 +478,18 @@ void update_number() {
       } else {
         wait(300/LOOP_DELAY); 
       }
-      set_led(_color, 120/LOOP_DELAY);
-      _number--;
+      if(_number/10*10==_number) {
+#ifdef DEBUG
+        if(DEBUG==DEBUG_NUMBER) {
+         Serial.println("zero"); 
+        }
+#endif
+//        wait(500/LOOP_DELAY); 
+        set_led(_color, 400/LOOP_DELAY); 
+      } else {
+        set_led(_color, 120/LOOP_DELAY);
+        _number--;
+      }
       if(_number && !(_number%10)) { // next digit?
         wait(600/LOOP_DELAY);
         _color = flip_color(_color);
@@ -615,7 +624,6 @@ void setup()
 #endif
   
   last_time = millis();
-  // setup initial light state
 }
 
 void loop() {
@@ -667,7 +675,6 @@ void loop() {
 #define OFF_MODE 0
 #define BLINKY_MODE 1
 #define CYCLE_MODE 2
-#define THERMOMETER_MODE 3
 
 int mode = 0;
 
@@ -675,21 +682,16 @@ int mode = 0;
 // very quick releases of buttons aren't working quite right, not sure why.
 void control_action() {
   static int brightness = 0;
-  if((button_held()-1)%(333/LOOP_DELAY)==0) {
-    set_led(DPIN_GLED, 100/LOOP_DELAY);
-  }
   if(button_released()) {
     if(button_held()<2) {
       // ignore, could be a bounce
     } else if(button_held()<300/LOOP_DELAY) {
       mode = CYCLE_MODE;
       brightness = (brightness + 250) % 1250;
+      brightness = brightness ? brightness : 1; // if 0, set to 1 to allow a delayed shutdown
       set_light_adjust(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
     } else if (button_held() < 700/LOOP_DELAY) {
       mode = BLINKY_MODE;
-    } else if (button_held() < 1000/LOOP_DELAY) {
-      mode = THERMOMETER_MODE;
-      set_light_adjust(CURRENT_LEVEL,1,120/LOOP_DELAY);
     }
   }
   if(mode == BLINKY_MODE) {
@@ -699,12 +701,17 @@ void control_action() {
       i=600/LOOP_DELAY;
     }
     i--;
-  } else if (mode == THERMOMETER_MODE) {
+  } else if (mode == CYCLE_MODE) {
     if(!printing_number()) {
       print_number(get_fahrenheit(get_temperature()));
+      if(brightness==1) { // turn off after one more brightness
+        brightness--;
+      } else if (!brightness) {
+        set_light_adjust(0, 0, 1);
+      }
     }
   }
-  if(button_held()>1000/LOOP_DELAY) {
+  if(button_held()>700/LOOP_DELAY) {
     mode = OFF_MODE;
     brightness = 0;
     set_light_adjust(0,0,1);
