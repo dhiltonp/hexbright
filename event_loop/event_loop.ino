@@ -547,11 +547,11 @@ void read_temperature() {
 }
 
 int get_celsius(int temp) {
-  // 0C ice water bath for 30 minutes: 153.
-  // 35C water bath for 30 minutes (measured by medical thermometer): 255
-  // intersection with 0: 52.5 = (35C-0C)/(255-153)*153
+  // 0C ice water bath for 20 minutes: 153.
+  // 40C water bath for 20 minutes (measured by medical thermometer): 275
+  // intersection with 0: 52.5 = (40C-0C)/(275-153)*153
   // readings obtained with DEBUG_TEMP
-  return temp * (35-0)/(255-153) - 53; 
+  return temp * (40.05-0)/(275-153) - 50; 
 }
 
 int get_fahrenheit(int temp) {
