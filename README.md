@@ -17,6 +17,7 @@ Underneath 'Sketch' and 'Tools', there is an up arrow.  Click on it, go to 'prog
 
 'functional' is a basic, but full-featured example of how to use the hexbright library.
 
+libraries/hexbright/hexbright.h has a list of all available methods in the api, and is fairly well commented.
 
 Be aware that this library is a work in progress.
 
