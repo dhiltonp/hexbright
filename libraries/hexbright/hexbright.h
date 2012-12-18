@@ -9,6 +9,8 @@
 #define MAX_LOW_LEVEL 385
 #define CURRENT_LEVEL -1
 
+#define NOW 1
+
 
 // led constants
 #define RLED 0

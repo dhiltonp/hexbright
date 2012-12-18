@@ -33,6 +33,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <math.h>
 #include <Wire.h>
 
+// number of milliseconds between updates
 #define LOOP_DELAY 5
 
 #define OFF_MODE 0
@@ -41,10 +42,9 @@ either expressed or implied, of the FreeBSD Project.
 
 int mode = 0;
 
-
+//creating a hexbright object initializes the hardware
 hexbright hb(LOOP_DELAY);
-
-void setup() {} //creating a hexbright object initializes the hardware
+void setup() {} 
 
 void loop() {
   hb.update();
@@ -54,42 +54,44 @@ void loop() {
   if(hb.button_released()) {
     if(hb.button_held()<2) {
       // ignore, could be a bounce
-    } else if(hb.button_held()<300/LOOP_DELAY) {
+    } else if(hb.button_held()<300/LOOP_DELAY) { //<300 milliseconds
       mode = CYCLE_MODE;
-      brightness = (brightness + 250) % 1250;
-      brightness = brightness ? brightness : 1; // if 0, set to 1 to allow a delayed shutdown
+      brightness = (brightness + 250) % 1250; // (0/250/500/750/1000)
+      brightness = brightness ? brightness : 1; // if 0, set to 1 to allow a delayed shutdown (so we can finish printing)
       hb.set_light(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
     } else if (hb.button_held() < 700/LOOP_DELAY) {
       mode = BLINKY_MODE;
     }
   }
-  if(mode == BLINKY_MODE) {
+  if(hb.button_held()>700/LOOP_DELAY) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
+    mode = OFF_MODE;
+    brightness = 0;
+    hb.set_light(0,0,NOW); // go to brightness level 0 (shutdown) immediately.
+  }
+
+  if(mode == BLINKY_MODE) { // just blink - fade over 120 milliseconds, wait for 480 ms, repeat.
     static int i = 0;
     if(!i) {
       hb.set_light(MAX_LOW_LEVEL,1,120/LOOP_DELAY);
       i=600/LOOP_DELAY;
     }
     i--;
-  } else if (mode == CYCLE_MODE) {
+  } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
     if(!hb.printing_number()) {
-    //  hb.print_number(hb.get_fahrenheit());
-      if(brightness==1) { // turn off after one more brightness
+        hb.print_number(hb.get_fahrenheit());
+      if(brightness==1) { // turn off after one more print
         brightness--;
       } else if (!brightness) {
-        hb.set_light(0, 0, 1);
+        hb.set_light(0, 0, NOW);
       }
     }
   } else if (mode == OFF_MODE) { // can only occur when under USB power.
     if(hb.get_charge_state()==CHARGED) {
-      hb.set_led_state(GLED, LED_ON, 500/LOOP_DELAY); // always runs = always on
+      // always runs = always on (the last parameter could be any positive value)
+      hb.set_led_state(GLED, LED_ON, 1); 
     } else if (hb.get_charge_state()==CHARGING && hb.get_led_state(GLED)==LED_OFF) {
       hb.set_led_state(GLED, LED_ON, 500/LOOP_DELAY);
     } 
-  }
-  if(hb.button_held()>700/LOOP_DELAY) {
-    mode = OFF_MODE;
-    brightness = 0;
-    hb.set_light(0,0,1);
   }
 
 }
