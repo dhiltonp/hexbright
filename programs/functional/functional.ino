@@ -48,11 +48,9 @@ void setup() {}
 
 void loop() {
   hb.update();
-// BLINKY_MODE has some issues when not connected to USB.  It detects a poweroff somehow.
-// very quick releases of buttons aren't working quite right, not sure why.
   static int brightness = 0;
   if(hb.button_released()) {
-    if(hb.button_held()<2) {
+    if(hb.button_held()<1) {
       // ignore, could be a bounce
     } else if(hb.button_held()<300/LOOP_DELAY) { //<300 milliseconds
       mode = CYCLE_MODE;
