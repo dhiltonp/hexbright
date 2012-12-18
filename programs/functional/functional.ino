@@ -49,6 +49,8 @@ void setup() {}
 void loop() {
   hb.update();
   static int brightness = 0;
+  
+  //// Button actions to recognize, one-time actions to take as a result
   if(hb.button_released()) {
     if(hb.button_held()<1) {
       // ignore, could be a bounce
@@ -67,6 +69,8 @@ void loop() {
     hb.set_light(0,0,NOW); // go to brightness level 0 (shutdown) immediately.
   }
 
+
+  //// Actions over time for a given mode
   if(mode == BLINKY_MODE) { // just blink - fade over 120 milliseconds, wait for 480 ms, repeat.
     static int i = 0;
     if(!i) {
