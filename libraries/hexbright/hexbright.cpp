@@ -68,7 +68,6 @@ hexbright::hexbright(int update_delay_ms) {
   // into USB, or the user is pressing the power button.
   pinMode(DPIN_PWR, INPUT);
   digitalWrite(DPIN_PWR, LOW);
-
   // Initialize GPIO
   pinMode(DPIN_RLED_SW, INPUT);
   pinMode(DPIN_GLED, OUTPUT);
@@ -143,6 +142,13 @@ void hexbright::update() {
   adjust_leds();
 }
 
+void hexbright::shutdown() {
+  pinMode(DPIN_PWR, OUTPUT);
+  digitalWrite(DPIN_PWR, LOW);
+  //  digitalWrite(DPIN_DRV_MODE, LOW);
+  //  digitalWrite(DPIN_DRV_EN, LOW);
+}
+
 
 
 
@@ -199,7 +205,13 @@ int hexbright::get_safe_light_level() {
 }
 
 
-void hexbright::set_hardware_light(int mode, int light_power) {
+void hexbright::set_light_level(unsigned long level) {
+// LOW 255 approximately equals HIGH 48/49.  There is a color change.  
+// Values < 4 do not provide any light.
+// I don't know about relative power draw.
+
+// look at linearity_test.ino for more detail on these algorithms.
+
 #ifdef DEBUG
   if (DEBUG == DEBUG_LIGHT) {
     Serial.print("Power/MODE: ");
@@ -208,10 +220,16 @@ void hexbright::set_hardware_light(int mode, int light_power) {
     Serial.println(mode);
   }
 #endif
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, HIGH);
-  digitalWrite(DPIN_DRV_MODE, mode);
-  analogWrite(DPIN_DRV_EN, light_power);
+  //  pinMode(DPIN_PWR, OUTPUT);
+  //  digitalWrite(DPIN_PWR, HIGH);
+  if(level<=500) {
+    digitalWrite(DPIN_DRV_MODE, LOW);
+    analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
+  } else {
+    level -= 500;
+    digitalWrite(DPIN_DRV_MODE, HIGH);
+    analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+  }  
 }
 
 boolean high_output_mode = false;
@@ -227,35 +245,11 @@ void hexbright::adjust_light() {
         Serial.println("Light level low, turning off");
       }
 #endif
-      pinMode(DPIN_PWR, OUTPUT);
-      digitalWrite(DPIN_PWR, LOW);
-      digitalWrite(DPIN_DRV_MODE, LOW);
-      digitalWrite(DPIN_DRV_EN, LOW);
     } else {
       // light_power has some issues with linearity when switching between power modes, but works ok
       float light_power = pow(light_level, 3)/227000+3;
-#ifdef DEBUG
-      if(DEBUG==DEBUG_LIGHT) {
-        Serial.print("Perceptual brightness: ");
-        Serial.print(light_level);
-        Serial.print("/");
-        Serial.println(MAX_LIGHT_LEVEL);
-      }
-#endif
-      // LOW 255 approximately equals HIGH 48/49.  There is a color change.  
-      // When switching from 254 or less to HIGH:48/49, I get a more noticeable glitch.
-      // values < 4 do not provide any light.  (that's the +3 in the light_power calculation)
-      // I don't know about relative power draw.
-      if(light_power<255) {
-        set_hardware_light(LOW, light_power);
-      } else { // bright mode
-        if (false && !high_output_mode) {
-          set_hardware_light(LOW, 255);
-          high_output_mode = true;
-        }
-        light_power = (light_power - 255)/20+48;
-        set_hardware_light(HIGH, light_power);
-      }
+      // turn on/off?
+      set_light_level(light_level);
     }
     change_done++;
   }

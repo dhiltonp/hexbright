@@ -46,7 +46,7 @@ either expressed or implied, of the FreeBSD Project.
 #define LOOP_DELAY 3
 
 
-void set_light(int mode, int brightness) {
+void set_light(int mode, double brightness) {
 #ifdef DEBUG
   Serial.print("Power/MODE: ");
   Serial.print(brightness);
@@ -55,6 +55,19 @@ void set_light(int mode, int brightness) {
 #endif
   digitalWrite(DPIN_DRV_MODE, mode);
   analogWrite(DPIN_DRV_EN, brightness);
+}
+
+void set_light(unsigned long level) {
+#ifdef DEBUG
+  Serial.print("level: ");
+  Serial.println(level);
+#endif  
+  if(level<=500) {
+    set_light(LOW, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
+  } else {
+    level -= 500;
+    set_light(HIGH, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+  }    
 }
 
 ///////////////////////////////////////////////
@@ -105,37 +118,67 @@ void setup()
 void loop() {
   unsigned long time = millis();
 
-  // loop 200? 60? times per second?
-  // The point is, we want light adjustments to be constant regardless of how much processing is going on.
+
   if(time-last_time >= LOOP_DELAY) {
-    static int level = LOW;
+    // third pass, moving calculation to set_level(double)
+    static int i = 0;
+    i=(i+1)%1000;
+    set_light(i);
+    
+    /*
+    // second pass, finding arithmetic approximation (courtesy of wolfram 
+    // alpha's fit function, then some final tweeking in a spreadsheet)
+    static int level = HIGH;
     static unsigned long i=0;
     static int maxnum = 500;
+    if(level == LOW) {
+      set_light(level, .000000633*(i*i*i)+.000632*(i*i)+.0285*i+3.98); // wolfram
+      i++;
+      if(i>maxnum) {
+        i=0; 
+        level = HIGH;
+      }
+    }
+    if(level == HIGH) {
+      set_light(level, .00000052*(i*i*i)+.000365*(i*i)+.108*i+44.8); // wolfram
+      i++;
+      if(i>maxnum) {
+        i=0; 
+        level = LOW;
+      }
+    }*/
+  
+  
+// first work, finding roughly linear formula
+/*  
+    static int level = LOW;
+    static unsigned long i=61;
+    static int maxnum = 500+61;
     static double exponent = 2.5;
     if(level == LOW) {
-      set_light(level, pow(i,exponent)*251/pow(maxnum,exponent)+4);
+      set_light(level, pow(i,exponent)*252/pow(maxnum,exponent)+3);
       i++;
       if(i>maxnum) {
         // 7, 225, 30
         // 8, 232, 23
-        i=7*maxnum/20;
-//        maxnum = 600;
+        i=8*maxnum/20+46;
+        maxnum = 700+70;
         level = HIGH;
         exponent = 3;
       }
     }
     if(level == HIGH) {
 //      set_light(level, pow(i,exponent)*241/pow(maxnum,exponent)+14);
-      set_light(level, pow(i,exponent)*225/pow(maxnum,exponent)+30);
+      set_light(level, pow(i,exponent)*217/pow(maxnum,exponent)+38);
       i++;
       if(i>maxnum) {
-        i=0;
+        i=61;
         level = LOW;
-//        maxnum = 600;
+        maxnum = 500+61;
         exponent = 2.5;
       }
     }
-    
+*/    
     // update time
     last_time = time;
   }

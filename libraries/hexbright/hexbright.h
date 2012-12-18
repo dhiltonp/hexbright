@@ -1,4 +1,3 @@
-#include <math.h>
 #include <Wire.h>
 #include <Arduino.h>
 
@@ -41,6 +40,9 @@ class hexbright {
     // Put update in your loop().  update() will wait until at least
     //  ms_delay have passed since the previous execution.
     static void update();
+
+    // turn off the hexbright
+    static void shutdown();
 
 
     // go from start_level to end_level over updates (updates*ms_delay) = ms
@@ -88,7 +90,7 @@ class hexbright {
 
  private: 
     static void adjust_light();
-    static void set_hardware_light(int mode, int brightness);
+    static void set_light_level(unsigned long level);
     static void overheat_protection();
 
     static void update_number();

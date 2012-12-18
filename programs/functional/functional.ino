@@ -30,7 +30,6 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <hexbright.h>
 
-#include <math.h>
 #include <Wire.h>
 
 // number of milliseconds between updates
