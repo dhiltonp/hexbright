@@ -30,10 +30,11 @@ for example: 2 green flashes, 6 red flashes, 3 green flashes = 263
 
  - Updating your calibration
 
-If you are using my code, you will want to modify the constants in get_celsius to report the correct temperature.  Then go to loop() and uncomment the line that contains get_fahrenheit().  Event_loop also uses the same code.
+Test your new thermometer by replacing 'get_thermal_sensor' with 'get_fahrenheit' or 'get_celsius' in temperature_calibration.
 
-
-If you just want to set the max temperature for your light, do the following:
-max_sensor_reading = desired_temp * (2nd_temp_reading - 0C_temp_reading) / 2nd_temp + 0C_temp_reading
+Modify libraries/hexbright/hexbright.cpp:
+modify get_celsius() to report the correct real temperature.
+modify OVERHEAT_TEMPERATURE with the desired sensor reading.
+(OVERHEAT_TEMPERATURE = desired_temp * (2nd_temp_reading - 0C_temp_reading) / 2nd_temp + 0C_temp_reading)
 
 50C/120F isn't a bad limit.  Do not go over 70C/160F.  I wouldn't go over 60C/140.
