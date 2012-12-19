@@ -638,7 +638,15 @@ int hexbright::get_thermal_sensor() {
 ///////////////////////////////////////////////
 
 byte hexbright::get_charge_state() {
-  int charge_state = analogRead(APIN_CHARGE);
+  int charge_value = analogRead(APIN_CHARGE);
+#ifdef DEBUG
+  if (DEBUG == DEBUG_CHARGE) {
+    Serial.print("Current charge reading: ");
+    Serial.println(charge_value);
+    Serial.print("Current charge state: ");
+    Serial.println(int((charge_value-129.0)/640+1));
+  }
+#endif
   // <128 charging, >768 charged, battery
-    return (charge_state-129)/640+1;
+  return int((charge_value-129.0)/640+1);
 }

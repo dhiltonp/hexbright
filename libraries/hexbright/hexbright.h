@@ -3,14 +3,15 @@
 
 
 // debugging related definitions
-//#define DEBUG 2
-// Some debug modes set the light.  Your control code may reset it.
+//#define DEBUG 7
+// Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_LOOP 1 // main loop
 #define DEBUG_LIGHT 2 // Light control
 #define DEBUG_TEMP 3  // temperature safety
 #define DEBUG_BUTTON 4 // button presses/rear led
 #define DEBUG_ACCEL 5 // accelerometer
 #define DEBUG_NUMBER 6 // number printing utility
+#define DEBUG_CHARGE 7 // charge state
 
 
 #ifdef DEBUG
@@ -87,6 +88,7 @@ class hexbright {
     // led = GLED or RLED,
     // state = LED_ON or LED_OFF.  LED_WAIT cannot be directly set.
     // updates = updates before led goes to LED_WAIT state (where it remains for 100 ms)
+    // While the RLED is on, the rear button cannot be read.
     static void set_led_state(byte led, byte state, int updates);
     // led = GLED or RLED 
     // returns LED_OFF, LED_WAIT, or LED_ON
