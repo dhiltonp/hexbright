@@ -132,7 +132,7 @@ class hexbright {
     static int get_celsius();
     static int get_fahrenheit();
 
-
+    // returns CHARGING, CHARGED, or BATTERY
     static byte get_charge_state();
 
     

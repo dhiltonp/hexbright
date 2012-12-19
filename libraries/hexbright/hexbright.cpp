@@ -90,7 +90,7 @@ void hexbright::update() {
   unsigned long time;
   do {
     time = millis();
-  } while (time-last_time <= ms_delay);
+  } while (time-last_time < ms_delay);
 
 
   // loop 200? 60? times per second?
