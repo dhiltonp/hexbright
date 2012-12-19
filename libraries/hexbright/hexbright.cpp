@@ -90,7 +90,7 @@ void hexbright::update() {
   unsigned long time;
   do {
     time = millis();
-  } while (time-last_time < ms_delay);
+  }i while (time-last_time < ms_delay);
 
 
   // loop 200? 60? times per second?
@@ -207,8 +207,8 @@ void hexbright::set_light_level(unsigned long level) {
     Serial.println(level);
   }
 #endif
-  //pinMode(DPIN_PWR, OUTPUT);
-  //digitalWrite(DPIN_PWR, HIGH);*/
+  pinMode(DPIN_PWR, OUTPUT);
+  digitalWrite(DPIN_PWR, HIGH);
   if(level == 0) {
     digitalWrite(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
@@ -394,11 +394,11 @@ void hexbright::adjust_leds() {
   if(DEBUG==DEBUG_BUTTON) {
     if(green_time>0) {
       Serial.print("green countdown: ");
-      Serial.println(green_time);
+      Serial.println(green_time*ms_delay);
     }
     if(red_time>0) {
       Serial.print("red countdown: ");
-      Serial.println(red_time);
+      Serial.println(red_time*ms_delay);
     }
   }
 #endif
@@ -449,7 +449,7 @@ void hexbright::read_button() {
 #ifdef DEBUG
    if(DEBUG==DEBUG_BUTTON)
       Serial.print("time_held: ");
-      Serial.println(time_held);
+      Serial.println(time_held*ms_delay);
 #endif
     time_held = 0; 
   } else {
