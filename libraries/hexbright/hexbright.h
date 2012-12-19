@@ -2,10 +2,29 @@
 #include <Arduino.h>
 
 
+// debugging related definitions
+//#define DEBUG 2
+// Some debug modes set the light.  Your control code may reset it.
+#define DEBUG_LOOP 1 // main loop
+#define DEBUG_LIGHT 2 // Light control
+#define DEBUG_TEMP 3  // temperature safety
+#define DEBUG_BUTTON 4 // button presses/rear led
+#define DEBUG_ACCEL 5 // accelerometer
+#define DEBUG_NUMBER 6 // number printing utility
 
-// key points on the light scale
-#define MAX_LIGHT_LEVEL 1000
-#define MAX_LOW_LEVEL 385
+
+#ifdef DEBUG
+#define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
+#else
+#define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
+#endif
+
+
+///////////////////////////////////
+// key points on the light scale //
+///////////////////////////////////
+#define MAX_LEVEL 1000
+#define MAX_LOW_LEVEL 500
 #define CURRENT_LEVEL -1
 
 #define NOW 1
@@ -26,27 +45,32 @@
 
 class hexbright {
   public: 
-    // init hardware.
     // ms_delay is the time update will try to wait between runs.
     // the point of ms_delay is to provide regular update speeds,
     // so if code takes longer to execute from one run to the next,
     // the actual interface doesn't change (button click duration,
     // brightness changes). Set this from 5-30. very low is generally
     // fine (or great), BUT if you do any printing, the actual delay
-    // will be greater than the value you set.
-
-    hexbright(int ms_delay);
+    // may be greater than the value you set.
+    hexbright(int update_delay_ms);
+  
+    // init hardware.
+    // put this in your setup().
+    static void init_hardware();
     
-    // Put update in your loop().  update() will wait until at least
-    //  ms_delay have passed since the previous execution.
+    // Put update in your loop().  It will block until update_delay has passed.
     static void update();
 
-    // turn off the hexbright
+    // turn off the hexbright.
+    // only turns off light when under USB power.  As such, you may want to re-initialize 
+    // your variables before a shutdown.
     static void shutdown();
 
 
     // go from start_level to end_level over updates (updates*ms_delay) = ms
-    // level is from 0-1000.  The linear scaling algorithm is a Work in progress.
+    // level is from 0-1000. 
+    // 0 = no light, 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
+    // start_level can be CURRENT_LEVEL
     static void set_light(int start_level, int end_level, int updates);
     // get light level (before overheat protection adjustment)
     static int get_light_level();
@@ -108,3 +132,5 @@ class hexbright {
     static void enable_accelerometer();
     static void disable_accelerometer();
 };
+
+

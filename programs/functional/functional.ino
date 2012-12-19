@@ -27,7 +27,6 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-
 #include <hexbright.h>
 
 #include <Wire.h>
@@ -41,31 +40,35 @@ either expressed or implied, of the FreeBSD Project.
 
 int mode = 0;
 
-//creating a hexbright object initializes the hardware
+
 hexbright hb(LOOP_DELAY);
-void setup() {} 
+
+void setup() {
+  hb.init_hardware();
+} 
 
 void loop() {
   hb.update();
-  static int brightness = 0;
-  
+  static int brightness_level = 4;
+
   //// Button actions to recognize, one-time actions to take as a result
   if(hb.button_released()) {
     if(hb.button_held()<1) {
       // ignore, could be a bounce
     } else if(hb.button_held()<300/LOOP_DELAY) { //<300 milliseconds
       mode = CYCLE_MODE;
-      brightness = (brightness + 250) % 1250; // (0/250/500/750/1000)
-      brightness = brightness ? brightness : 1; // if 0, set to 1 to allow a delayed shutdown (so we can finish printing)
-      hb.set_light(CURRENT_LEVEL, brightness, 150/LOOP_DELAY);
+      int levels[] = {1,250,500,750,1000};
+      brightness_level = (brightness_level+1)%5;
+      hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150/LOOP_DELAY);
     } else if (hb.button_held() < 700/LOOP_DELAY) {
       mode = BLINKY_MODE;
     }
   }
   if(hb.button_held()>700/LOOP_DELAY) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
     mode = OFF_MODE;
-    brightness = 0;
-    hb.set_light(0,0,NOW); // go to brightness level 0 (shutdown) immediately.
+    // in case we are under usb power, reset state
+    hb.set_light(0, 0, 1);
+    brightness_level = 4;
   }
 
 
@@ -73,20 +76,16 @@ void loop() {
   if(mode == BLINKY_MODE) { // just blink - fade over 120 milliseconds, wait for 480 ms, repeat.
     static int i = 0;
     if(!i) {
-      hb.set_light(MAX_LOW_LEVEL,1,120/LOOP_DELAY);
+      hb.set_light(MAX_LOW_LEVEL,0,120/LOOP_DELAY);
       i=600/LOOP_DELAY;
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
     if(!hb.printing_number()) {
-        hb.print_number(hb.get_fahrenheit());
-      if(brightness==1) { // turn off after one more print
-        brightness--;
-      } else if (!brightness) {
-        hb.set_light(0, 0, NOW);
-      }
+      hb.print_number(hb.get_fahrenheit());
     }
-  } else if (mode == OFF_MODE) { // can only occur when under USB power.
+  } else if (mode == OFF_MODE) { // charging, or turning off
+    hb.shutdown();
     if(hb.get_charge_state()==CHARGED) {
       // always runs = always on (the last parameter could be any positive value)
       hb.set_led_state(GLED, LED_ON, 1); 

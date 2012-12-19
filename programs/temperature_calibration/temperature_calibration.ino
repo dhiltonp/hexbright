@@ -33,7 +33,9 @@ either expressed or implied, of the FreeBSD Project.
 
 hexbright hb(5);
 
-void setup() {}
+void setup() {
+  hb.init_hardware();
+}
 
 void loop() {
   hb.update();

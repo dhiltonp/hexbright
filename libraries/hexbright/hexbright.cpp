@@ -39,22 +39,6 @@ either expressed or implied, of the FreeBSD Project.
 #define APIN_TEMP 0
 #define APIN_CHARGE 3
 
-//#define DEBUG 1
-#define DEBUG_LOOP 1 // main loop
-#define DEBUG_LIGHT 2 // Light control
-#define DEBUG_TEMP 3  // temperature safety
-#define DEBUG_BUTTON 4 // button presses/rear led
-#define DEBUG_ACCEL 5 // accelerometer
-#define DEBUG_NUMBER 6 // number printing utility
-
-
-#ifdef DEBUG
-#define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
-#else
-#define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
-#endif
-
-
 
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
@@ -64,6 +48,10 @@ int ms_delay;
 unsigned long last_time;
 
 hexbright::hexbright(int update_delay_ms) {
+  ms_delay = update_delay_ms;
+}
+
+void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
   // into USB, or the user is pressing the power button.
   pinMode(DPIN_PWR, INPUT);
@@ -87,16 +75,14 @@ hexbright::hexbright(int update_delay_ms) {
     // do a full light range sweep, (printing all light intensity info)
     set_light(0,1000,1000);
   } else if (DEBUG==DEBUG_TEMP) {
-    // turn up the heat!
-    set_light(0,1000,1);
+    set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
     // note the use of TIME_MS/ms_delay.
-    set_light(0,1000,2500/ms_delay);
+    set_light(0, MAX_LEVEL, 2500/ms_delay);
   }
 #endif
   
   last_time = millis();
-  ms_delay = update_delay_ms;
 }
 
 
@@ -104,7 +90,7 @@ void hexbright::update() {
   unsigned long time;
   do {
     time = millis();
-  } while (time-last_time < ms_delay);
+  } while (time-last_time <= ms_delay);
 
 
   // loop 200? 60? times per second?
@@ -145,8 +131,8 @@ void hexbright::update() {
 void hexbright::shutdown() {
   pinMode(DPIN_PWR, OUTPUT);
   digitalWrite(DPIN_PWR, LOW);
-  //  digitalWrite(DPIN_DRV_MODE, LOW);
-  //  digitalWrite(DPIN_DRV_EN, LOW);
+  digitalWrite(DPIN_DRV_MODE, LOW);
+  digitalWrite(DPIN_DRV_EN, LOW);
 }
 
 
@@ -167,7 +153,7 @@ int end_light_level = 0;
 int change_duration = 0;
 int change_done  = 0;
 
-int safe_light_level = MAX_LIGHT_LEVEL;
+int safe_light_level = MAX_LEVEL;
 
 
 void hexbright::set_light(int start_level, int end_level, int updates) {
@@ -193,7 +179,10 @@ void hexbright::set_light(int start_level, int end_level, int updates) {
 }
 
 int hexbright::get_light_level() {
-  return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level;
+  if(change_done>=change_duration)
+    return end_light_level;
+  else 
+    return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level; 
 }
 
 int hexbright::get_safe_light_level() {
@@ -214,15 +203,17 @@ void hexbright::set_light_level(unsigned long level) {
 
 #ifdef DEBUG
   if (DEBUG == DEBUG_LIGHT) {
-    Serial.print("Power/MODE: ");
-    Serial.print(light_power);
-    Serial.print("/");
-    Serial.println(mode);
+    Serial.print("light level: ");
+    Serial.println(level);
   }
 #endif
-  //  pinMode(DPIN_PWR, OUTPUT);
-  //  digitalWrite(DPIN_PWR, HIGH);
-  if(level<=500) {
+  //pinMode(DPIN_PWR, OUTPUT);
+  //digitalWrite(DPIN_PWR, HIGH);*/
+  if(level == 0) {
+    digitalWrite(DPIN_DRV_MODE, LOW);
+    analogWrite(DPIN_DRV_EN, 0);
+  }
+  else if(level<=500) {
     digitalWrite(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
   } else {
@@ -232,25 +223,12 @@ void hexbright::set_light_level(unsigned long level) {
   }  
 }
 
-boolean high_output_mode = false;
-
 void hexbright::adjust_light() {
   // sets actual light level, altering value to be perceptually linear, based on steven's area brightness (cube root)
   if(change_done<=change_duration) {
     int light_level = hexbright::get_safe_light_level();
-    
-    if(!light_level) {
-#ifdef DEBUG
-      if(DEBUG==DEBUG_LIGHT) {
-        Serial.println("Light level low, turning off");
-      }
-#endif
-    } else {
-      // light_power has some issues with linearity when switching between power modes, but works ok
-      float light_power = pow(light_level, 3)/227000+3;
-      // turn on/off?
-      set_light_level(light_level);
-    }
+    set_light_level(light_level);
+
     change_done++;
   }
 }
@@ -264,7 +242,7 @@ void hexbright::overheat_protection() {
   
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
-  safe_light_level = safe_light_level > MAX_LIGHT_LEVEL ? MAX_LIGHT_LEVEL : safe_light_level;
+  safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
   safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
 #ifdef DEBUG
   if(DEBUG==DEBUG_TEMP) {
@@ -290,7 +268,7 @@ void hexbright::overheat_protection() {
 #endif
 
   // if safe_light_level has changed, guarantee a light adjustment:
-  if(safe_light_level < MAX_LIGHT_LEVEL) {
+  if(safe_light_level < MAX_LEVEL) {
 #ifdef DEBUG
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
