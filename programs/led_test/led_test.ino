@@ -21,7 +21,8 @@ void loop() {
 //      Serial.println(i);
 //      hb.set_led(RLED, 30,0);
 //      hb.set_led(RLED, 1,1);
-      hb.set_led(RLED, 100, 1);
+//      hb.set_led(RLED, 100, 1);
+      hb.set_led(RLED, 100);
     }
   }
 
