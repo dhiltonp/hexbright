@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // In development, not well tested.
-//#define ACCELEROMETER
+#define ACCELEROMETER
 #ifdef ACCELEROMETER
 #define DEBUG 0 // force some debug mode to enable printing
 #define DPIN_ACC_INT 3
@@ -173,11 +173,19 @@ class hexbright {
     // accepts things like ACC_REG_TILT
     static byte read_accelerometer(byte acc_reg);
 
-    static int dot_product();
-    static void print_vector(); // and dot product
+    static void print_accelerometer();
+
+    static double get_dp();
+    static double* get_axes_rotation();
+    static double get_angle_change(); // in radians
 
   private:
+    static double dot_product();
+    static double sqrt_sqrsum(int vector);
+
     static int convert_axis_number(byte value);
+    static void print_vector(int vector);
+
     static void enable_accelerometer();
     static void disable_accelerometer();
   public:

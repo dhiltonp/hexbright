@@ -460,29 +460,68 @@ boolean using_accelerometer = false;
 int vectors[2][3] = {{0,0,0},{0,0,0}};
 int vector=0;
 
-void hexbright::print_vector() {
+double dp = 0;
+double angle_change = 0;
+double axes_rotation[] = {0,0,0};
+
+
+double hexbright::get_angle_change() {
+  return angle_change;
+}
+
+double hexbright::get_dp() {
+  return dp;
+}
+
+double* hexbright::get_axes_rotation() {
+  return axes_rotation;
+}
+
+
+void hexbright::print_vector(int vector) {
   for(int i=0; i<3; i++) {
     Serial.print(vectors[vector][i]); 
     Serial.print("/");
   }
-  Serial.println(dot_product());
+}
+void hexbright::print_accelerometer() {
+   //  print_vector(0);
+   //  print_vector(1);
+  for(int i=0; i<3; i++) {
+    Serial.print(axes_rotation[i]); 
+    Serial.print("/");
+  }
+  Serial.print(angle_change*(180/3.14159));
+  Serial.println(" (degrees)");
+  Serial.print("Dp: ");
+  Serial.println(dp);
+
+
 }
 
-int hexbright::dot_product() {
+double hexbright::dot_product() {
   int sum = 0;
   for(int i=0;i<3;i++) {
     sum+=vectors[0][i]*vectors[1][i];
   } 
-  return sum;
+  return sum/(21.3*21.3); // convert to Gs (datasheet appendix C)
 }
 
 int hexbright::convert_axis_number(byte value) {
   if((value>>7)%2) { // Alert bit set, invalid data...
     Serial.println("Invalid data, returning 0");
-    return 0;
+    return 100; // out of range
   }
   int val = value<<10;
   return val>>10;
+}
+
+double hexbright::sqrt_sqrsum(int vector) {
+  int result = 0;
+  for(int i=0; i<3;i++) {
+   result += vectors[vector][i]*vectors[vector][i];
+  }
+  return sqrt(result/(21.3*21.3)); // convert to Gs (datasheet appendix C)
 }
 
 void hexbright::read_accelerometer_vector() {
@@ -493,12 +532,32 @@ void hexbright::read_accelerometer_vector() {
     Wire.endTransmission(false);
     Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
     for(int i=0; i<3; i++) {//read into our vector
+      // TODO: check for number being invalid
       vectors[vector][i]=convert_axis_number(Wire.read());
     }
   } else {
     for(int i=0; i<3; i++) {//read into x, then y, then z
       vectors[vector][i]=0;
     }
+  }
+
+  // calculate Gs
+  dp = dot_product();
+  //  gs = 
+
+  // calculate angle change
+  // equation 45 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+  double sqrt_sqrsum_vectors = sqrt_sqrsum(0)*sqrt_sqrsum(1);
+  angle_change = acos(dp/sqrt_sqrsum_vectors);
+
+  // calculate instantaneous rotation around axes
+  // equation 47 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+  for(int i=0; i<3; i++) {
+    axes_rotation[i] = (vectors[vector][(i+1)%2]*vectors[(vector+1)%2][(i+2)%2] \
+                        - vectors[vector][(i+2)%2]*vectors[(vector+1)%2][(i+1)%2]);
+    axes_rotation[i] /= 21.3; // convert to Gs (datasheet appendix C);
+    axes_rotation[i] /= sqrt_sqrsum_vectors;
+    axes_rotation[i] /= sin(angle_change);
   }
 }
 

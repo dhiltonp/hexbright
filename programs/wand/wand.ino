@@ -24,12 +24,10 @@ void loop() {
   
   if(mode==WAND_MODE) {
     // sample rate is 120hz, so every 8 ms or so we get a new reading.
-    hb.read_accelerometer_vector();
-    //hb.print_vector(); // and dot product
+//    hb.print_accelerometer(); // and dot product, cos_alpha
     // we will be 120/10th of the way to the new brightness the next time we come through.
-    //  in order words, to get max brightness, acceleration must be maintained over time.
-    // dot_product can be from 0 to 3072, 400 is about 1G);
-    hb.set_light(CURRENT_LEVEL, abs(hb.dot_product()-400)/3, 120); 
+    // dp is in Gs, 1 = gravity
+    hb.set_light(CURRENT_LEVEL, abs(hb.get_dp()-1)*500, 120); 
   } else if (mode==OFF_MODE) {
     hb.shutdown(); 
     if(hb.get_charge_state()==CHARGED) {
