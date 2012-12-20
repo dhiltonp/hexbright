@@ -31,6 +31,22 @@ either expressed or implied, of the FreeBSD Project.
 #include <Arduino.h>
 
 
+// In development, not well tested.
+//#define ACCELEROMETER
+#ifdef ACCELEROMETER
+#define DEBUG 0 // force some debug mode to enable printing
+#define DPIN_ACC_INT 3
+
+#define ACC_ADDRESS             0x4C
+#define ACC_REG_XOUT            0
+#define ACC_REG_YOUT            1
+#define ACC_REG_ZOUT            2
+#define ACC_REG_TILT            3
+#define ACC_REG_INTS            6
+#define ACC_REG_MODE            7
+#endif
+
+
 // debugging related definitions
 //#define DEBUG 4
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
@@ -41,6 +57,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_ACCEL 5 // accelerometer
 #define DEBUG_NUMBER 6 // number printing utility
 #define DEBUG_CHARGE 7 // charge state
+
 
 
 #ifdef DEBUG
@@ -147,7 +164,26 @@ class hexbright {
     // currently printing a number
     static boolean printing_number();
 
- private: 
+#ifdef ACCELEROMETER
+    // Accelerometer (in development)
+    // good documentation:
+    // http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+    // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
+    static void read_accelerometer_vector();
+    // accepts things like ACC_REG_TILT
+    static byte read_accelerometer(byte acc_reg);
+
+    static int dot_product();
+    static void print_vector(); // and dot product
+
+  private:
+    static int convert_axis_number(byte value);
+    static void enable_accelerometer();
+    static void disable_accelerometer();
+  public:
+#endif
+
+  private: 
     static void adjust_light();
     static void set_light_level(unsigned long level);
     static void overheat_protection();
@@ -162,10 +198,6 @@ class hexbright {
     static void read_thermal_sensor();
 
     static void read_button();
-
-    static void read_accelerometer();
-    static void enable_accelerometer();
-    static void disable_accelerometer();
 };
 
 

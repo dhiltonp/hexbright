@@ -63,8 +63,10 @@ void hexbright::init_hardware() {
   pinMode(DPIN_DRV_EN, OUTPUT);
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
-  
+
+#ifdef ACCELEROMETER
   enable_accelerometer();
+#endif
   
 #ifdef DEBUG
   // Initialize serial busses
@@ -81,7 +83,6 @@ void hexbright::init_hardware() {
     set_light(0, MAX_LEVEL, 2500/ms_delay);
   }
 #endif
-  
   last_time = millis();
 }
 
@@ -119,7 +120,9 @@ void hexbright::update() {
   //run overheat protection, time display, track battery usage
   read_button();
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
-  read_accelerometer();
+#ifdef ACCELEROMETER
+  read_accelerometer_vector();
+#endif
   overheat_protection();    
   update_number();
   
@@ -438,7 +441,10 @@ void hexbright::read_button() {
 ////////////////ACCELEROMETER//////////////////
 ///////////////////////////////////////////////
 
-// return degrees of movement
+#ifdef ACCELEROMETER
+
+// return degrees of movement?
+// Possible things to work with:
 //MOVE_TYPE, value returned from a successful detect_movement
 #define ACCEL_NONE   0 // nothing
 #define ACCEL_TWIST  1 // return degrees - light axis remains constant
@@ -449,50 +455,95 @@ void hexbright::read_button() {
 boolean using_accelerometer = false;
 
 
-#define DPIN_ACC_INT 3
-
-#define ACC_ADDRESS             0x4C
-#define ACC_REG_XOUT            0
-#define ACC_REG_YOUT            1
-#define ACC_REG_ZOUT            2
-#define ACC_REG_TILT            3
-#define ACC_REG_INTS            6
-#define ACC_REG_MODE            7
 
 
-void hexbright::read_accelerometer() {
-  
-  byte tapped = 0, shaked = 0;
-  if (!digitalRead(DPIN_ACC_INT))
-  {
-    Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(ACC_REG_TILT);
-    Wire.endTransmission(false);       // End, but do not stop!
-    Wire.requestFrom(ACC_ADDRESS, 1);  // This one stops.
-    byte tilt = Wire.read();
-    
-    static int i = 0; 
-    if(!i) {
-      tapped = !!(tilt & 0x20);
-      shaked = !!(tilt & 0x80);
-      Serial.println(tilt);  
-      if (tapped) Serial.println("Tap!");
-      if (shaked) Serial.println("Shake!");
-      
-      i=10;
-    }
-    i--;
-  } 
+int vectors[2][3] = {{0,0,0},{0,0,0}};
+int vector=0;
+
+void hexbright::print_vector() {
+  for(int i=0; i<3; i++) {
+    Serial.print(vectors[vector][i]); 
+    Serial.print("/");
+  }
+  Serial.println(dot_product());
 }
 
+int hexbright::dot_product() {
+  int sum = 0;
+  for(int i=0;i<3;i++) {
+    sum+=vectors[0][i]*vectors[1][i];
+  } 
+  return sum;
+}
+
+int hexbright::convert_axis_number(byte value) {
+  if((value>>7)%2) { // Alert bit set, invalid data...
+    Serial.println("Invalid data, returning 0");
+    return 0;
+  }
+  int val = value<<10;
+  return val>>10;
+}
+
+void hexbright::read_accelerometer_vector() {
+  vector = (vector+1)%2;
+  if (!digitalRead(DPIN_ACC_INT)) {
+    Wire.beginTransmission(ACC_ADDRESS);
+    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
+    Wire.endTransmission(false);
+    Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
+    for(int i=0; i<3; i++) {//read into our vector
+      vectors[vector][i]=convert_axis_number(Wire.read());
+    }
+  } else {
+    for(int i=0; i<3; i++) {//read into x, then y, then z
+      vectors[vector][i]=0;
+    }
+  }
+}
+
+byte hexbright::read_accelerometer(byte acc_reg) {
+  if (!digitalRead(DPIN_ACC_INT)) {
+    Wire.beginTransmission(ACC_ADDRESS);
+    Wire.write(acc_reg);
+    Wire.endTransmission(false);       // End, but do not stop!
+    Wire.requestFrom(ACC_ADDRESS, 1);  
+    return Wire.read();
+  }
+  return 0;
+}
+
+
 void hexbright::enable_accelerometer() {
-  pinMode(DPIN_ACC_INT,  INPUT);
-  digitalWrite(DPIN_ACC_INT,  HIGH);
+  
+  // Configure accelerometer
+  byte config[] = {
+    ACC_REG_INTS,  // First register (see next line)
+    0xE4,  // Interrupts: shakes, taps
+    0x00,  // Mode: not enabled yet
+    0x00,  // Sample rate: 120 Hz
+    0x0F,  // Tap threshold
+    0x05   // Tap debounce samples
+  };
+  Wire.beginTransmission(ACC_ADDRESS);
+  Wire.write(config, sizeof(config));
+  Wire.endTransmission();
+
+  // Enable accelerometer
+  byte enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
+  Wire.beginTransmission(ACC_ADDRESS);
+  Wire.write(enable, sizeof(enable));
+  Wire.endTransmission();
+ 
+ // pinMode(DPIN_ACC_INT,  INPUT);
+ // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
 
 void hexbright::disable_accelerometer() {
   
 }
+
+#endif
 
 ///////////////////////////////////////////////
 //////////////////UTILITIES////////////////////
