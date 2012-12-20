@@ -32,8 +32,6 @@ either expressed or implied, of the FreeBSD Project.
 #include <Wire.h>
 
 // number of milliseconds between updates
-#define LOOP_DELAY 5
-
 #define OFF_MODE 0
 #define BLINKY_MODE 1
 #define CYCLE_MODE 2
@@ -41,7 +39,8 @@ either expressed or implied, of the FreeBSD Project.
 int mode = 0;
 
 
-hexbright hb(LOOP_DELAY);
+#define MS 5
+hexbright hb(MS);
 
 void setup() {
   hb.init_hardware();
@@ -55,16 +54,16 @@ void loop() {
   if(hb.button_released()) {
     if(hb.button_held()<1) {
       // ignore, could be a bounce
-    } else if(hb.button_held()<300/LOOP_DELAY) { //<300 milliseconds
+    } else if(hb.button_held()<300) { //<300 milliseconds
       mode = CYCLE_MODE;
       int levels[] = {1,250,500,750,1000};
       brightness_level = (brightness_level+1)%5;
-      hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150/LOOP_DELAY);
-    } else if (hb.button_held() < 700/LOOP_DELAY) {
+      hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150);
+    } else if (hb.button_held() < 700) {
       mode = BLINKY_MODE;
     }
   }
-  if(hb.button_held()>700/LOOP_DELAY) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
+  if(hb.button_held()>700) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
     mode = OFF_MODE;
     // in case we are under usb power, reset state
     hb.set_light(0, 0, 1);
@@ -73,11 +72,11 @@ void loop() {
 
 
   //// Actions over time for a given mode
-  if(mode == BLINKY_MODE) { // just blink - fade over 120 milliseconds, wait for 480 ms, repeat.
+  if(mode == BLINKY_MODE) { // just blink
     static int i = 0;
     if(!i) {
-      hb.set_light(MAX_LOW_LEVEL,0,120/LOOP_DELAY);
-      i=600/LOOP_DELAY;
+      hb.set_light(MAX_LOW_LEVEL,0,MS); // because time = MS, we'll only hit the endpoints
+      i=400/MS;
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
@@ -89,9 +88,9 @@ void loop() {
     if(!hb.printing_number()) {
       if(hb.get_charge_state()==CHARGED) {
         // always runs = always on (the last parameter could be any positive value)
-        hb.set_led_state(GLED, LED_ON, 1); 
+        hb.set_led(GLED, 1); 
       } else if (hb.get_charge_state()==CHARGING && hb.get_led_state(GLED)==LED_OFF) {
-        hb.set_led_state(GLED, LED_ON, 300/LOOP_DELAY);
+        hb.set_led(GLED, 200,200);
       }
     }
   }

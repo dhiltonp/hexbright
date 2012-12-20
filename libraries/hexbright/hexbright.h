@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-//#define DEBUG 7
+//#define DEBUG 4
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_LOOP 1 // main loop
 #define DEBUG_LIGHT 2 // Light control
@@ -77,11 +77,13 @@ class hexbright {
   public: 
     // ms_delay is the time update will try to wait between runs.
     // the point of ms_delay is to provide regular update speeds,
-    // so if code takes longer to execute from one run to the next,
-    // the actual interface doesn't change (button click duration,
-    // brightness changes). Set this from 5-30. very low is generally
-    // fine (or great), BUT if you do any printing, the actual delay
-    // may be greater than the value you set.
+    //   so if code takes longer to execute from one run to the next,
+    //   the actual interface doesn't change (button click duration,
+    //   brightness changes). Set this from 5-30. very low is generally
+    //   fine (or great), BUT if you do any printing, the actual delay
+    //   may be greater than the value you set.
+    // Don't try to use times smaller than this value in your code.
+    //   (setting the on_time for less than update_delay_ms = 0)
     hexbright(int update_delay_ms);
   
     // init hardware.
@@ -97,11 +99,11 @@ class hexbright {
     static void shutdown();
 
 
-    // go from start_level to end_level over updates (updates*ms_delay) = ms
+    // go from start_level to end_level over time (in milliseconds)
     // level is from 0-1000. 
     // 0 = no light, 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
     // start_level can be CURRENT_LEVEL
-    static void set_light(int start_level, int end_level, int updates);
+    static void set_light(int start_level, int end_level, int time);
     // get light level (before overheat protection adjustment)
     static int get_light_level();
     // get light level (after overheat protection adjustment)
@@ -116,10 +118,11 @@ class hexbright {
     static boolean button_released();
     
     // led = GLED or RLED,
-    // state = LED_ON or LED_OFF.  LED_WAIT cannot be directly set.
-    // updates = updates before led goes to LED_WAIT state (where it remains for 100 ms)
+    // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
+    // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
+    //   Defaults to 100 ms.
     // While the RLED is on, the rear button cannot be read.
-    static void set_led_state(byte led, byte state, int updates);
+    static void set_led(byte led, int on_time, int wait_time=100);
     // led = GLED or RLED 
     // returns LED_OFF, LED_WAIT, or LED_ON
     static byte get_led_state(byte led);
