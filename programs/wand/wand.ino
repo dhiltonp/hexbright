@@ -3,7 +3,7 @@
 // uncomment #ACCELEROMETER in hexbright.h
 #include <hexbright.h>
 
-hexbright hb(10);
+hexbright hb(18);
 
 void setup() {
   hb.init_hardware(); 
@@ -29,7 +29,6 @@ void loop() {
     
 
     // sample rate is 120hz, so every 8 ms or so we get a new reading.
-    hb.print_accelerometer(); // and dot product, cos_alpha
     // we will be 120/10th of the way to the new brightness the next time we come through.
     // dp is in Gs, 1 = gravity
 
@@ -45,8 +44,8 @@ void loop() {
       highest_level = 0;
     }
     last_dp = dp;*/
-    
-    if(hb.jab_detect()>1) {
+    if(hb.jab_detect()>.5) {
+      hb.print_accelerometer(); // and dot product, cos_alpha
       hb.set_light(MAX_LOW_LEVEL, 0, 300);  
     }
   } else if (mode==OFF_MODE) {

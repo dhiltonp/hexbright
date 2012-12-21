@@ -177,17 +177,20 @@ class hexbright {
     static void print_accelerometer();
 
     static double get_dp();
+    static double get_gs(); // Gs of acceleration
     static double* get_axes_rotation();
-    static double get_angle_change(); // in radians
+    // lots of noise < 5*.  Most noise is <10*
+    // noise varies partially based on sample rate.  120, noise <10*.  64, ~8?
+    static double get_angle_change(); 
 
     static double jab_detect(float sensitivity=1);
 
   private:
-    static double dot_product();
-    static double sqrt_sqrsum(int vector);
+    static double dot_product(int* vector1, int* vector2);
+    static double get_magnitude(int* vector);
 
     static int convert_axis_number(byte value);
-    static void print_vector(int vector);
+    static void print_vector(int* vector);
 
     static void enable_accelerometer();
     static void disable_accelerometer();

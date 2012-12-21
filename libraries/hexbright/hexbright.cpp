@@ -463,10 +463,13 @@ boolean using_accelerometer = false;
 
 
 
+int vectors[] = {0,0,0, 0,0,0};
+int* new_vector = vectors;
+int* old_vector = vectors+3;
+int zaxis[3] = {1,0,0};
 
-int vectors[2][3] = {{0,0,0},{0,0,0}};
-int vector=0;
 
+double magnitude = 0;
 double dp = 0;
 double angle_change = 0;
 double axes_rotation[] = {0,0,0};
@@ -484,43 +487,63 @@ double* hexbright::get_axes_rotation() {
   return axes_rotation;
 }
 
+double hexbright::get_gs() {
+  return magnitude;
+}
+
+
+
 double hexbright::jab_detect(float sensitivity) {
 #ifdef DEBUG
   if(DEBUG==DEBUG_ACCEL)
     Serial.println((int)sensitivity);
 #endif
+  //  if(abs(magnitude-1)>.2)
+  if(angle_change>15 && abs(magnitude-1)>.4)
+    return 1;
   return 0;
 }
 
 
-void hexbright::print_vector(int vector) {
+void hexbright::print_vector(int* vector) {
   for(int i=0; i<3; i++) {
-    Serial.print(vectors[vector][i]); 
+    Serial.print(vector[i]); 
     Serial.print("/");
   }
+  Serial.println("vector");
 }
 void hexbright::print_accelerometer() {
-  print_vector(vector);
-  //  print_vector(1);
+  print_vector(old_vector);
+  print_vector(new_vector);
   for(int i=0; i<3; i++) {
     Serial.print(axes_rotation[i]); 
     Serial.print("/");
   }
-  Serial.print(angle_change*(180/3.14159));
+  Serial.println("axes of rotation");
+  Serial.print(angle_change);
   Serial.println(" (degrees)");
+  Serial.print("Magnitude (acceleration in Gs): ");
+  Serial.println(magnitude);
   Serial.print("Dp: ");
   Serial.println(dp);
-
-
 }
 
-double hexbright::dot_product() {
+double hexbright::dot_product(int* vector1, int* vector2) {
   int sum = 0;
   for(int i=0;i<3;i++) {
-    sum+=vectors[0][i]*vectors[1][i];
+    sum+=vector1[i]*vector2[i];
   } 
   return sum/(21.3*21.3); // convert to Gs (datasheet appendix C)
 }
+
+double hexbright::get_magnitude(int* vector) {
+  int result = 0;
+  for(int i=0; i<3;i++) {
+   result += vector[i]*vector[i];
+  }
+  return sqrt(result/(21.3*21.3)); // convert to Gs (datasheet appendix C)
+}
+
 
 int hexbright::convert_axis_number(byte value) {
   if((value>>7)%2) { // Alert bit set, invalid data...
@@ -531,16 +554,12 @@ int hexbright::convert_axis_number(byte value) {
   return val>>10;
 }
 
-double hexbright::sqrt_sqrsum(int vector) {
-  int result = 0;
-  for(int i=0; i<3;i++) {
-   result += vectors[vector][i]*vectors[vector][i];
-  }
-  return sqrt(result/(21.3*21.3)); // convert to Gs (datasheet appendix C)
-}
-
 void hexbright::read_accelerometer_vector() {
-  vector = (vector+1)%2;
+  // swap first vector
+  int * tmp_vector = new_vector;
+  new_vector = old_vector;
+  old_vector = tmp_vector;
+
   if (!digitalRead(DPIN_ACC_INT)) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
@@ -548,32 +567,37 @@ void hexbright::read_accelerometer_vector() {
     Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
     for(int i=0; i<3; i++) {//read into our vector
       // TODO: check for number being invalid
-      vectors[vector][i]=convert_axis_number(Wire.read());
+      new_vector[i]=convert_axis_number(Wire.read());
     }
   } else {
     for(int i=0; i<3; i++) {//read into x, then y, then z
-      vectors[vector][i]=0;
+      new_vector[i]=0;
     }
   }
 
   // calculate Gs
-  dp = dot_product();
+  dp = dot_product(old_vector, new_vector);
   //  gs = 
 
   // calculate angle change
   // equation 45 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-  double sqrt_sqrsum_vectors = sqrt_sqrsum(0)*sqrt_sqrsum(1);
-  angle_change = acos(dp/sqrt_sqrsum_vectors);
+  double old_magnitude = magnitude;
+  magnitude = get_magnitude(new_vector);
+  angle_change = acos(dp/magnitude*old_magnitude);
 
   // calculate instantaneous rotation around axes
   // equation 47 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
   for(int i=0; i<3; i++) {
-    axes_rotation[i] = (vectors[vector][(i+1)%2]*vectors[(vector+1)%2][(i+2)%2] \
-                        - vectors[vector][(i+2)%2]*vectors[(vector+1)%2][(i+1)%2]);
+    axes_rotation[i] = (new_vector[(i+1)%3]*old_vector[(i+2)%3] \
+                        - new_vector[(i+2)%3]*old_vector[(i+1)%3]);
     axes_rotation[i] /= 21.3; // convert to Gs (datasheet appendix C);
-    axes_rotation[i] /= sqrt_sqrsum_vectors;
-    axes_rotation[i] /= asin(angle_change);
+    axes_rotation[i] /= magnitude*old_magnitude;
+    //    axes_rotation[i] /= asin(angle_change);
   }
+
+  // change angle_change from radians to degrees
+  angle_change *= 180/3.14159;  
+
 }
 
 byte hexbright::read_accelerometer(byte acc_reg) {
