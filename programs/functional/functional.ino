@@ -39,7 +39,7 @@ either expressed or implied, of the FreeBSD Project.
 int mode = 0;
 
 
-#define MS 5
+#define MS 10
 hexbright hb(MS);
 
 void setup() {
