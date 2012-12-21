@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // In development, not well tested.
-#define ACCELEROMETER
+//#define ACCELEROMETER
 #ifdef ACCELEROMETER
 #define DEBUG 0 // force some debug mode to enable printing
 #define DPIN_ACC_INT 3
