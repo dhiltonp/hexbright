@@ -463,11 +463,10 @@ boolean using_accelerometer = false;
 
 
 
-int vectors[] = {0,0,0, 0,0,0};
-int* new_vector = vectors;
-int* old_vector = vectors+3;
-int light_axis[3] = {0,21,0};
-
+double vectors[] = {0,0,0, 0,0,0};
+double* new_vector = vectors;
+double* old_vector = vectors+3;
+double down[3] = {0,0,0};
 
 double old_magnitude = 0;
 double new_magnitude = 0;
@@ -492,32 +491,40 @@ double hexbright::get_gs() {
   return new_magnitude;
 }
 
+void hexbright::normalize(double* out_vector, double* in_vector, double magnitude) {
+  for(int i=0; i<3; i++) {
+    out_vector[i] = in_vector[i]/magnitude;
+  }  
+}
 
 
 double hexbright::jab_detect(float sensitivity) {
 #ifdef DEBUG
-  if(DEBUG==DEBUG_ACCEL)
-    Serial.println((int)sensitivity);
+  //  if(DEBUG==DEBUG_ACCEL)
+  //    Serial.println((int)sensitivity);
 #endif
-  int new_normalized[3] = {0,0,0};
-  for(int i=0; i<3; i++) {
-    new_normalized[i] = new_vector[i]/new_magnitude;
-  }
-  int old_normalized[3] = {0,0,0};
-  for(int i=0; i<3; i++) {
-    old_normalized[i] = old_vector[i]/old_magnitude;
-  }
-  //  if(abs(magnitude-1)>.2)
+  double new_normalized[3] = {0,0,0};
+  double old_normalized[3] = {0,0,0};
+  normalize(new_normalized, new_vector, new_magnitude);
+  normalize(old_normalized, old_vector, old_magnitude);
   
   //  if(abs(old_magnitude-1)>.3 && abs(new_magnitude-1)>.3) {
   if(abs(old_magnitude-new_magnitude)>.4) {
+#ifdef DEBUG
+    if(DEBUG==DEBUG_ACCEL) {
      Serial.println("magnitude passed");
      Serial.println(abs(dot_product(new_normalized, light_axis)));
      Serial.println(abs(dot_product(old_normalized, light_axis)));
+    }
+#endif
      if(abs(dot_product(new_normalized, light_axis))>.8 &&
         abs(dot_product(old_normalized, light_axis))>.8) {
+#ifdef DEBUG
+       if(DEBUG==DEBUG_ACCEL) {
         Serial.println("light_axis passed");
         Serial.println(new_vector[1]);
+       }
+#endif
         return new_vector[1]-20;
      }
   }
@@ -534,100 +541,124 @@ double hexbright::jab_detect(float sensitivity) {
   return 0;
 }
 
+double hexbright::angle_difference(double dot_product, double magnitude1, double magnitude2) {
+  double tmp = dot_product/(magnitude1*magnitude2);
+  if(tmp>.9999999) { // can't exeed 1, otherwise we get 0
+    tmp = .9999999;
+  }
+  return acos(tmp);
+}
 
-void hexbright::print_vector(int* vector) {
+double hexbright::difference_from_down() {
+  return 1-angle_difference(dot_product(light_axis, down), new_magnitude, 1)/3.14159;;
+}
+
+
+void hexbright::print_vector(double* vector, char* label) {
+#ifdef DEBUG
   for(int i=0; i<3; i++) {
     Serial.print(vector[i]); 
     Serial.print("/");
   }
-  Serial.println("vector");
+  Serial.println(label);
+#endif
 }
+
 void hexbright::print_accelerometer() {
-  print_vector(old_vector);
-  print_vector(new_vector);
-  for(int i=0; i<3; i++) {
-    Serial.print(axes_rotation[i]); 
-    Serial.print("/");
-  }
-  Serial.println("axes of rotation");
+#ifdef DEBUG // serial port is imported
+  print_vector(old_vector, "old vector");
+  print_vector(new_vector, "new vector");
+  print_vector(down, "down");
+  print_vector(axes_rotation, "axes rotation");
   Serial.print(angle_change);
   Serial.println(" (degrees)");
+  Serial.print(difference_from_down());
+  Serial.println(" (difference from down)");
   Serial.print("Magnitude (acceleration in Gs): ");
   Serial.println(new_magnitude);
   Serial.print("Dp: ");
   Serial.println(dp);
+#endif
 }
 
-double hexbright::dot_product(int* vector1, int* vector2) {
-  int sum = 0;
+double hexbright::dot_product(double* vector1, double* vector2) {
+  double sum = 0;
   for(int i=0;i<3;i++) {
     sum+=vector1[i]*vector2[i];
   } 
-  return sum/(21.3*21.3); // convert to Gs (datasheet appendix C)
+  return sum; // convert to Gs (datasheet appendix C)
 }
 
-double hexbright::get_magnitude(int* vector) {
-  int result = 0;
+double hexbright::get_magnitude(double* vector) {
+  double result = 0;
   for(int i=0; i<3;i++) {
    result += vector[i]*vector[i];
   }
-  return sqrt(result/(21.3*21.3)); // convert to Gs (datasheet appendix C)
+  return sqrt(result); // convert to Gs (datasheet appendix C)
 }
 
-
-int hexbright::convert_axis_number(byte value) {
-  if((value>>7)%2) { // Alert bit set, invalid data...
-    Serial.println("Invalid data, returning 0");
-    return 100; // out of range
+void hexbright::sum_vectors(double* out_vector, double* in_vector1, double* in_vector2) {
+  for(int i=0; i<3;i++) {
+    out_vector[i] = in_vector1[i]+in_vector2[i];
   }
-  int val = value<<10;
-  return val>>10;
 }
+
 
 void hexbright::read_accelerometer_vector() {
   // swap first vector
-  int * tmp_vector = new_vector;
+  double* tmp_vector = new_vector;
   new_vector = old_vector;
   old_vector = tmp_vector;
 
-  if (!digitalRead(DPIN_ACC_INT)) {
+  while(1) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
     Wire.endTransmission(false);
     Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
-    for(int i=0; i<3; i++) {//read into our vector
-      // TODO: check for number being invalid
-      new_vector[i]=convert_axis_number(Wire.read());
+    for(int i=0; i<3; i++) {
+      if (!Wire.available())
+        continue;
+      char tmp = Wire.read();
+      if(tmp & 0x40) // Bx1xxxxx, re-read per data sheet page 14
+        continue;
+      if(tmp & 0x20) // Bxx1xxxx, it's negative, extend the 6 bits to 8 bits
+        tmp |= 0xC0;
+      new_vector[i] = tmp/21.3; // convert to Gs (datasheet page 28)
     }
-  } else {
-    for(int i=0; i<3; i++) {//read into x, then y, then z
-      new_vector[i]=0;
-    }
+    break;
   }
 
-  // calculate Gs
-  dp = dot_product(old_vector, new_vector);
-  //  gs = 
+  // calculate Gs (magnitude)
+  old_magnitude = new_magnitude;
+  new_magnitude = get_magnitude(new_vector);
 
   // calculate angle change
   // equation 45 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-  old_magnitude = new_magnitude;
-  new_magnitude = get_magnitude(new_vector);
-  angle_change = acos(dp/new_magnitude*old_magnitude);
+  dp = dot_product(old_vector, new_vector);
+  angle_change = angle_difference(dp,
+                                  new_magnitude, old_magnitude);
 
   // calculate instantaneous rotation around axes
   // equation 47 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
   for(int i=0; i<3; i++) {
     axes_rotation[i] = (new_vector[(i+1)%3]*old_vector[(i+2)%3] \
                         - new_vector[(i+2)%3]*old_vector[(i+1)%3]);
-    axes_rotation[i] /= 21.3; // convert to Gs (datasheet appendix C);
     axes_rotation[i] /= new_magnitude*old_magnitude;
-    //    axes_rotation[i] /= asin(angle_change);
+    axes_rotation[i] /= asin(angle_change);
   }
+
 
   // change angle_change from radians to degrees
   angle_change *= 180/3.14159;  
 
+  // find down
+  if(new_magnitude-1<.1 && old_magnitude-1<.1 && // both readings have about 1G
+     dp>.9) { // and both point in the same direction
+    // update down
+    double tmp[3];
+    sum_vectors(down, new_vector, old_vector);
+    normalize(down, down, (new_magnitude+old_magnitude));
+  }
 }
 
 byte hexbright::read_accelerometer(byte acc_reg) {

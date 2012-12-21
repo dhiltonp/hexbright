@@ -32,9 +32,9 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // In development, not well tested.
-//#define ACCELEROMETER
+#define ACCELEROMETER
 #ifdef ACCELEROMETER
-#define DEBUG 0 // force some debug mode to enable printing
+#define DEBUG 0 // force debug mode to enable printing
 #define DPIN_ACC_INT 3
 
 #define ACC_ADDRESS             0x4C
@@ -176,6 +176,10 @@ class hexbright {
 
     static void print_accelerometer();
 
+    //returns the angle between straight down and 
+    static double angle_difference(double dot_product, double magnitude1, double magnitude2);
+    // returns 0 to 1. 0 == down, 1 == up.  Multiply by 180 to get degrees. 1==100% up
+    static double difference_from_down();
     static double get_dp();
     static double get_gs(); // Gs of acceleration
     static double* get_axes_rotation();
@@ -186,11 +190,13 @@ class hexbright {
     static double jab_detect(float sensitivity=1);
 
   private:
-    static double dot_product(int* vector1, int* vector2);
-    static double get_magnitude(int* vector);
+    static void normalize(double* out_vector, double* in_vector, double magnitude);
+    static void sum_vectors(double* out_vector, double* in_vector1, double* in_vector2);
+    static double dot_product(double* vector1, double* vector2);
+    static double get_magnitude(double* vector);
 
     static int convert_axis_number(byte value);
-    static void print_vector(int* vector);
+    static void print_vector(double* vector, char* label);
 
     static void enable_accelerometer();
     static void disable_accelerometer();
