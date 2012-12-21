@@ -41,10 +41,11 @@ double smoothed_difference = 0;
 
 void loop() {
   hb.update();
-  // take the average, 4 parts smoothed percent, 1 part new reading
+
   static double smoothed_difference = 0;
   Serial.println(smoothed_difference);
   Serial.println(hb.difference_from_down());
+  // take the average, 2 parts smoothed percent, 1 part new reading
   smoothed_difference = (smoothed_difference*2 + hb.difference_from_down())/3;
   int level = 2500*(smoothed_difference);
   level = level>1000 ? 1000 : level;
