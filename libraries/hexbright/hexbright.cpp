@@ -474,6 +474,8 @@ double dp = 0;
 double angle_change = 0;
 double axes_rotation[] = {0,0,0};
 
+double light_axis[3] = {0,1,0};
+
 
 double hexbright::get_angle_change() {
   return angle_change;
