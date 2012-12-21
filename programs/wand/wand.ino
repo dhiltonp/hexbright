@@ -29,22 +29,26 @@ void loop() {
     
 
     // sample rate is 120hz, so every 8 ms or so we get a new reading.
-//    hb.print_accelerometer(); // and dot product, cos_alpha
+    hb.print_accelerometer(); // and dot product, cos_alpha
     // we will be 120/10th of the way to the new brightness the next time we come through.
     // dp is in Gs, 1 = gravity
-    
-//    hb.set_light(CURRENT_LEVEL, abs(hb.get_dp()-1)*500, 120); 
-    if(dp-last_dp>1.1) {
+
+//    get brighter with vigorous movement    
+//    hb.set_light(CURRENT_LEVEL, abs(hb.get_dp()-1)*500, 120);
+
+//    track activity, when activity stops, flash at the highest activity intensity.
+/*    if(dp-last_dp>1.1) {
       highest_level = (dp-last_dp)*350;
       highest_level = highest_level>1000 ? 1000 : highest_level;
     } else if (highest_level) {
       hb.set_light(highest_level, 0, 300); 
       highest_level = 0;
     }
-    last_dp = dp;
+    last_dp = dp;*/
     
-    
-    
+    if(hb.jab_detect()>1) {
+      hb.set_light(MAX_LOW_LEVEL, 0, 300);  
+    }
   } else if (mode==OFF_MODE) {
     hb.shutdown(); 
     if(hb.get_charge_state()==CHARGED) {
