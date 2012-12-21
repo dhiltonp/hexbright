@@ -64,10 +64,6 @@ void hexbright::init_hardware() {
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
 
-#ifdef ACCELEROMETER
-  enable_accelerometer();
-#endif
-  
 #ifdef DEBUG
   // Initialize serial busses
   Serial.begin(9600);
@@ -83,6 +79,17 @@ void hexbright::init_hardware() {
     set_light(0, MAX_LEVEL, 2500/ms_delay);
   }
 #endif
+
+#ifdef ACCELEROMETER
+  if(ms_delay<9) {
+#ifdef DEBUG
+    Serial.println("Warning, ms_delay too low for accelerometer.  Adjusting to 9 ms.");
+#endif
+    ms_delay = 9;
+  }
+  enable_accelerometer();
+#endif
+  
   last_time = millis();
 }
 
@@ -477,6 +484,14 @@ double* hexbright::get_axes_rotation() {
   return axes_rotation;
 }
 
+double hexbright::jab_detect(float sensitivity) {
+#ifdef DEBUG
+  if(DEBUG==DEBUG_ACCEL)
+    Serial.println((int)sensitivity);
+#endif
+  return 0;
+}
+
 
 void hexbright::print_vector(int vector) {
   for(int i=0; i<3; i++) {
@@ -485,8 +500,8 @@ void hexbright::print_vector(int vector) {
   }
 }
 void hexbright::print_accelerometer() {
-   //  print_vector(0);
-   //  print_vector(1);
+  print_vector(vector);
+  //  print_vector(1);
   for(int i=0; i<3; i++) {
     Serial.print(axes_rotation[i]); 
     Serial.print("/");
@@ -557,7 +572,7 @@ void hexbright::read_accelerometer_vector() {
                         - vectors[vector][(i+2)%2]*vectors[(vector+1)%2][(i+1)%2]);
     axes_rotation[i] /= 21.3; // convert to Gs (datasheet appendix C);
     axes_rotation[i] /= sqrt_sqrsum_vectors;
-    axes_rotation[i] /= sin(angle_change);
+    axes_rotation[i] /= asin(angle_change);
   }
 }
 
@@ -574,13 +589,33 @@ byte hexbright::read_accelerometer(byte acc_reg) {
 
 
 void hexbright::enable_accelerometer() {
+  byte sample_rate = 6; //111
+  for(int i=0; i<=6; i++) {
+    if(1000/ms_delay> (1<<i)) {
+      //       1000/12000>1, leave sample_rate at 6
+      //       1000/200>1, sample_rate=5(110)
+      //       1000/200>2, sample_rate=4(101)
+      //       1000/200>4, sample_rate=3(100)
+      //       1000/200>8, sample_rate=3(011)
+      //       1000/200>16, sample_rate=3(010)
+      //       1000/200>32, sample_rate=3(001)
+      //       1000/200>64, sample_rate=3(111)
+      //       1000/200>128, sample_rate=3(111)
+      sample_rate = 6-i;
+    }
+  }
+#ifdef DEBUG
+  if(DEBUG==DEBUG_ACCEL)
+    Serial.println((int)sample_rate);
+#endif
+
   
   // Configure accelerometer
   byte config[] = {
     ACC_REG_INTS,  // First register (see next line)
     0xE4,  // Interrupts: shakes, taps
     0x00,  // Mode: not enabled yet
-    0x00,  // Sample rate: 120 Hz
+    sample_rate,  // Sample rate: 120 Hz (see datasheet page 19)
     0x0F,  // Tap threshold
     0x05   // Tap debounce samples
   };

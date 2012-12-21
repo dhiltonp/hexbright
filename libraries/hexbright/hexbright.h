@@ -99,6 +99,7 @@ class hexbright {
     //   brightness changes). Set this from 5-30. very low is generally
     //   fine (or great), BUT if you do any printing, the actual delay
     //   may be greater than the value you set.
+    //   Also, the minimum value when working with the accelerometer is 9. (1000/120)
     // Don't try to use times smaller than this value in your code.
     //   (setting the on_time for less than update_delay_ms = 0)
     hexbright(int update_delay_ms);
@@ -178,6 +179,8 @@ class hexbright {
     static double get_dp();
     static double* get_axes_rotation();
     static double get_angle_change(); // in radians
+
+    static double jab_detect(float sensitivity=1);
 
   private:
     static double dot_product();
