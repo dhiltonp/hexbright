@@ -176,20 +176,25 @@ class hexbright {
 
     static void print_accelerometer();
 
+    static boolean low_movement();
+    static boolean high_movement();
+
+
     //returns the angle between straight down and 
-    static double angle_difference(double dot_product, double magnitude1, double magnitude2);
-    // returns 0 to 1. 0 == down, 1 == up.  Multiply by 180 to get degrees. 1==100% up
+    // returns 0 to 100. 0 == down, 100% == up.  Multiply by 1.8 to get degrees.
+    // expect noise of about 10.
     static double difference_from_down();
     static double get_dp();
     static double get_gs(); // Gs of acceleration
     static double* get_axes_rotation();
     // lots of noise < 5*.  Most noise is <10*
     // noise varies partially based on sample rate.  120, noise <10*.  64, ~8?
-    static double get_angle_change(); 
+    static double get_angle_change();
 
     static double jab_detect(float sensitivity=1);
 
   private:
+    static double angle_difference(double dot_product, double magnitude1, double magnitude2);
     static void normalize(double* out_vector, double* in_vector, double magnitude);
     static void sum_vectors(double* out_vector, double* in_vector1, double* in_vector2);
     static double dot_product(double* vector1, double* vector2);

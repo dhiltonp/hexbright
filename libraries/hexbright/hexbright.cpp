@@ -552,7 +552,7 @@ double hexbright::angle_difference(double dot_product, double magnitude1, double
 }
 
 double hexbright::difference_from_down() {
-  return 1-angle_difference(dot_product(light_axis, down), new_magnitude, 1)/3.14159;;
+  return (1-angle_difference(dot_product(light_axis, down), new_magnitude, 1)/3.14159);
 }
 
 
@@ -661,6 +661,17 @@ void hexbright::read_accelerometer_vector() {
     sum_vectors(down, new_vector, old_vector);
     normalize(down, down, (new_magnitude+old_magnitude));
   }
+}
+
+boolean hexbright::low_movement() {
+  // low acceleration vectors, not much difference between vectors
+  return (new_magnitude-1<.1 && old_magnitude-1<.1 && dp>.9);   
+}
+
+boolean hexbright::high_movement() {
+  // low acceleration vectors, not much difference between vectors
+  //  we had low acceleration, now it's high
+  return (new_magnitude-1>.5);// && dp>.9);   
 }
 
 byte hexbright::read_accelerometer(byte acc_reg) {

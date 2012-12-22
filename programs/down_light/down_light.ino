@@ -31,24 +31,55 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <Wire.h>
 
-hexbright hb(10);
+hexbright hb(20);
 
 void setup() {
   hb.init_hardware();
-} 
+}
 
-double smoothed_difference = 0;
+int smoothed_difference = 0;
+
+#define OFF_MODE 0
+#define USE_MODE 1
+int mode = OFF_MODE;
 
 void loop() {
   hb.update();
 
-  static double smoothed_difference = 0;
-  Serial.println(smoothed_difference);
-  Serial.println(hb.difference_from_down());
-  // take the average, 2 parts smoothed percent, 1 part new reading
-  smoothed_difference = (smoothed_difference*2 + hb.difference_from_down())/3;
-  int level = 2500*(smoothed_difference);
-  level = level>1000 ? 1000 : level;
-  hb.set_light(CURRENT_LEVEL, 2500*(smoothed_difference),1);
+  if(hb.button_released() && hb.button_held()<300) {
+    mode = USE_MODE; 
+  } else if (hb.button_held()>1000) {
+    mode = OFF_MODE; 
+  }
+   
+   
+  if(USE_MODE==mode) {
+
+    static int smoothed_difference = 0;
+    // take the average, 2 parts smoothed percent, 1 part new reading
+    smoothed_difference = (smoothed_difference*5 + hb.difference_from_down()*1000)/6;
+    int level = 2*(smoothed_difference);
+    if(smoothed_difference<100) {
+    //lots of noise, cap at a minimum.
+      level = 200;
+    }
+    level = level>1000 ? 1000 : level;
+    if(hb.low_movement()) { // low movement, use the smoothed light level
+      hb.set_light(CURRENT_LEVEL, level, 150);
+    } else if (abs(hb.get_gs())-1>.5 ||
+               hb.get_angle_change()>25) { // moderate-high movement
+       hb.set_light(CURRENT_LEVEL, 200, 50);
+    } 
+  } else if (mode==OFF_MODE) {
+    hb.shutdown(); 
+    if(hb.get_charge_state()==CHARGED) {
+      // always runs = always on (the last parameter could be any positive value)
+      hb.set_led(GLED, 1); 
+    } else if (hb.get_charge_state()==CHARGING && hb.get_led_state(GLED)==LED_OFF) {
+      hb.set_led(GLED, 200,200);
+    }
+  } 
+
+
 //  hb.print_accelerometer();
 }
