@@ -220,8 +220,9 @@ void hexbright::set_light_level(unsigned long level) {
   pinMode(DPIN_PWR, OUTPUT);
   digitalWrite(DPIN_PWR, HIGH);
   if(level == 0) {
+  // lowest possible power, but still running (DPIN_PWR still high)
     digitalWrite(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, 0);
+    analogWrite(DPIN_DRV_EN, 0); 
   }
   else if(level<=500) {
     digitalWrite(DPIN_DRV_MODE, LOW);
@@ -651,8 +652,7 @@ void hexbright::read_accelerometer_vector() {
   angle_change *= 180/3.14159;  
 
   // find down
-  if(stationary()) {
-    // update down
+  if(stationary()) { // update down
     sum_vectors(down, new_vector, old_vector);
     normalize(down, down, (new_magnitude+old_magnitude));
   }
@@ -664,8 +664,6 @@ boolean hexbright::stationary(double tolerance) {
 }
 
 boolean hexbright::moved(double tolerance) {
-  // low acceleration vectors, not much difference between vectors
-  //  we had low acceleration, now it's high
   return abs(new_magnitude-1)>tolerance;
  }
 
@@ -862,5 +860,6 @@ byte hexbright::get_charge_state() {
   }
 #endif
   // <128 charging, >768 charged, battery
+  // this takes up less space than an if statement.
   return int((charge_value-129.0)/640+1);
 }

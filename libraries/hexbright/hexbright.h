@@ -111,15 +111,21 @@ class hexbright {
     // Put update in your loop().  It will block until update_delay has passed.
     static void update();
 
-    // turn off the hexbright.
-    // only turns off light when under USB power.  As such, you may want to re-initialize 
-    // your variables before a shutdown.
+	// When plugged in: turn off the light immediately, 
+	//   leave the cpu running (as it cannot be stopped)
+	// When on battery power: turn off the light immediately, 
+	//   turn off the cpu in about .5 seconds.
+	// Loop will run a few more times, and if your code turns 
+	//  on the light, shutoff will be canceled. As a result, 
+	//  if you do not reset your variables you may get weird 
+	//  behavior after turning the light off and on again in 
+	// less than .5 seconds.
     static void shutdown();
 
-
+	
     // go from start_level to end_level over time (in milliseconds)
     // level is from 0-1000. 
-    // 0 = no light, 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
+    // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
     // start_level can be CURRENT_LEVEL
     static void set_light(int start_level, int end_level, int time);
     // get light level (before overheat protection adjustment)
@@ -154,7 +160,12 @@ class hexbright {
     static int get_fahrenheit();
 
     // returns CHARGING, CHARGED, or BATTERY
-    static byte get_charge_state();
+	// The hardware charging implementation isn't very good.  If we're plugged
+    //   in and fully charged, the battery will continually try to top off as 
+	//   power is consumed, resulting in fluctuating values.
+	// When plugged in, you'll get readings between CHARGED and CHARGING, and 
+	//   if you read at just the wrong time, you may get BATTERY.
+	static byte get_charge_state();
 
     
     // prints a number through the rear leds
