@@ -48,7 +48,7 @@ void loop() {
 
   if(hb.button_released() && hb.button_held()<300) {
     mode = USE_MODE; 
-  } else if (hb.button_held()>1000) {
+  } else if (hb.button_held()>300) {
     mode = OFF_MODE; 
   }
    
@@ -64,7 +64,7 @@ void loop() {
       level = 200;
     }
     level = level>1000 ? 1000 : level;
-    if(hb.low_movement()) { // low movement, use the smoothed light level
+    if(hb.stationary()) { // low movement, use the smoothed light level
       hb.set_light(CURRENT_LEVEL, level, 150);
     } else if (abs(hb.get_gs())-1>.5 ||
                hb.get_angle_change()>25) { // moderate-high movement

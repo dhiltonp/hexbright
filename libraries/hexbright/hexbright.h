@@ -176,8 +176,10 @@ class hexbright {
 
     static void print_accelerometer();
 
-    static boolean low_movement();
-    static boolean high_movement();
+	// last two readings have had less than tolerance acceleration(in Gs)
+    static boolean stationary(double tolerance=.1);
+	// last reading had more than tolerance acceleration (in Gs)
+    static boolean moved(double tolerance=.5);
 
 
     //returns the angle between straight down and 

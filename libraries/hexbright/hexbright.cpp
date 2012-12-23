@@ -474,7 +474,7 @@ double dp = 0;
 double angle_change = 0;
 double axes_rotation[] = {0,0,0};
 
-double light_axis[3] = {0,1,0};
+double light_axis[3] = {0,-1,0};
 
 
 double hexbright::get_angle_change() {
@@ -545,14 +545,11 @@ double hexbright::jab_detect(float sensitivity) {
 
 double hexbright::angle_difference(double dot_product, double magnitude1, double magnitude2) {
   double tmp = dot_product/(magnitude1*magnitude2);
-  if(tmp>.9999999) { // can't exeed 1, otherwise we get 0
-    tmp = .9999999;
-  }
   return acos(tmp);
 }
 
 double hexbright::difference_from_down() {
-  return (1-angle_difference(dot_product(light_axis, down), new_magnitude, 1)/3.14159);
+  return (angle_difference(dot_product(light_axis, down), 1, 1)/3.14159);
 }
 
 
@@ -654,25 +651,23 @@ void hexbright::read_accelerometer_vector() {
   angle_change *= 180/3.14159;  
 
   // find down
-  if(new_magnitude-1<.1 && old_magnitude-1<.1 && // both readings have about 1G
-     dp>.9) { // and both point in the same direction
+  if(stationary()) {
     // update down
-    double tmp[3];
     sum_vectors(down, new_vector, old_vector);
     normalize(down, down, (new_magnitude+old_magnitude));
   }
 }
 
-boolean hexbright::low_movement() {
+boolean hexbright::stationary(double tolerance) {
   // low acceleration vectors, not much difference between vectors
-  return (new_magnitude-1<.1 && old_magnitude-1<.1 && dp>.9);   
+  return abs(new_magnitude-1)<tolerance && abs(old_magnitude-1)<tolerance; 
 }
 
-boolean hexbright::high_movement() {
+boolean hexbright::moved(double tolerance) {
   // low acceleration vectors, not much difference between vectors
   //  we had low acceleration, now it's high
-  return (new_magnitude-1>.5);// && dp>.9);   
-}
+  return abs(new_magnitude-1)>tolerance;
+ }
 
 byte hexbright::read_accelerometer(byte acc_reg) {
   if (!digitalRead(DPIN_ACC_INT)) {
