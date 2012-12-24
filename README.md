@@ -5,7 +5,7 @@ This is the easiest way to get started with programming your hexbright.
 
 First, download and install arduino (http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx).  Most linux kernels come with the driver pre-built.
 
-Next, download this folder, open the arduino ide, and click on 'File'->'Preferences' in the menu.  
+Next, download this folder (git clone or download and extract the zip), open the arduino ide, and click on 'File'->'Preferences' in the menu.  
 Set your sketchbook location to the location of this folder (where this README file is found).
 
 Restart arduino.
