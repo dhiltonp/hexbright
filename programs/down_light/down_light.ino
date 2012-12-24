@@ -56,18 +56,19 @@ void loop() {
   if(USE_MODE==mode) {
 
     static int smoothed_difference = 0;
-    // take the average, 2 parts smoothed percent, 1 part new reading
-    smoothed_difference = (smoothed_difference*5 + hb.difference_from_down()*1000)/6;
-    int level = 2*(smoothed_difference);
-    if(smoothed_difference<100) {
-    //lots of noise, cap at a minimum.
-      level = 200;
-    }
-    level = level>1000 ? 1000 : level;
-    if(hb.stationary()) { // low movement, use the smoothed light level
+      if(hb.stationary()) { // low movement, use a dimmer level based on where we're pointing
+      // take the average, 2 parts smoothed percent, 1 part new reading
+      smoothed_difference = (smoothed_difference*5 + hb.difference_from_down()*1000)/6;
+      int level = 2*(smoothed_difference);
+      if(smoothed_difference<100) {
+      //lots of noise, cap at a minimum.
+        level = 200;
+      }
+      level = level>1000 ? 1000 : level;
       hb.set_light(CURRENT_LEVEL, level, 150);
     } else if (abs(hb.get_gs())-1>.5 ||
-               hb.get_angle_change()>25) { // moderate-high movement
+               hb.get_angle_change()>25) { // moderate-high movement, drop light level
+       smoothed_difference=100; // reset so when we stop we build up with no jerks.
        hb.set_light(CURRENT_LEVEL, 200, 50);
     } 
   } else if (mode==OFF_MODE) {
