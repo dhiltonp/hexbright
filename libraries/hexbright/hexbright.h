@@ -86,9 +86,9 @@ either expressed or implied, of the FreeBSD Project.
 #define LED_ON 2
 
 // charging constants
-#define CHARGING 0
-#define BATTERY 1  
-#define CHARGED 2
+#define CHARGING 1
+#define BATTERY 2 
+#define CHARGED 3
 
 class hexbright {
   public: 
@@ -160,11 +160,9 @@ class hexbright {
     static int get_fahrenheit();
 
     // returns CHARGING, CHARGED, or BATTERY
-	// The hardware charging implementation isn't very good.  If we're plugged
-    //   in and fully charged, the battery will continually try to top off as 
-	//   power is consumed, resulting in fluctuating values.
-	// When plugged in, you'll get readings between CHARGED and CHARGING, and 
-	//   if you read at just the wrong time, you may get BATTERY.
+	// There is a 1% chance we'll report CHARGED once (regardless of charge level) before
+    //  reporting BATTERY in the moment we are unplugged.
+	// BATTERY cannot go to any other charge state, as plugging in the USB will cause a reset.
 	static byte get_charge_state();
 
     
@@ -234,6 +232,7 @@ class hexbright {
     static void adjust_leds();
 
     static void read_thermal_sensor();
+	static byte read_charge_state();
 
     static void read_button();
 };

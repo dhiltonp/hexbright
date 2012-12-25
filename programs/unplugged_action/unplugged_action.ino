@@ -18,6 +18,7 @@ void setup() {
      
 void loop() {
   hb.update();
+  byte charge_state = hb.get_charge_state();
   // set mode
   if(hb.button_held()>1000) { // off signal
     // turn off light
