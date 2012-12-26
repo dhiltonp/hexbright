@@ -34,7 +34,7 @@ either expressed or implied, of the FreeBSD Project.
 // In development, not well tested.
 #define ACCELEROMETER
 #ifdef ACCELEROMETER
-#define DEBUG 0 // force debug mode to enable printing
+//#define DEBUG 6
 #define DPIN_ACC_INT 3
 
 #define ACC_ADDRESS             0x4C
@@ -48,16 +48,17 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-//#define DEBUG 4
+#define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
-#define DEBUG_LOOP 1 // main loop
-#define DEBUG_LIGHT 2 // Light control
-#define DEBUG_TEMP 3  // temperature safety
-#define DEBUG_BUTTON 4 // button presses/rear led
-#define DEBUG_ACCEL 5 // accelerometer
-#define DEBUG_NUMBER 6 // number printing utility
-#define DEBUG_CHARGE 7 // charge state
+#define DEBUG_ON 1 // initialize printing
+#define DEBUG_LOOP 2 // main loop
+#define DEBUG_LIGHT 3 // Light control
+#define DEBUG_TEMP 4  // temperature safety
+#define DEBUG_BUTTON 5 // button presses/rear led
+#define DEBUG_ACCEL 6 // accelerometer
+#define DEBUG_NUMBER 7 // number printing utility
+#define DEBUG_CHARGE 8 // charge state
 
 
 

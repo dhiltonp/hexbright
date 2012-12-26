@@ -64,7 +64,7 @@ void hexbright::init_hardware() {
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
 
-#ifdef DEBUG
+#if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
   Serial.begin(9600);
   Wire.begin();
@@ -82,7 +82,7 @@ void hexbright::init_hardware() {
 
 #ifdef ACCELEROMETER
   if(ms_delay<9) {
-#ifdef DEBUG
+#if (DEBUG!=DEBUG_OFF)
     Serial.println("Warning, ms_delay too low for accelerometer.  Adjusting to 9 ms.");
 #endif
     ms_delay = 9;
@@ -103,14 +103,16 @@ void hexbright::update() {
 
   // loop 200? 60? times per second?
   // The point is, we want light adjustments to be constant regardless of how much processing is going on.
-#ifdef DEBUG
+#if (DEBUG!=DEBUG_OFF)
   static int i=0;
   static float avg_loop_time = 0;
   avg_loop_time = (avg_loop_time*29 + time-last_time)/30;
-  if(DEBUG==DEBUG_LOOP && !i) {
+#if (DEBUG==DEBUG_LOOP)
+  if(!i) {
     Serial.print("Average loop time: ");
     Serial.println(avg_loop_time);
   }
+#endif
   if(avg_loop_time>ms_delay+1 && !i) {
     // This may be caused by too much processing for our ms_delay, or by too many print statements (each one takes a few ms)
     Serial.print("WARNING: loop time: ");
@@ -179,11 +181,9 @@ void hexbright::set_light(int start_level, int end_level, int time) {
 
   change_duration = time/ms_delay;
   change_done = 0;
-#ifdef DEBUG
-  if (DEBUG == DEBUG_LIGHT) {
-    Serial.print("Light adjust requested, start level:");
-    Serial.println(start_light_level);
-  }
+#if (DEBUG==DEBUG_LIGHT)
+  Serial.print("Light adjust requested, start level:");
+  Serial.println(start_light_level);
 #endif
 
 }
@@ -211,11 +211,9 @@ void hexbright::set_light_level(unsigned long level) {
 
 // look at linearity_test.ino for more detail on these algorithms.
 
-#ifdef DEBUG
-  if (DEBUG == DEBUG_LIGHT) {
-    Serial.print("light level: ");
-    Serial.println(level);
-  }
+#if (DEBUG==DEBUG_LIGHT)
+  Serial.print("light level: ");
+  Serial.println(level);
 #endif
   pinMode(DPIN_PWR, OUTPUT);
   digitalWrite(DPIN_PWR, HIGH);
@@ -255,32 +253,30 @@ void hexbright::overheat_protection() {
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
   safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
-#ifdef DEBUG
-  if(DEBUG==DEBUG_TEMP) {
-    static float printed_temperature = 0;
-    static float average_temperature = -1;
-    if(average_temperature < 0) {
-      average_temperature = temperature;
-      Serial.println("Have you calibrated your thermometer?");
-      Serial.println("Instructions are in get_celsius.");
-    }
-    average_temperature = (average_temperature*4+temperature)/5;
-    if (abs(printed_temperature-average_temperature)>1) {
-      printed_temperature = average_temperature;
-      Serial.print("Current average reading: ");
-      Serial.print(printed_temperature);
-      Serial.print(" (celsius: ");
-      Serial.print(get_celsius());
-      Serial.print(") (fahrenheit: ");
-      Serial.print(get_fahrenheit());
-      Serial.println(")");
-    }
+#if (DEBUG==DEBUG_TEMP)
+  static float printed_temperature = 0;
+  static float average_temperature = -1;
+  if(average_temperature < 0) {
+    average_temperature = temperature;
+    Serial.println("Have you calibrated your thermometer?");
+    Serial.println("Instructions are in get_celsius.");
   }
+  average_temperature = (average_temperature*4+temperature)/5;
+  if (abs(printed_temperature-average_temperature)>1) {
+    printed_temperature = average_temperature;
+    Serial.print("Current average reading: ");
+    Serial.print(printed_temperature);
+    Serial.print(" (celsius: ");
+    Serial.print(get_celsius());
+    Serial.print(") (fahrenheit: ");
+    Serial.print(get_fahrenheit());
+    Serial.println(")");
+    }
 #endif
 
   // if safe_light_level has changed, guarantee a light adjustment:
   if(safe_light_level < MAX_LEVEL) {
-#ifdef DEBUG
+#if (DEBUG!=DEBUG_OFF)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif
@@ -305,11 +301,9 @@ boolean released = true; //button starts down
 int led_wait_time[2] = {-1, -1};
 
 void hexbright::set_led(byte led, int on_time, int wait_time) {
-#ifdef DEBUG
-  if(DEBUG==DEBUG_BUTTON) {
-    Serial.println("activate led");
-  }
-#endif DEBUG
+#if (DEBUG==DEBUG_BUTTON)
+  Serial.println("activate led");
+#endif
   if(on_time>0) {
     _set_led(led,HIGH);
   } else {
@@ -334,24 +328,22 @@ byte hexbright::get_led_state(byte led) {
  void hexbright::_set_led(byte led, byte state) {
   // this state is HIGH/LOW
   // keep this debug section and the next section in sync
-#ifdef DEBUG 
-  if(DEBUG==DEBUG_BUTTON) {
-    if(led == RLED) { // DPIN_RLED_SW
-      if (!released) {
-        Serial.println("can't set red led, switch is down");
+#if (DEBUG==DEBUG_BUTTON)
+  if(led == RLED) { // DPIN_RLED_SW
+    if (!released) {
+      Serial.println("can't set red led, switch is down");
+    } else {
+      if(state == HIGH) {
+        Serial.println("Red LED on");
       } else {
-        if(state == HIGH) {
-          Serial.println("Red LED on");
-        } else {
-          Serial.println("Red LED off");
-        }
+        Serial.println("Red LED off");
       }
-    } else { // DPIN_GLED
-      if(state==HIGH)
-        Serial.println("Green LED on");
-      else
-        Serial.println("Green LED off");
     }
+  } else { // DPIN_GLED
+    if(state==HIGH)
+      Serial.println("Green LED on");
+    else
+      Serial.println("Green LED off");
   }
 #endif
   // keep in sync with the previous debug section.
@@ -372,22 +364,20 @@ byte hexbright::get_led_state(byte led) {
 
 void hexbright::adjust_leds() {
   // turn off led if it's expired
-#ifdef DEBUG
-  if(DEBUG==DEBUG_BUTTON) {
-    if(led_on_time[GLED]>=0) {
-      Serial.print("green on countdown: ");
-      Serial.println(led_on_time[GLED]*ms_delay);
-    } else if (led_on_time[GLED]<0 && led_wait_time[GLED]>=0) {
-      Serial.print("green wait countdown: ");
-      Serial.println((led_wait_time[GLED])*ms_delay);
-    }
-    if(led_on_time[RLED]>=0) {
-      Serial.print("red on countdown: ");
-      Serial.println(led_on_time[RLED]*ms_delay);
-    } else if (led_on_time[RLED]<0 && led_wait_time[RLED]>=0) {
-      Serial.print("red wait countdown: ");
-      Serial.println((led_wait_time[RLED])*ms_delay);
-    }
+#if (DEBUG==DEBUG_BUTTON)
+  if(led_on_time[GLED]>=0) {
+    Serial.print("green on countdown: ");
+    Serial.println(led_on_time[GLED]*ms_delay);
+  } else if (led_on_time[GLED]<0 && led_wait_time[GLED]>=0) {
+    Serial.print("green wait countdown: ");
+    Serial.println((led_wait_time[GLED])*ms_delay);
+  }
+  if(led_on_time[RLED]>=0) {
+    Serial.print("red on countdown: ");
+    Serial.println(led_on_time[RLED]*ms_delay);
+  } else if (led_on_time[RLED]<0 && led_wait_time[RLED]>=0) {
+    Serial.print("red wait countdown: ");
+    Serial.println((led_wait_time[RLED])*ms_delay);
   }
 #endif
   int i=0;
@@ -417,26 +407,23 @@ int hexbright::button_held() {
 
 void hexbright::read_button() {
   if(led_on_time[RLED] >= 0) { // led is still on, wait
-#ifdef DEBUG
-   if(DEBUG==DEBUG_BUTTON) {
-      Serial.println("Red LED is active, no switch for you");
-   }
+#if (DEBUG==DEBUG_BUTTON)
+    Serial.println("Red LED is active, no switch for you");
 #endif
     return;
   }
   byte button_on = digitalRead(DPIN_RLED_SW);
   if(button_on) {
-#ifdef DEBUG
-    if(DEBUG==DEBUG_BUTTON && released)
+#if (DEBUG==DEBUG_BUTTON)
+    if(released)
       Serial.println("Button pressed");
 #endif
     time_held++; 
     released = false;
   } else if (released && time_held) { // we've given a chance for the button press to be read, reset time_held
-#ifdef DEBUG
-   if(DEBUG==DEBUG_BUTTON)
-      Serial.print("time_held: ");
-      Serial.println(time_held*ms_delay);
+#if (DEBUG==DEBUG_BUTTON)
+    Serial.print("time_held: ");
+    Serial.println(time_held*ms_delay);
 #endif
     time_held = 0; 
   } else {
@@ -502,9 +489,8 @@ void hexbright::normalize(double* out_vector, double* in_vector, double magnitud
 
 
 double hexbright::jab_detect(float sensitivity) {
-#ifdef DEBUG
-  //  if(DEBUG==DEBUG_ACCEL)
-  //    Serial.println((int)sensitivity);
+#if (DEBUG==DEBUG_ACCEL)
+  //Serial.println((int)sensitivity);
 #endif
   double new_normalized[3] = {0,0,0};
   double old_normalized[3] = {0,0,0};
@@ -513,20 +499,16 @@ double hexbright::jab_detect(float sensitivity) {
   
   //  if(abs(old_magnitude-1)>.3 && abs(new_magnitude-1)>.3) {
   if(abs(old_magnitude-new_magnitude)>.4) {
-#ifdef DEBUG
-    if(DEBUG==DEBUG_ACCEL) {
-     Serial.println("magnitude passed");
-     Serial.println(abs(dot_product(new_normalized, light_axis)));
-     Serial.println(abs(dot_product(old_normalized, light_axis)));
-    }
+#if (DEBUG==DEBUG_ACCEL)
+    Serial.println("magnitude passed");
+    Serial.println(abs(dot_product(new_normalized, light_axis)));
+    Serial.println(abs(dot_product(old_normalized, light_axis)));
 #endif
      if(abs(dot_product(new_normalized, light_axis))>.8 &&
         abs(dot_product(old_normalized, light_axis))>.8) {
-#ifdef DEBUG
-       if(DEBUG==DEBUG_ACCEL) {
-        Serial.println("light_axis passed");
-        Serial.println(new_vector[1]);
-       }
+#if (DEBUG==DEBUG_ACCEL)
+       Serial.println("light_axis passed");
+       Serial.println(new_vector[1]);
 #endif
         return new_vector[1]-20;
      }
@@ -555,7 +537,7 @@ double hexbright::difference_from_down() {
 
 
 void hexbright::print_vector(double* vector, char* label) {
-#ifdef DEBUG
+#if (DEBUG!=DEBUG_OFF)
   for(int i=0; i<3; i++) {
     Serial.print(vector[i]); 
     Serial.print("/");
@@ -695,9 +677,8 @@ void hexbright::enable_accelerometer() {
       sample_rate = 6-i;
     }
   }
-#ifdef DEBUG
-  if(DEBUG==DEBUG_ACCEL)
-    Serial.println((int)sample_rate);
+#if (DEBUG==DEBUG_ACCEL)
+  Serial.println((int)sample_rate);
 #endif
 
   
@@ -764,10 +745,8 @@ void hexbright::update_number() {
         print_wait_time = 300/ms_delay; 
       }
       if(_number/10*10==_number) {
-#ifdef DEBUG
-        if(DEBUG==DEBUG_NUMBER) {
-         Serial.println("zero"); 
-        }
+#if (DEBUG==DEBUG_NUMBER)
+        Serial.println("zero"); 
 #endif
 //        print_wait_time = 500/ms_delay; 
         set_led(_color, 400); 
@@ -851,13 +830,11 @@ int hexbright::get_thermal_sensor() {
 
 char hexbright::read_charge_state() {
   int charge_value = analogRead(APIN_CHARGE);
-#ifdef DEBUG
-  if (DEBUG == DEBUG_CHARGE) {
-    Serial.print("Current charge reading: ");
-    Serial.println(charge_value);
-    Serial.print("Current charge state: ");
-    Serial.println(int((charge_value-129.0)/640+1)-1);
-  }
+#if (DEBUG==DEBUG_CHARGE)
+  Serial.print("Current charge reading: ");
+  Serial.println(charge_value);
+  Serial.print("Current charge state: ");
+  Serial.println(int((charge_value-129.0)/640+1)-1);
 #endif
   // <128 charging, >768 charged, battery
   // this takes up less space than an if statement.
