@@ -163,6 +163,7 @@ class hexbright {
 
     // returns CHARGING, CHARGED, or BATTERY
 	// BATTERY cannot go to any other charge state, as plugging in the USB causes a restart.
+	// If you assign this to an unsigned data type (byte), your conditionals will fail.
 	static char get_charge_state();
 
     

@@ -64,7 +64,7 @@ void loop() {
     last_dp = dp;
   } else if (mode==OFF_MODE) {
     hb.shutdown(); 
-    byte charge_state = hb.get_charge_state();
+    char charge_state = hb.get_charge_state();
     if(charge_state==CHARGED) {
       // always runs = always on (the last parameter could be any positive value)
       hb.set_led(GLED, 1); 
