@@ -50,6 +50,7 @@ either expressed or implied, of the FreeBSD Project.
 // debugging related definitions
 //#define DEBUG 4
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
+#define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_LOOP 1 // main loop
 #define DEBUG_LIGHT 2 // Light control
 #define DEBUG_TEMP 3  // temperature safety
@@ -60,7 +61,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 
-#ifdef DEBUG
+#if (DEBUG==DEBUG_TEMP)
 #define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
 #else
 #define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
@@ -86,9 +87,9 @@ either expressed or implied, of the FreeBSD Project.
 #define LED_ON 2
 
 // charging constants
-#define CHARGING 1
-#define BATTERY 2 
-#define CHARGED 3
+#define CHARGING -1
+#define BATTERY 0
+#define CHARGED 1
 
 class hexbright {
   public: 
@@ -160,10 +161,8 @@ class hexbright {
     static int get_fahrenheit();
 
     // returns CHARGING, CHARGED, or BATTERY
-	// There is a 1% chance we'll report CHARGED once (regardless of charge level) before
-    //  reporting BATTERY in the moment we are unplugged.
-	// BATTERY cannot go to any other charge state, as plugging in the USB will cause a reset.
-	static byte get_charge_state();
+	// BATTERY cannot go to any other charge state, as plugging in the USB causes a restart.
+	static char get_charge_state();
 
     
     // prints a number through the rear leds
@@ -232,7 +231,7 @@ class hexbright {
     static void adjust_leds();
 
     static void read_thermal_sensor();
-	static byte read_charge_state();
+	static char read_charge_state();
 
     static void read_button();
 };

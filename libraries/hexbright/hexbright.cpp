@@ -849,19 +849,19 @@ int hexbright::get_thermal_sensor() {
 //////////////////CHARGING/////////////////////
 ///////////////////////////////////////////////
 
-byte hexbright::read_charge_state() {
+char hexbright::read_charge_state() {
   int charge_value = analogRead(APIN_CHARGE);
 #ifdef DEBUG
   if (DEBUG == DEBUG_CHARGE) {
     Serial.print("Current charge reading: ");
     Serial.println(charge_value);
     Serial.print("Current charge state: ");
-    Serial.println(int((charge_value-129.0)/640+2));
+    Serial.println(int((charge_value-129.0)/640+1)-1);
   }
 #endif
   // <128 charging, >768 charged, battery
   // this takes up less space than an if statement.
-  return int((charge_value-129.0)/640+2);
+  return int((charge_value-129.0)/640+1)-1;
 }
 
 // reading twice costs us 30 bytes, but improves reliability.
@@ -869,14 +869,8 @@ byte hexbright::read_charge_state() {
 //  reverse, from topping off), it passes through the middle range.  If we 
 //  read at the wrong time, we can get a BATTERY value while we are still 
 //  plugged in.
-// Reading twice, we can guarantee that if we return the BATTERY state, 
-//  we are in the battery state.  The only misread possible is this:
-//  unplugging the USB may result in CHARGING & BATTERY, returning:
-//  CHARGING->CHARGED(1 read)->BATTERY
-// This will occur (read_charge_state2_time-read_charge_state1_time)/ms_delay of the time.
-//  Assuming <50 microseconds between reads, and ms_delay>5, this will occur at most 1% of the 
-//  time when are physically disconnected.
-byte hexbright::get_charge_state() {
+// Reading twice with a sufficient delay, we can guarantee that our state is correct.
+char hexbright::get_charge_state() {
   char val1 = read_charge_state();
   // do something that will take some time...
   // delayMicroseconds costs an extra 20 bytes (because nowhere else is it called)
@@ -884,8 +878,7 @@ byte hexbright::get_charge_state() {
   //delayMicroseconds(30); 
   read_thermal_sensor(); // delay a little...
   char val2 = read_charge_state();
-  // BATTERY|CHARGING = CHARGED, which is /usually/ correct (from reading fluctuations 
-  //  as we switch between charging and charged), but may cause a momentary incorrect 
-  //  report of CHARGED in the moment we are unplugged.
+  // BATTERY | CHARGING = CHARGING, BATTERY | CHARGED = CHARGED, CHARGED | CHARGING = CHARGING
+  // In essence, only return the middle value (BATTERY) if two reads report the same thing.
   return val1 | val2;
 }
