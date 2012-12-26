@@ -48,7 +48,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 1
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -88,9 +88,9 @@ either expressed or implied, of the FreeBSD Project.
 #define LED_ON 2
 
 // charging constants
-#define CHARGING -1
-#define BATTERY 0
-#define CHARGED 1
+#define CHARGING 1
+#define BATTERY 7
+#define CHARGED 3
 
 class hexbright {
   public: 
@@ -162,9 +162,19 @@ class hexbright {
     static int get_fahrenheit();
 
     // returns CHARGING, CHARGED, or BATTERY
-	// BATTERY cannot go to any other charge state, as plugging in the USB causes a restart.
-	// If you assign this to an unsigned data type (byte), your conditionals will fail.
-	static char get_charge_state();
+	// This reads the charge state twice with a small delay, then returns 
+	//  the actual charge state.  BATTERY will never be returned if we are 
+	//  plugged in.
+	// Use this if you take actions based on the charge state (example: you
+	//  turn on when you stop charging).  Takes up 56 bytes (34+22).
+	static byte get_definite_charge_state();
+	// returns CHARGING, CHARGED, or BATTERY
+	// This reads and returns the charge state, without any verification.  
+	//  As a result, it may report BATTERY when switching between CHARGED 
+	//  and CHARGING.
+	// Use this if you don't care if the value is sometimes wrong (charging 
+	//  notification).  Takes up 34 bytes.
+	static byte get_charge_state();
 
     
     // prints a number through the rear leds
@@ -233,8 +243,7 @@ class hexbright {
     static void adjust_leds();
 
     static void read_thermal_sensor();
-	static char read_charge_state();
-
+	
     static void read_button();
 };
 

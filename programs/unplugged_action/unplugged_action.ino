@@ -18,12 +18,12 @@ void setup() {
      
 void loop() {
   hb.update();
-  char charge_state = hb.get_charge_state();
+  byte charge_state = hb.get_definite_charge_state();
   // set mode
   if(hb.button_held()>1000) { // off signal
     // turn off light
     hb.set_light(CURRENT_LEVEL,0,NOW);
-    if(hb.get_charge_state()==BATTERY) { // battery power, real off
+    if(charge_state==BATTERY) { // battery power or real off?
       mode=OFF_MODE;
      } else { // plugged in, set CHARGE_MODE (pseudo off)
       mode=CHARGE_MODE;
@@ -31,7 +31,7 @@ void loop() {
   }
  
   if(mode==CHARGE_MODE) {
-    if(hb.get_charge_state()==BATTERY) {
+    if(charge_state==BATTERY) {
       hb.set_light(CURRENT_LEVEL,150,NOW);
       mode=AUTO_OFF_MODE;
       auto_off_timer=10000/MS; // 10 seconds
@@ -41,9 +41,7 @@ void loop() {
     }
   } else if (mode==AUTO_OFF_MODE) {
     auto_off_timer--;
-    if (hb.get_charge_state()!=BATTERY) { // we're plugged in, (bad read?)
-      mode=CHARGE_MODE;
-    } else if(auto_off_timer==0) {
+    if(auto_off_timer==0) {
      hb.shutdown();
     }
   } else if (mode==OFF_MODE) {

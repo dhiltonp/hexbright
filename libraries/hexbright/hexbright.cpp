@@ -828,34 +828,35 @@ int hexbright::get_thermal_sensor() {
 //////////////////CHARGING/////////////////////
 ///////////////////////////////////////////////
 
-char hexbright::read_charge_state() {
+byte hexbright::get_charge_state() {
   int charge_value = analogRead(APIN_CHARGE);
 #if (DEBUG==DEBUG_CHARGE)
   Serial.print("Current charge reading: ");
   Serial.println(charge_value);
-  Serial.print("Current charge state: ");
-  Serial.println(int((charge_value-129.0)/640+1)-1);
 #endif
   // <128 charging, >768 charged, battery
-  // this takes up less space than an if statement.
-  return int((charge_value-129.0)/640+1)-1;
+  if(charge_value<128)
+    return CHARGING;
+  else if (charge_value>768)
+    return CHARGED;
+  return BATTERY;
 }
 
-// reading twice costs us 30 bytes, but improves reliability.
+// reading twice costs us 28 bytes, but improves reliability.
 // The root problem is when the charge value goes from <128 to >768 (or the 
 //  reverse, from topping off), it passes through the middle range.  If we 
 //  read at the wrong time, we can get a BATTERY value while we are still 
 //  plugged in.
 // Reading twice with a sufficient delay, we can guarantee that our state is correct.
-char hexbright::get_charge_state() {
-  char val1 = read_charge_state();
+byte hexbright::get_definite_charge_state() {
+  byte val1 = get_charge_state();
   // do something that will take some time...
   // delayMicroseconds costs an extra 20 bytes (because nowhere else is it called)
   // If other code needs delayMicroseconds, switch to it.
   //delayMicroseconds(30); 
   read_thermal_sensor(); // delay a little...
-  char val2 = read_charge_state();
-  // BATTERY | CHARGING = CHARGING, BATTERY | CHARGED = CHARGED, CHARGED | CHARGING = CHARGING
+  byte val2 = get_charge_state();
+  // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
-  return val1 | val2;
+  return val1 & val2;
 }

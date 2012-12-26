@@ -73,7 +73,7 @@ void loop() {
     } 
   } else if (mode==OFF_MODE) {
     hb.shutdown();
-    char charge_state = hb.get_charge_state();
+    byte charge_state = hb.get_charge_state();
 //    Serial.println(charge_state);
     if(charge_state==CHARGED) {
       // always runs = always on (the last parameter could be any positive value)
