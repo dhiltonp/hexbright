@@ -113,18 +113,18 @@ class hexbright {
     // Put update in your loop().  It will block until update_delay has passed.
     static void update();
 
-	// When plugged in: turn off the light immediately, 
-	//   leave the cpu running (as it cannot be stopped)
-	// When on battery power: turn off the light immediately, 
-	//   turn off the cpu in about .5 seconds.
-	// Loop will run a few more times, and if your code turns 
-	//  on the light, shutoff will be canceled. As a result, 
-	//  if you do not reset your variables you may get weird 
-	//  behavior after turning the light off and on again in 
-	// less than .5 seconds.
+    // When plugged in: turn off the light immediately, 
+    //   leave the cpu running (as it cannot be stopped)
+    // When on battery power: turn off the light immediately, 
+    //   turn off the cpu in about .5 seconds.
+    // Loop will run a few more times, and if your code turns 
+    //  on the light, shutoff will be canceled. As a result, 
+    //  if you do not reset your variables you may get weird 
+    //  behavior after turning the light off and on again in 
+    // less than .5 seconds.
     static void shutdown();
 
-	
+    
     // go from start_level to end_level over time (in milliseconds)
     // level is from 0-1000. 
     // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
@@ -162,19 +162,19 @@ class hexbright {
     static int get_fahrenheit();
 
     // returns CHARGING, CHARGED, or BATTERY
-	// This reads the charge state twice with a small delay, then returns 
-	//  the actual charge state.  BATTERY will never be returned if we are 
-	//  plugged in.
-	// Use this if you take actions based on the charge state (example: you
-	//  turn on when you stop charging).  Takes up 56 bytes (34+22).
-	static byte get_definite_charge_state();
-	// returns CHARGING, CHARGED, or BATTERY
-	// This reads and returns the charge state, without any verification.  
-	//  As a result, it may report BATTERY when switching between CHARGED 
-	//  and CHARGING.
-	// Use this if you don't care if the value is sometimes wrong (charging 
-	//  notification).  Takes up 34 bytes.
-	static byte get_charge_state();
+    // This reads the charge state twice with a small delay, then returns 
+    //  the actual charge state.  BATTERY will never be returned if we are 
+    //  plugged in.
+    // Use this if you take actions based on the charge state (example: you
+    //  turn on when you stop charging).  Takes up 56 bytes (34+22).
+    static byte get_definite_charge_state();
+    // returns CHARGING, CHARGED, or BATTERY
+    // This reads and returns the charge state, without any verification.  
+    //  As a result, it may report BATTERY when switching between CHARGED 
+    //  and CHARGING.
+    // Use this if you don't care if the value is sometimes wrong (charging 
+    //  notification).  Takes up 34 bytes.
+    static byte get_charge_state();
 
     
     // prints a number through the rear leds
@@ -196,9 +196,9 @@ class hexbright {
 
     static void print_accelerometer();
 
-	// last two readings have had less than tolerance acceleration(in Gs)
+    // last two readings have had less than tolerance acceleration(in Gs)
     static boolean stationary(double tolerance=.1);
-	// last reading had more than tolerance acceleration (in Gs)
+    // last reading had more than tolerance acceleration (in Gs)
     static boolean moved(double tolerance=.5);
 
 
@@ -243,7 +243,7 @@ class hexbright {
     static void adjust_leds();
 
     static void read_thermal_sensor();
-	
+    
     static void read_button();
 };
 
