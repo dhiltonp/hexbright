@@ -819,6 +819,7 @@ int hexbright::get_celsius() {
 int hexbright::get_fahrenheit() {
   //return get_celsius()*18/10+32;
   // algebraic form of (get_celsius' formula)*18/10+32
+  // I was lazy and pasted (x*((40.05-0)/(275-153)) - 50)*18/10+32 into wolfram alpha
   return .590902*thermal_sensor_value-58;
 }
 

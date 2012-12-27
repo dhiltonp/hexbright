@@ -159,7 +159,7 @@ class hexbright {
     // Get the raw thermal sensor reading. Takes up 18 bytes.
     static int get_thermal_sensor();
 	// Get the degrees in celsius. I suggest calibrating your sensor, as described
-	//  in programs/temperature_calibratino. Takes up 60 bytes
+	//  in programs/temperature_calibration. Takes up 60 bytes
     static int get_celsius();
 	// Get the degrees in fahrenheit. After calibrating your sensor, you'll need to
     //  modify this as well. Takes up 60 bytes

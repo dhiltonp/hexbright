@@ -40,8 +40,7 @@ void setup() {
 void loop() {
   hb.update();
   if(!hb.printing_number()) {
-    //hb.print_number(hb.get_thermal_sensor());
-    hb.get_fahrenheit();
+    hb.print_number(hb.get_thermal_sensor());
 //    hb.print_number(hb.get_fahrenheit());
   }
 }
