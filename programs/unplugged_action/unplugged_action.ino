@@ -1,21 +1,21 @@
 #include <hexbright.h>
- 
+
 #include <Wire.h>
 
 #define MS 20
 hexbright hb(MS);
-     
+
 #define OFF_MODE 0
 #define CHARGE_MODE 1
 #define AUTO_OFF_MODE 2
-     
+
 int auto_off_timer=0;
 int mode=CHARGE_MODE;
-     
+
 void setup() {
   hb.init_hardware();
 }
-     
+
 void loop() {
   hb.update();
   byte charge_state = hb.get_definite_charge_state();
@@ -25,11 +25,11 @@ void loop() {
     hb.set_light(CURRENT_LEVEL,0,NOW);
     if(charge_state==BATTERY) { // battery power or real off?
       mode=OFF_MODE;
-     } else { // plugged in, set CHARGE_MODE (pseudo off)
+    } else { // plugged in, set CHARGE_MODE (pseudo off)
       mode=CHARGE_MODE;
     }
   }
- 
+
   if(mode==CHARGE_MODE) {
     if(charge_state==BATTERY) {
       hb.set_light(CURRENT_LEVEL,150,NOW);
@@ -42,7 +42,7 @@ void loop() {
   } else if (mode==AUTO_OFF_MODE) {
     auto_off_timer--;
     if(auto_off_timer==0) {
-     hb.shutdown();
+      hb.shutdown();
     }
   } else if (mode==OFF_MODE) {
     hb.shutdown();

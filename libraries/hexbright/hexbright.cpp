@@ -810,12 +810,16 @@ int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
   // intersection with 0: 52.5 = (40C-0C)/(275-153)*153
-  // readings obtained with DEBUG_TEMP
+  
+  // 40.05 is to force the division to floating point.  The extra parenthesis are to 
+  //  tell the compiler to pre-evaluate the expression.
   return thermal_sensor_value * ((40.05-0)/(275-153)) - 50; 
 }
 
 int hexbright::get_fahrenheit() {
-  return get_celsius()*18/10+32;
+  //return get_celsius()*18/10+32;
+  // algebraic form of (get_celsius' formula)*18/10+32
+  return .590902*thermal_sensor_value-58;
 }
 
 int hexbright::get_thermal_sensor() {
