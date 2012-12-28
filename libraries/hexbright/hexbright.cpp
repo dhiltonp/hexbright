@@ -303,13 +303,15 @@ void hexbright::overheat_protection() {
 // >0 = countdown, 0 = change state, -1 = state changed
 int led_wait_time[2] = {-1, -1};
 int led_on_time[2] = {-1, -1};
+byte led_brightness[2] = {0, 0};
 
-void hexbright::set_led(byte led, int on_time, int wait_time) {
+void hexbright::set_led(byte led, int on_time, int wait_time, byte brightness) {
 #if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
   led_on_time[led] = on_time/ms_delay;
   led_wait_time[led] = wait_time/ms_delay;
+  led_brightness[led] = brightness;
 }
 
 
@@ -326,10 +328,10 @@ byte hexbright::get_led_state(byte led) {
 
 inline void hexbright::_led_on(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    digitalWrite(DPIN_RLED_SW, HIGH);
+    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
     pinMode(DPIN_RLED_SW, OUTPUT);
   } else { // DPIN_GLED
-    digitalWrite(DPIN_GLED, HIGH);
+    analogWrite(DPIN_GLED, led_brightness[GLED]);
   }
 }
 

@@ -31,8 +31,8 @@ either expressed or implied, of the FreeBSD Project.
 #include <Arduino.h>
 
 /// Some space-saving options
-#define LED // comment out save 820 bytes if you don't use the rear LEDs
-#define PRINT_NUMBER // comment out to save 668 bytes if you don't need to print numbers (but need the LEDs)
+#define LED // comment out save 786 bytes if you don't use the rear LEDs
+#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 3500 bytes (in development, it will shrink a lot once it's finished)
 
 // In development, api will change.
@@ -150,8 +150,10 @@ class hexbright {
     // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
     // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
     //   Defaults to 100 ms.
-    // Takes up 14 bytes.
-    static void set_led(byte led, int on_time, int wait_time=100);
+    // brightness (0-255) = brightness of rear led
+    //   Defaults to 255 (full brightness)
+    // Takes up 16 bytes.
+    static void set_led(byte led, int on_time, int wait_time=100, byte brightness=255);
     // led = GLED or RLED 
     // returns LED_OFF, LED_WAIT, or LED_ON
     // Takes up 54 bytes.
@@ -163,10 +165,10 @@ class hexbright {
 
     // Get the raw thermal sensor reading. Takes up 18 bytes.
     static int get_thermal_sensor();
-	// Get the degrees in celsius. I suggest calibrating your sensor, as described
-	//  in programs/temperature_calibration. Takes up 60 bytes
+    // Get the degrees in celsius. I suggest calibrating your sensor, as described
+    //  in programs/temperature_calibration. Takes up 60 bytes
     static int get_celsius();
-	// Get the degrees in fahrenheit. After calibrating your sensor, you'll need to
+    // Get the degrees in fahrenheit. After calibrating your sensor, you'll need to
     //  modify this as well. Takes up 60 bytes
     static int get_fahrenheit();
 
