@@ -30,10 +30,13 @@ either expressed or implied, of the FreeBSD Project.
 #include <Wire.h>
 #include <Arduino.h>
 
+/// Some space-saving options
+#define LED // comment out save 820 bytes if you don't use the rear LEDs
+#define PRINT_NUMBER // comment out to save 668 bytes if you don't need to print numbers (but need the LEDs)
+#define ACCELEROMETER //comment out to save 3500 bytes (in development, it will shrink a lot once it's finished)
 
 // In development, api will change.
-//#define ACCELEROMETER
-#ifdef ACCELEROMETER
+#ifdef ACCELEROMETER 
 //#define DEBUG 6
 #define DPIN_ACC_INT 3
 
@@ -48,7 +51,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 6
+#define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -56,7 +59,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_LIGHT 3 // Light control
 #define DEBUG_TEMP 4  // temperature safety
 #define DEBUG_BUTTON 5 // button presses - you may experience some flickering LEDs if enabled
-#define DEBUG_LED 6 // rear LEDs - you may get flickering LEDs, due to prints in critical code sections
+#define DEBUG_LED 6 // rear LEDs - you may get flickering LEDs with this enabled
 #define DEBUG_ACCEL 7 // accelerometer
 #define DEBUG_NUMBER 8 // number printing utility
 #define DEBUG_CHARGE 9 // charge state
@@ -139,7 +142,6 @@ class hexbright {
     // Returns the duration the button has been in updates.  Keeps its value 
     //  immediately after being released, allowing for use as follows:
     // if(button_released() && button_held()>500)
-    // While the button is down, RLED cannot be set.
     static int button_held();
     // button has been released
     static boolean button_released();
@@ -148,12 +150,14 @@ class hexbright {
     // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
     // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
     //   Defaults to 100 ms.
-    // While the RLED is on, the rear button cannot be read.
+    // Takes up 14 bytes.
     static void set_led(byte led, int on_time, int wait_time=100);
     // led = GLED or RLED 
     // returns LED_OFF, LED_WAIT, or LED_ON
+    // Takes up 54 bytes.
     static byte get_led_state(byte led);
     // returns the opposite color than the one passed in
+    // Takes up 12 bytes.
     static byte flip_color(byte color);
 
 

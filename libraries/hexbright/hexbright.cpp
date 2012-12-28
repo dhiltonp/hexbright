@@ -126,20 +126,25 @@ void hexbright::update() {
   last_time = time;
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
-  
-  _set_led(RLED,LOW);
-  _set_led(GLED,LOW);
-  
+
+#ifdef LED  
+  // regardless of desired led state, turn it off so we can read the button
+  _led_off(RLED);
   read_button();
-  // turn on leds, if appropriate
+  // turn on (or off) the leds, if appropriate
   adjust_leds();
+#ifdef PRINT_NUMBER
+  update_number();
+#endif
+#else
+  read_button();
+#endif
   
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer_vector();
 #endif
   overheat_protection();    
-  update_number();
   
   // change light levels as requested
   adjust_light(); 
@@ -290,13 +295,10 @@ void hexbright::overheat_protection() {
 }
 
 ///////////////////////////////////////////////
-/////////////BUTTON & LED CONTROL//////////////
+///////////////////LED CONTROL/////////////////
 ///////////////////////////////////////////////
-// because the red LED and button share the same pin,
-// we need to share some logic, hence the merged section.
-// the switch cannot receive input while the red led is on.
 
-//////////////////////LED//////////////////////
+#ifdef LED
 
 // >0 = countdown, 0 = change state, -1 = state changed
 int led_wait_time[2] = {-1, -1};
@@ -322,72 +324,25 @@ byte hexbright::get_led_state(byte led) {
   }
 }
 
-/*
-void hexbright::_led_on(byte led) {
-// keep this debug section and the next section in sync
-#if (DEBUG==DEBUG_LED)
+inline void hexbright::_led_on(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    if (!released) {
-      Serial.println("can't set red led, switch is down");
-    } else {
-      Serial.println("Red LED on");
-    }
-  } else { // DPIN_GLED
-    Serial.println("Green LED on");
-  }
-#endif
-  // keep in sync with the previous debug section.
-  if(led == RLED) { // DPIN_RLED_SW
-    if (released) {
-      digitalWrite(DPIN_RLED_SW, HIGH);
-      pinMode(DPIN_RLED_SW, OUTPUT);
-	}
+    digitalWrite(DPIN_RLED_SW, HIGH);
+    pinMode(DPIN_RLED_SW, OUTPUT);
   } else { // DPIN_GLED
     digitalWrite(DPIN_GLED, HIGH);
   }
 }
 
- void hexbright::_led_off(byte led) {
-  // this state is HIGH/LOW
-  // keep this debug section and the next section in sync
-#if (DEBUG==DEBUG_LED)
+inline void hexbright::_led_off(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    if (!released) {
-      Serial.println("can't set red led, switch is down");
-    } else {
-      Serial.println("Red LED off");
-    }
+    pinMode(DPIN_RLED_SW, LOW);
+    digitalWrite(DPIN_RLED_SW, LOW);
   } else { // DPIN_GLED
-    Serial.println("Green LED off");
-  }
-#endif
-  // keep in sync with the previous debug section.
-  if(led == RLED) { // DPIN_RLED_SW
-    if (released) {
-      pinMode(DPIN_RLED_SW, LOW);
-      digitalWrite(DPIN_RLED_SW, LOW);
-    }
- } else { // DPIN_GLED
    digitalWrite(DPIN_GLED, LOW);
- }
-}*/
-
-void hexbright::_set_led(byte led, byte state) {
-  // this state is HIGH/LOW
-  if(led == RLED) { // DPIN_RLED_SW
-    if(state == HIGH) {
-      digitalWrite(DPIN_RLED_SW, state);
-      pinMode(DPIN_RLED_SW, OUTPUT);
-    } else {
-	  pinMode(DPIN_RLED_SW, LOW);
-      digitalWrite(DPIN_RLED_SW, LOW);
-	}
- } else { // DPIN_GLED
-   digitalWrite(DPIN_GLED, state);
- }
+  }
 }
 
-void hexbright::adjust_leds() {
+inline void hexbright::adjust_leds() {
   // turn off led if it's expired
 #if (DEBUG==DEBUG_LED)
   if(led_on_time[GLED]>=0) {
@@ -407,19 +362,23 @@ void hexbright::adjust_leds() {
 #endif
   int i=0;
   for(int i=0; i<2; i++) {
-    if(led_on_time[i]==0) {
-      _set_led(i, LOW);
-    }
-    if(led_on_time[i]>=0) {
-      _set_led(i, HIGH);
+    if(led_on_time[i]>0) {
+      _led_on(i);
       led_on_time[i]--;
+    } else if(led_on_time[i]==0) {
+      _led_off(i);
+	  led_on_time[i]--;
     } else if (led_wait_time[i]>=0) {
       led_wait_time[i]--;
     }
- }
+  }
 }
 
+#endif
+
+///////////////////////////////////////////////
 /////////////////////BUTTON////////////////////
+///////////////////////////////////////////////
 
 int time_held = 0;
 boolean released = true;
@@ -740,7 +699,7 @@ long _number = 0;
 byte _color = GLED;
 int print_wait_time = 0;
 
-
+#if (defined(LED) && defined(PRINT_NUMBER))
 boolean hexbright::printing_number() {
   return _number || print_wait_time; 
 }
@@ -792,6 +751,7 @@ byte hexbright::flip_color(byte color) {
   return (color+1)%2;
 }
 
+
 void hexbright::print_number(long number) {
   // reverse number (so it prints from left to right)
   boolean negative = false;
@@ -811,8 +771,7 @@ void hexbright::print_number(long number) {
     print_wait_time = 600/ms_delay;
   }
 }
-
-
+#endif
 
 ///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////
