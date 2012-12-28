@@ -809,7 +809,7 @@ void hexbright::read_thermal_sensor() {
 int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
-  // intersection with 0: 52.5 = (40C-0C)/(275-153)*153
+  // intersection with 0: 50 = (40C-0C)/(275-153)*153
   
   // 40.05 is to force the division to floating point.  The extra parenthesis are to 
   //  tell the compiler to pre-evaluate the expression.
