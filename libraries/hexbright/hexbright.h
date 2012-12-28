@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // In development, api will change.
-#define ACCELEROMETER
+//#define ACCELEROMETER
 #ifdef ACCELEROMETER
 //#define DEBUG 6
 #define DPIN_ACC_INT 3
@@ -48,17 +48,18 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 6
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
 #define DEBUG_LOOP 2 // main loop
 #define DEBUG_LIGHT 3 // Light control
 #define DEBUG_TEMP 4  // temperature safety
-#define DEBUG_BUTTON 5 // button presses/rear led
-#define DEBUG_ACCEL 6 // accelerometer
-#define DEBUG_NUMBER 7 // number printing utility
-#define DEBUG_CHARGE 8 // charge state
+#define DEBUG_BUTTON 5 // button presses - you may experience some flickering LEDs if enabled
+#define DEBUG_LED 6 // rear LEDs - you may get flickering LEDs, due to prints in critical code sections
+#define DEBUG_ACCEL 7 // accelerometer
+#define DEBUG_NUMBER 8 // number printing utility
+#define DEBUG_CHARGE 9 // charge state
 
 
 
@@ -244,6 +245,8 @@ class hexbright {
     // controls actual led hardware set.  
     //  As such, state = HIGH or LOW
     static void _set_led(byte led, byte state);
+    static void _led_on(byte led);
+    static void _led_off(byte led);
     static void adjust_leds();
 
     static void read_thermal_sensor();

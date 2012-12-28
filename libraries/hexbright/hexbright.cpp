@@ -99,8 +99,7 @@ void hexbright::update() {
   do {
     time = millis();
   } while (time-last_time < ms_delay);
-
-
+  
   // loop 200? 60? times per second?
   // The point is, we want light adjustments to be constant regardless of how much processing is going on.
 #if (DEBUG!=DEBUG_OFF)
@@ -127,7 +126,14 @@ void hexbright::update() {
   last_time = time;
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
+  
+  _set_led(RLED,LOW);
+  _set_led(GLED,LOW);
+  
   read_button();
+  // turn on leds, if appropriate
+  adjust_leds();
+  
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer_vector();
@@ -137,7 +143,6 @@ void hexbright::update() {
   
   // change light levels as requested
   adjust_light(); 
-  adjust_leds();
 }
 
 void hexbright::shutdown() {
@@ -291,24 +296,16 @@ void hexbright::overheat_protection() {
 // we need to share some logic, hence the merged section.
 // the switch cannot receive input while the red led is on.
 
-// >0 = countdown, 0 = change state, -1 = state changed
-int led_on_time[2] = {-1, -1};
-boolean released = true; //button starts down
-
 //////////////////////LED//////////////////////
 
 // >0 = countdown, 0 = change state, -1 = state changed
 int led_wait_time[2] = {-1, -1};
+int led_on_time[2] = {-1, -1};
 
 void hexbright::set_led(byte led, int on_time, int wait_time) {
-#if (DEBUG==DEBUG_BUTTON)
+#if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
-  if(on_time>0) {
-    _set_led(led,HIGH);
-  } else {
-    _set_led(led,LOW);
-  }
   led_on_time[led] = on_time/ms_delay;
   led_wait_time[led] = wait_time/ms_delay;
 }
@@ -325,38 +322,66 @@ byte hexbright::get_led_state(byte led) {
   }
 }
 
- void hexbright::_set_led(byte led, byte state) {
-  // this state is HIGH/LOW
-  // keep this debug section and the next section in sync
-#if (DEBUG==DEBUG_BUTTON)
+/*
+void hexbright::_led_on(byte led) {
+// keep this debug section and the next section in sync
+#if (DEBUG==DEBUG_LED)
   if(led == RLED) { // DPIN_RLED_SW
     if (!released) {
       Serial.println("can't set red led, switch is down");
     } else {
-      if(state == HIGH) {
-        Serial.println("Red LED on");
-      } else {
-        Serial.println("Red LED off");
-      }
+      Serial.println("Red LED on");
     }
   } else { // DPIN_GLED
-    if(state==HIGH)
-      Serial.println("Green LED on");
-    else
-      Serial.println("Green LED off");
+    Serial.println("Green LED on");
   }
 #endif
   // keep in sync with the previous debug section.
   if(led == RLED) { // DPIN_RLED_SW
     if (released) {
-      if(state == HIGH) {
-        digitalWrite(DPIN_RLED_SW, state);
-        pinMode(DPIN_RLED_SW, OUTPUT);
-      } else {
-        pinMode(DPIN_RLED_SW, state);
-        digitalWrite(DPIN_RLED_SW, LOW);
-      }
+      digitalWrite(DPIN_RLED_SW, HIGH);
+      pinMode(DPIN_RLED_SW, OUTPUT);
+	}
+  } else { // DPIN_GLED
+    digitalWrite(DPIN_GLED, HIGH);
+  }
+}
+
+ void hexbright::_led_off(byte led) {
+  // this state is HIGH/LOW
+  // keep this debug section and the next section in sync
+#if (DEBUG==DEBUG_LED)
+  if(led == RLED) { // DPIN_RLED_SW
+    if (!released) {
+      Serial.println("can't set red led, switch is down");
+    } else {
+      Serial.println("Red LED off");
     }
+  } else { // DPIN_GLED
+    Serial.println("Green LED off");
+  }
+#endif
+  // keep in sync with the previous debug section.
+  if(led == RLED) { // DPIN_RLED_SW
+    if (released) {
+      pinMode(DPIN_RLED_SW, LOW);
+      digitalWrite(DPIN_RLED_SW, LOW);
+    }
+ } else { // DPIN_GLED
+   digitalWrite(DPIN_GLED, LOW);
+ }
+}*/
+
+void hexbright::_set_led(byte led, byte state) {
+  // this state is HIGH/LOW
+  if(led == RLED) { // DPIN_RLED_SW
+    if(state == HIGH) {
+      digitalWrite(DPIN_RLED_SW, state);
+      pinMode(DPIN_RLED_SW, OUTPUT);
+    } else {
+	  pinMode(DPIN_RLED_SW, LOW);
+      digitalWrite(DPIN_RLED_SW, LOW);
+	}
  } else { // DPIN_GLED
    digitalWrite(DPIN_GLED, state);
  }
@@ -364,7 +389,7 @@ byte hexbright::get_led_state(byte led) {
 
 void hexbright::adjust_leds() {
   // turn off led if it's expired
-#if (DEBUG==DEBUG_BUTTON)
+#if (DEBUG==DEBUG_LED)
   if(led_on_time[GLED]>=0) {
     Serial.print("green on countdown: ");
     Serial.println(led_on_time[GLED]*ms_delay);
@@ -386,6 +411,7 @@ void hexbright::adjust_leds() {
       _set_led(i, LOW);
     }
     if(led_on_time[i]>=0) {
+      _set_led(i, HIGH);
       led_on_time[i]--;
     } else if (led_wait_time[i]>=0) {
       led_wait_time[i]--;
@@ -396,6 +422,7 @@ void hexbright::adjust_leds() {
 /////////////////////BUTTON////////////////////
 
 int time_held = 0;
+boolean released = true;
 
 boolean hexbright::button_released() {
   return time_held && released;
@@ -406,12 +433,6 @@ int hexbright::button_held() {
 }
 
 void hexbright::read_button() {
-  if(led_on_time[RLED] >= 0) { // led is still on, wait
-#if (DEBUG==DEBUG_BUTTON)
-    Serial.println("Red LED is active, no switch for you");
-#endif
-    return;
-  }
   byte button_on = digitalRead(DPIN_RLED_SW);
   if(button_on) {
 #if (DEBUG==DEBUG_BUTTON)
