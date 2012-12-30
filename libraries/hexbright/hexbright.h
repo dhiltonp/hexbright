@@ -35,9 +35,7 @@ either expressed or implied, of the FreeBSD Project.
 #define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 3500 bytes (in development, it will shrink a lot once it's finished)
 
-// In development, api will change.
 #ifdef ACCELEROMETER 
-//#define DEBUG 6
 #define DPIN_ACC_INT 3
 
 #define ACC_ADDRESS             0x4C
