@@ -2,7 +2,7 @@
 
 #include <hexbright.h>
 
-hexbright hb(50);
+hexbright hb;
 
 void setup() {
   hb.init_hardware(); 

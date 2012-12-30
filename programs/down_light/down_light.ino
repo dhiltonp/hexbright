@@ -31,7 +31,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <Wire.h>
 
-hexbright hb(20);
+hexbright hb;
 
 void setup() {
   hb.init_hardware();
@@ -66,8 +66,8 @@ void loop() {
       }
       level = level>1000 ? 1000 : level;
       hb.set_light(CURRENT_LEVEL, level, 150);
-    } else if (abs(hb.get_gs())-1>.5 ||
-               hb.get_angle_change()>25) { // moderate-high movement, drop light level
+    } else if (abs(hb.magnitude(hb.vector(0)))-100>50 ||
+               hb.angle_change()>25) { // moderate-high movement, drop light level
        smoothed_difference=100; // reset so when we stop we build up with no jerks.
        hb.set_light(CURRENT_LEVEL, 200, 50);
     } 
@@ -83,6 +83,4 @@ void loop() {
     }
   } 
 
-
-//  hb.print_accelerometer();
 }

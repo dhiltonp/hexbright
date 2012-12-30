@@ -98,17 +98,8 @@ either expressed or implied, of the FreeBSD Project.
 
 class hexbright {
   public: 
-    // ms_delay is the time update will try to wait between runs.
-    // the point of ms_delay is to provide regular update speeds,
-    //   so if code takes longer to execute from one run to the next,
-    //   the actual interface doesn't change (button click duration,
-    //   brightness changes). Set this from 5-30. very low is generally
-    //   fine (or great), BUT if you do any printing, the actual delay
-    //   may be greater than the value you set.
-    //   Also, the minimum value when working with the accelerometer is 9. (1000/120)
-    // Don't try to use times smaller than this value in your code.
-    //   (setting the on_time for less than update_delay_ms = 0)
-    hexbright(int update_delay_ms);
+    // This is the constructor, it is called when you create a hexbright object.
+    hexbright();
   
     // init hardware.
     // put this in your setup().
@@ -197,48 +188,78 @@ class hexbright {
     static boolean printing_number();
 
 #ifdef ACCELEROMETER
-    // Accelerometer (in development)
-    // good documentation:
-    // http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-    // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
-    static void read_accelerometer_vector();
     // accepts things like ACC_REG_TILT
     static byte read_accelerometer(byte acc_reg);
 
-    static void print_accelerometer();
-
-    // last two readings have had less than tolerance acceleration(in Gs)
-    static boolean stationary(double tolerance=.1);
-    // last reading had more than tolerance acceleration (in Gs)
-    static boolean moved(double tolerance=.5);
-
-
+    // Most units are in 1/100ths of Gs.
+	//  so 100 = 1G.
+    // last two readings have had minor acceleration
+	static boolean stationary(int tolerance=10);
+    // last reading had non-gravitational acceleration
+    static boolean moved(int tolerance=50);
+	
+	// returns a value from 100 to -100. 0 is no movement.
+	//  This returns lots of noise if we're pointing up or down.
+	//  I've found it works well rotating it one-handed.
+	static char get_spin();
     //returns the angle between straight down and 
-    // returns 0 to 100. 0 == down, 100% == up.  Multiply by 1.8 to get degrees.
+    // returns 0 to 1. 0 == down, 1 == straight up.  Multiply by 1.8 to get degrees.
     // expect noise of about 10.
     static double difference_from_down();
-    static double get_dp();
-    static double get_gs(); // Gs of acceleration
-    static double* get_axes_rotation();
     // lots of noise < 5*.  Most noise is <10*
     // noise varies partially based on sample rate.  120, noise <10*.  64, ~8?
-    static double get_angle_change();
-
-    static double jab_detect(float sensitivity=1);
-
-  private:
-    static double angle_difference(double dot_product, double magnitude1, double magnitude2);
-    static void normalize(double* out_vector, double* in_vector, double magnitude);
-    static void sum_vectors(double* out_vector, double* in_vector1, double* in_vector2);
-    static double dot_product(double* vector1, double* vector2);
-    static double get_magnitude(double* vector);
-
-    static int convert_axis_number(byte value);
-    static void print_vector(double* vector, char* label);
-
-    static void enable_accelerometer();
-    static void disable_accelerometer();
-  public:
+    static double angle_change();
+	
+	// returns how much acceleration is occurring on a vector - down.
+	//  If no acceleration is occurring, the vector should be close to {0,0,0}.
+	static void absolute_vector(int* out_vector, int* in_vector);
+	
+	   
+	// Returns the nth vector back from our position.  Currently we only store the last 4 vectors.
+	//  0 = most recent reading,
+	//  3 = most distant reading.
+	// Do not modify the return vector.
+	static int* vector(byte back);
+	// Returns our best guess at which way is down.
+	// Do not modify the return vector.
+	static int* down();
+	
+    
+	/// vector operations, most operate with 100 = 1G, mathematically.
+	// returns a value roughly corresponding to how similar two vectors are.
+	static int dot_product(int* vector1, int* vector2);
+	// this will give a vector that has experienced no movement, only rotation relative to the two inputs
+    static void cross_product(int * out_vector, int* in_vector1, int* in_vector2, double angle_difference);
+	// magnitude of a non-normalized vector corresponds to how many Gs we're sensing
+	//  The only normalized vector is down.
+	static double magnitude(int* vector);
+	static void sum_vectors(int* out_vector, int* in_vector1, int* in_vector2);
+    static void sub_vectors(int* out_vector, int* in_vector1, int* in_vector2);
+	static void copy_vector(int* out_vector, int* in_vector);
+	// normalize scales our current vector to 100
+	static void normalize(int* out_vector, int* in_vector, double magnitude);
+    // angle difference is unusual in that it returns a value from 0-1 
+	//  (0 = same angle, 1 = opposite).
+    static double angle_difference(int dot_product, double magnitude1, double magnitude2);
+	
+	static void print_vector(int* vector, char* label);
+    
+  private: // internal to the library
+    // good documentation:
+    // http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
+    // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
+    // 1 ~= .05 Gs (page 28 of the data sheet).
+    static void read_accelerometer_vector();
+    
+    // advances the current vector to the next (a place for more data)
+    static void next_vector();
+	// Recalculate down.  If there has been lots of movement, this could easily
+    //  be off. But not recalculating down in such cases costs more work, and 
+	//  even then, we're just guessing.  Overall, a windowed average works fairly 
+	//  well.
+	static void find_down();
+    
+	static void enable_accelerometer();
 #endif
 
   private: 

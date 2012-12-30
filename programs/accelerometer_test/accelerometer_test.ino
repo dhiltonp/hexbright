@@ -3,7 +3,7 @@
 #include <hexbright.h>
 
 
-hexbright hb(250);
+hexbright hb;
 
 void setup() {
   hb.init_hardware(); 
@@ -45,8 +45,8 @@ void loop() {
     }
   } else {
     // http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-    hb.read_accelerometer_vector();
-    hb.print_vector(); // and dot product
+    //hb.read_accelerometer_vector();
+    hb.print_vector(hb.vector(0), "read vector"); // and dot product
   }
 }
 

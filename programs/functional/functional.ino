@@ -39,8 +39,8 @@ either expressed or implied, of the FreeBSD Project.
 int mode = 0;
 
 
-#define MS 10
-hexbright hb(MS);
+#define MS 8.333 // now internally set, keeping us in lockstep with the accelerometer
+hexbright hb;
 
 void setup() {
   hb.init_hardware();

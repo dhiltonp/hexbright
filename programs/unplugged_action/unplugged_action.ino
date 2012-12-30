@@ -3,7 +3,7 @@
 #include <Wire.h>
 
 #define MS 20
-hexbright hb(MS);
+hexbright hb;
 
 #define OFF_MODE 0
 #define CHARGE_MODE 1

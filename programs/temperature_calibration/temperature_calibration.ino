@@ -31,7 +31,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <Wire.h>
 
 
-hexbright hb(5);
+hexbright hb;
 
 void setup() {
   hb.init_hardware();

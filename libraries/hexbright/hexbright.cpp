@@ -44,11 +44,10 @@ either expressed or implied, of the FreeBSD Project.
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
 
-int ms_delay;
-unsigned long last_time;
+const float ms_delay = 8.3333333; // in lock-step with the accelerometer
+unsigned long time;
 
-hexbright::hexbright(int update_delay_ms) {
-  ms_delay = update_delay_ms;
+hexbright::hexbright() {
 }
 
 void hexbright::init_hardware() {
@@ -81,55 +80,50 @@ void hexbright::init_hardware() {
 #endif
 
 #ifdef ACCELEROMETER
-  if(ms_delay<9) {
-#if (DEBUG!=DEBUG_OFF)
-    Serial.println("Warning, ms_delay too low for accelerometer.  Adjusting to 9 ms.");
-#endif
-    ms_delay = 9;
-  }
   enable_accelerometer();
 #endif
   
-  last_time = millis();
+  time = micros();
 }
 
 
 void hexbright::update() {
-  unsigned long time;
-  do {
-    time = millis();
-  } while (time-last_time < ms_delay);
+  // advance time at the same rate as values are changed in the accelerometer.
+  time = time+(1000*ms_delay);
+  while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
   
-  // loop 200? 60? times per second?
-  // The point is, we want light adjustments to be constant regardless of how much processing is going on.
+  // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
   static float avg_loop_time = 0;
+  static float last_time = 0;
   avg_loop_time = (avg_loop_time*29 + time-last_time)/30;
 #if (DEBUG==DEBUG_LOOP)
   if(!i) {
     Serial.print("Average loop time: ");
-    Serial.println(avg_loop_time);
+    Serial.println(avg_loop_time/1000);
   }
 #endif
-  if(avg_loop_time>ms_delay+1 && !i) {
+  if(avg_loop_time/1000>ms_delay+1 && !i) {
     // This may be caused by too much processing for our ms_delay, or by too many print statements (each one takes a few ms)
     Serial.print("WARNING: loop time: ");
-    Serial.println(avg_loop_time);
+    Serial.println(avg_loop_time/1000);
   }
   if (!i)
     i=1000/ms_delay; // display loop output every second
   else
     i--;
-#endif
-
   last_time = time;
+#endif
+  
+  
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
 
-#ifdef LED  
+  #ifdef LED  
   // regardless of desired led state, turn it off so we can read the button
   _led_off(RLED);
+  delayMicroseconds(50); // let the light stabilize...
   read_button();
   // turn on (or off) the leds, if appropriate
   adjust_leds();
@@ -143,6 +137,7 @@ void hexbright::update() {
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer_vector();
+  find_down();
 #endif
   overheat_protection();    
   
@@ -429,247 +424,27 @@ void hexbright::read_button() {
 #define ACCEL_DROP   3 // return change of velocity - period of no acceleration before impact?
 #define ACCEL_TAP    4 // return change of velocity - acceleration before impact
 
-boolean using_accelerometer = false;
+// I considered operating with bytes to save space, but the savings were
+//  offset by still needing to do /some/ things as ints.  I've not completely
+//  tested which is more compact, but preliminary work suggests difficulty
+//  in the implementation with little to no benefit.
+      
+
+int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
+int current_vector = 0;
+byte num_vectors = 4;
+int down_vector[] = {0,0,0};
 
 
-
-double vectors[] = {0,0,0, 0,0,0};
-double* new_vector = vectors;
-double* old_vector = vectors+3;
-double down[3] = {0,0,0};
-
-double old_magnitude = 0;
-double new_magnitude = 0;
-double dp = 0;
-double angle_change = 0;
-double axes_rotation[] = {0,0,0};
-
-double light_axis[3] = {0,-1,0};
-
-
-double hexbright::get_angle_change() {
-  return angle_change;
-}
-
-double hexbright::get_dp() {
-  return dp;
-}
-
-double* hexbright::get_axes_rotation() {
-  return axes_rotation;
-}
-
-double hexbright::get_gs() {
-  return new_magnitude;
-}
-
-void hexbright::normalize(double* out_vector, double* in_vector, double magnitude) {
-  for(int i=0; i<3; i++) {
-    out_vector[i] = in_vector[i]/magnitude;
-  }  
-}
-
-
-double hexbright::jab_detect(float sensitivity) {
-#if (DEBUG==DEBUG_ACCEL)
-  //Serial.println((int)sensitivity);
-#endif
-  double new_normalized[3] = {0,0,0};
-  double old_normalized[3] = {0,0,0};
-  normalize(new_normalized, new_vector, new_magnitude);
-  normalize(old_normalized, old_vector, old_magnitude);
-  
-  //  if(abs(old_magnitude-1)>.3 && abs(new_magnitude-1)>.3) {
-  if(abs(old_magnitude-new_magnitude)>.4) {
-#if (DEBUG==DEBUG_ACCEL)
-    Serial.println("magnitude passed");
-    Serial.println(abs(dot_product(new_normalized, light_axis)));
-    Serial.println(abs(dot_product(old_normalized, light_axis)));
-#endif
-     if(abs(dot_product(new_normalized, light_axis))>.8 &&
-        abs(dot_product(old_normalized, light_axis))>.8) {
-#if (DEBUG==DEBUG_ACCEL)
-       Serial.println("light_axis passed");
-       Serial.println(new_vector[1]);
-#endif
-        return new_vector[1]-20;
-     }
-  }
-  return 0;
-
-  // magnitude(old_thing, new_thing
-  if(angle_change>15 && abs(new_magnitude-1)>.4) {
-    
-    //    print_vector(normalized);
-    //    Serial.println("normalized");
-    //Serial.println(dot_product(normalized,light_axis));
-    return 1;
-  }
-  return 0;
-}
-
-double hexbright::angle_difference(double dot_product, double magnitude1, double magnitude2) {
-  double tmp = dot_product/(magnitude1*magnitude2);
-  return acos(tmp);
-}
-
-double hexbright::difference_from_down() {
-  return (angle_difference(dot_product(light_axis, down), 1, 1)/3.14159);
-}
-
-
-void hexbright::print_vector(double* vector, char* label) {
-#if (DEBUG!=DEBUG_OFF)
-  for(int i=0; i<3; i++) {
-    Serial.print(vector[i]); 
-    Serial.print("/");
-  }
-  Serial.println(label);
-#endif
-}
-
-void hexbright::print_accelerometer() {
-#ifdef DEBUG // serial port is imported
-  print_vector(old_vector, "old vector");
-  print_vector(new_vector, "new vector");
-  print_vector(down, "down");
-  print_vector(axes_rotation, "axes rotation");
-  Serial.print(angle_change);
-  Serial.println(" (degrees)");
-  Serial.print(difference_from_down());
-  Serial.println(" (difference from down)");
-  Serial.print("Magnitude (acceleration in Gs): ");
-  Serial.println(new_magnitude);
-  Serial.print("Dp: ");
-  Serial.println(dp);
-#endif
-}
-
-double hexbright::dot_product(double* vector1, double* vector2) {
-  double sum = 0;
-  for(int i=0;i<3;i++) {
-    sum+=vector1[i]*vector2[i];
-  } 
-  return sum; // convert to Gs (datasheet appendix C)
-}
-
-double hexbright::get_magnitude(double* vector) {
-  double result = 0;
-  for(int i=0; i<3;i++) {
-   result += vector[i]*vector[i];
-  }
-  return sqrt(result); // convert to Gs (datasheet appendix C)
-}
-
-void hexbright::sum_vectors(double* out_vector, double* in_vector1, double* in_vector2) {
-  for(int i=0; i<3;i++) {
-    out_vector[i] = in_vector1[i]+in_vector2[i];
-  }
-}
-
-
-void hexbright::read_accelerometer_vector() {
-  // swap first vector
-  double* tmp_vector = new_vector;
-  new_vector = old_vector;
-  old_vector = tmp_vector;
-
-  while(1) {
-    Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
-    Wire.endTransmission(false);
-    Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
-    for(int i=0; i<3; i++) {
-      if (!Wire.available())
-        continue;
-      char tmp = Wire.read();
-      if(tmp & 0x40) // Bx1xxxxx, re-read per data sheet page 14
-        continue;
-      if(tmp & 0x20) // Bxx1xxxx, it's negative, extend the 6 bits to 8 bits
-        tmp |= 0xC0;
-      new_vector[i] = tmp/21.3; // convert to Gs (datasheet page 28)
-    }
-    break;
-  }
-
-  // calculate Gs (magnitude)
-  old_magnitude = new_magnitude;
-  new_magnitude = get_magnitude(new_vector);
-
-  // calculate angle change
-  // equation 45 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-  dp = dot_product(old_vector, new_vector);
-  angle_change = angle_difference(dp,
-                                  new_magnitude, old_magnitude);
-
-  // calculate instantaneous rotation around axes
-  // equation 47 from http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-  for(int i=0; i<3; i++) {
-    axes_rotation[i] = (new_vector[(i+1)%3]*old_vector[(i+2)%3] \
-                        - new_vector[(i+2)%3]*old_vector[(i+1)%3]);
-    axes_rotation[i] /= new_magnitude*old_magnitude;
-    axes_rotation[i] /= asin(angle_change);
-  }
-
-
-  // change angle_change from radians to degrees
-  angle_change *= 180/3.14159;  
-
-  // find down
-  if(stationary()) { // update down
-    sum_vectors(down, new_vector, old_vector);
-    normalize(down, down, (new_magnitude+old_magnitude));
-  }
-}
-
-boolean hexbright::stationary(double tolerance) {
-  // low acceleration vectors, not much difference between vectors
-  return abs(new_magnitude-1)<tolerance && abs(old_magnitude-1)<tolerance; 
-}
-
-boolean hexbright::moved(double tolerance) {
-  return abs(new_magnitude-1)>tolerance;
- }
-
-byte hexbright::read_accelerometer(byte acc_reg) {
-  if (!digitalRead(DPIN_ACC_INT)) {
-    Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(acc_reg);
-    Wire.endTransmission(false);       // End, but do not stop!
-    Wire.requestFrom(ACC_ADDRESS, 1);  
-    return Wire.read();
-  }
-  return 0;
-}
-
+/// SETUP/MANAGEMENT
 
 void hexbright::enable_accelerometer() {
-  byte sample_rate = 6; //111
-  for(int i=0; i<=6; i++) {
-    if(1000/ms_delay> (1<<i)) {
-      //       1000/12000>1, leave sample_rate at 6
-      //       1000/200>1, sample_rate=5(110)
-      //       1000/200>2, sample_rate=4(101)
-      //       1000/200>4, sample_rate=3(100)
-      //       1000/200>8, sample_rate=3(011)
-      //       1000/200>16, sample_rate=3(010)
-      //       1000/200>32, sample_rate=3(001)
-      //       1000/200>64, sample_rate=3(111)
-      //       1000/200>128, sample_rate=3(111)
-      sample_rate = 6-i;
-    }
-  }
-#if (DEBUG==DEBUG_ACCEL)
-  Serial.println((int)sample_rate);
-#endif
-
-  
   // Configure accelerometer
   byte config[] = {
     ACC_REG_INTS,  // First register (see next line)
     0xE4,  // Interrupts: shakes, taps
     0x00,  // Mode: not enabled yet
-    sample_rate,  // Sample rate: 120 Hz (see datasheet page 19)
+    0x00,  // Sample rate: 120 Hz (see datasheet page 19)
     0x0F,  // Tap threshold
     0x05   // Tap debounce samples
   };
@@ -687,9 +462,200 @@ void hexbright::enable_accelerometer() {
  // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
 
-void hexbright::disable_accelerometer() {
-  
+void hexbright::read_accelerometer_vector() {
+  /*unsigned long time = 0;
+  if((millis()-init_time)>*/
+  // advance which vector is considered the first
+  next_vector();
+  while(1) {
+    Wire.beginTransmission(ACC_ADDRESS);
+    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
+    Wire.endTransmission(false);
+    Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
+    for(int i=0; i<3; i++) {
+      if (!Wire.available())
+        continue;
+      char tmp = Wire.read();
+      if(tmp & 0x40) // Bx1xxxxxx, re-read per data sheet page 14
+        continue;
+      if(tmp & 0x20) // Bxx1xxxxx, it's negative, extend to B111xxxxx
+        tmp |= 0xC0;
+      vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
+    }
+    break;
+  }
 }
+
+byte hexbright::read_accelerometer(byte acc_reg) {
+  if (!digitalRead(DPIN_ACC_INT)) {
+    Wire.beginTransmission(ACC_ADDRESS);
+    Wire.write(acc_reg);
+    Wire.endTransmission(false);       // End, but do not stop!
+    Wire.requestFrom(ACC_ADDRESS, 1);  
+    return Wire.read();
+  }
+  return 0;
+}
+
+inline void hexbright::find_down() {
+  // currently, we're just averaging the last four data points.
+  //  Down is the strongest constant acceleration we experience 
+  //  (assuming we're not dropped).  Heuristics to only find down
+  //  under specific circumstances have been tried, but they only
+  //  tell us when down is less certain, not where it is...
+  copy_vector(down_vector, vector(0)); // copy first vector to down
+  double magnitudes = magnitude(vector(0));
+  for(int i=1; i<num_vectors; i++) { // go through, summing everything up
+    int* vtmp = vector(i);
+    sum_vectors(down_vector, down_vector, vtmp);
+    magnitudes+=magnitude(vtmp);
+  }
+  normalize(down_vector, down_vector, magnitudes);
+}
+
+/// SOME SAMPLE FUNCTIONS
+
+double hexbright::angle_change() {
+  int* vec1 = vector(0);
+  int* vec2 = vector(1);
+  return angle_difference(dot_product(vec1, vec2),
+                          magnitude(vec1),
+                          magnitude(vec2));
+}
+
+void hexbright::absolute_vector(int* out_vector, int* in_vector) {
+  sub_vectors(out_vector, in_vector, down_vector);
+}
+
+double hexbright::difference_from_down() {
+  int light_axis[3] = {0, -100, 0};
+  return (angle_difference(dot_product(light_axis, down_vector), 100, 100));
+}
+
+boolean hexbright::stationary(int tolerance) {
+  // low acceleration vectors
+  return abs(magnitude(vector(0))-100)<tolerance && abs(magnitude(vector(1))-100)<tolerance; 
+}
+
+boolean hexbright::moved(int tolerance) {
+  return abs(magnitude(vector(0))-100)>tolerance;
+}
+
+char hexbright::get_spin() {
+  // quick formula:
+  //(atan2(vector(1)[0], vector(1)[2]) - atan2(vector(0)[0], vector(0)[2]))*32;  
+  // we cache the last position, because it takes up less space.
+  static char last_position = 0;
+  // 2*PI*32 = 200
+  char position = atan2(vector(0)[0], vector(0)[2])*32;  
+  char tmp = last_position-position;
+  last_position = position;
+  return tmp;
+}
+
+/// VECTOR TOOLS
+int* hexbright::vector(byte back) {
+  return vectors+((current_vector/3+back)%num_vectors)*3;
+}
+
+int* hexbright::down() {
+  return down_vector;
+}
+
+void hexbright::next_vector() {
+  current_vector=((current_vector/3+(num_vectors-1))%num_vectors)*3;
+}
+
+double hexbright::angle_difference(int dot_product, double magnitude1, double magnitude2) {
+  // multiply to account for 100 being equal to one for our vectors
+  double tmp = dot_product*100/(magnitude1*magnitude2);
+  return acos(tmp)/3.14159;
+}
+
+int hexbright::dot_product(int* vector1, int* vector2) {
+  // the max value sum could hit is technically > 2^16.
+  //  However, the only instance where this is possible is if both vectors have 
+  //  experienced maximum acceleration on all axes - with 4 of the 6 being the max in the negative 
+  //  direction (-32 min, 31 max), (31*100/21.3) = 145, (-32*100/21.3) = -150
+  //  3*(150^2) = 67500 (not safe)
+  //  (150*150)+(150*150)+(145*145) = 66025 (not safe)
+  //  (150*150)+(150*145)+(145*145) = 65275 (safe)
+  //  3*(145^2) = 63075 (safe)
+  // Given the difficulty of triggering this condition, I'm using an int.
+  //  This could also be avoided by /100 inside the loop, costing 12 bytes.
+  //  We should revisit this decision when drop detect code has been written.
+  // An alternate solution would be to convert using READING*100/21.65, giving 
+  //  a max of 147.  3*(147^2) = 64827 (safe).  A max of 148 would be safe so 
+  //  long as no more than 5 values are -32.
+  unsigned int sum = 0; // max value is about 3*(150^2), a tad over the maximum unsigned int
+  for(int i=0;i<3;i++) {
+    //sum+=vector1[i]*vector2[i]/100; // avoids overflow, but costs space
+    sum+=vector1[i]*vector2[i];
+  } 
+  return sum/100; // small danger of overflow
+}
+
+void hexbright::cross_product(int * axes_rotation, 
+                                        int* in_vector1, 
+										int* in_vector2, 
+										double angle_difference) {
+  for(int i=0; i<3; i++) {
+      axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3] \
+                          - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
+      //axes_rotation[i] /= magnitude(in_vector1)*magnitude(in_vector2);
+      //axes_rotation[i] /= asin(angle_difference*3.14159);
+    }
+}
+
+double hexbright::magnitude(int* vector) {
+  // This has a small possibility of failure, see the comments at the start 
+  //  of dot_product.  A long would cost another 28 bytes, a double 42.
+  //  A cheaper solution (costing 20 bytes) is to divide the squaring by 100,
+  //  then multiply the sqrt by 10 (commented out).
+  unsigned int result = 0; 
+  for(int i=0; i<3;i++) {
+    result += vector[i]*vector[i]; // vector[i]*vector[i]/100;
+  }
+  return sqrt(result); // sqrt(result)*10;
+}
+
+void hexbright::normalize(int* out_vector, int* in_vector, double magnitude) {
+  for(int i=0; i<3; i++) {
+  // normalize to 100, not 1
+    out_vector[i] = in_vector[i]/magnitude*100;
+  }  
+}
+
+void hexbright::sum_vectors(int* out_vector, int* in_vector1, int* in_vector2) {
+  for(int i=0; i<3;i++) {
+    out_vector[i] = in_vector1[i]+in_vector2[i];
+  }
+}
+
+void hexbright::sub_vectors(int* out_vector, int* in_vector1, int* in_vector2) {
+  for(int i=0; i<3;i++) {
+    out_vector[i] = in_vector1[i]-in_vector2[i];
+  }
+}
+
+void hexbright::copy_vector(int* out_vector, int* in_vector) {
+  for(int i=0; i<3;i++) {
+    out_vector[i] = in_vector[i];
+  }
+}
+
+void hexbright::print_vector(int* vector, char* label) {
+#if (DEBUG!=DEBUG_OFF)
+  for(int i=0; i<3; i++) {
+    Serial.print(vector[i]); 
+    Serial.print("/");
+  }
+  Serial.println(label);
+#endif
+}
+
+
+
 
 #endif
 
