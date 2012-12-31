@@ -45,6 +45,12 @@ either expressed or implied, of the FreeBSD Project.
 #define ACC_REG_TILT            3
 #define ACC_REG_INTS            6
 #define ACC_REG_MODE            7
+
+// return values for get_tilt_orientation
+#define TILT_UNKNOWN 0
+#define TILT_UP 1
+#define TILT_DOWN 2
+#define TILT_HORIZONTAL 3
 #endif
 
 
@@ -187,8 +193,33 @@ class hexbright {
 
 #ifdef ACCELEROMETER
     // accepts things like ACC_REG_TILT
+	// TILT is now read by default in the private method, at the cost of 12 bytes.
+	// using this may cause synchronization errors?
     static byte read_accelerometer(byte acc_reg);
+	
+	/// interface with the tilt register
+	// look at the datasheet page 15 for more details
+	//  // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
+	// In general, the tilt register is less precise than doing manual
+	//  calculations with the vector, but it takes up less space.
+	static byte get_tilt_register();
+	// return true if the tap flag was set
+	static boolean tapped();
+	// return true if the shake flag was set
+    static boolean shaked();
+	// returns the tilt orientation:
+	//  TILT_UNKNOWN, TILT_HORIZONTAL, TILT_UP, and TILT_DOWN
+	//  TILT_UNKNOWN is an extremely rare case (turning on from off, or 
+    //  the accelerometer turning on from standby).
+	static byte get_tilt_orientation();
+	// returns tilt rotation.
+	//  1 for clockwise, -1 for counterclockwise, 0 for same/unknown.
+	// The tilt sensor only changes readings every 90 degrees.  If you need 
+	//  more precision, look at angle_change
+	static char get_tilt_rotation();
+	
 
+	/// operations that use the vector reading
     // Most units are in 1/100ths of Gs (so 100 = 1G).
     // last two readings have had minor acceleration
 	//  The sensor has around .1-.05 Gs of noise, so by default we set tolerance = .1 Gs.
@@ -251,7 +282,8 @@ class hexbright {
     // http://cache.freescale.com/files/sensors/doc/app_note/AN3461.pdf
     // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
     // 1 ~= .05 Gs (page 28 of the data sheet).
-    static void read_accelerometer_vector();
+	// reads the x,y,z axes + the tilt register.
+    static void read_accelerometer();
     
     // advances the current vector to the next (a place for more data)
     static void next_vector();

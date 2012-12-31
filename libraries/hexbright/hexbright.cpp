@@ -136,7 +136,7 @@ void hexbright::update() {
   
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
-  read_accelerometer_vector();
+  read_accelerometer();
   find_down();
 #endif
   overheat_protection();    
@@ -430,6 +430,7 @@ void hexbright::read_button() {
 //  in the implementation with little to no benefit.
       
 
+byte tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
 int current_vector = 0;
 byte num_vectors = 4;
@@ -462,7 +463,7 @@ void hexbright::enable_accelerometer() {
  // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
 
-void hexbright::read_accelerometer_vector() {
+void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
   if((millis()-init_time)>*/
   // advance which vector is considered the first
@@ -471,16 +472,20 @@ void hexbright::read_accelerometer_vector() {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
     Wire.endTransmission(false);
-    Wire.requestFrom(ACC_ADDRESS, 3);  // read 3 registers (X,Y,Z)
-    for(int i=0; i<3; i++) {
+    Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT
+    for(int i=0; i<4; i++) {
       if (!Wire.available())
         continue;
       char tmp = Wire.read();
       if(tmp & 0x40) // Bx1xxxxxx, re-read per data sheet page 14
         continue;
-      if(tmp & 0x20) // Bxx1xxxxx, it's negative, extend to B111xxxxx
-        tmp |= 0xC0;
-      vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
+      if(i==3){ //read tilt register
+	    tilt = tmp;
+	  } else { // read vector
+        if(tmp & 0x20) // Bxx1xxxxx, it's negative
+          tmp |= 0xC0; // extend to B111xxxxx
+        vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
+	  }
     }
     break;
   }
@@ -513,7 +518,72 @@ inline void hexbright::find_down() {
   normalize(down_vector, down_vector, magnitudes);
 }
 
-/// SOME SAMPLE FUNCTIONS
+/// tilt register interface
+
+byte hexbright::get_tilt_register() {
+  return tilt;
+}
+
+boolean hexbright::tapped() {
+  return tilt & 0x20;
+}
+
+boolean hexbright::shaked() {
+  return tilt & 0x80;
+}
+
+byte hexbright::get_tilt_orientation() {
+  byte tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
+  tmp = tmp>>2; // shift us all the way to the right
+  // PoLa: 5, 6 = horizontal, 1 = up, 2 = down, 0 = unknown
+  if(tmp & 0x04) 
+    return TILT_HORIZONTAL;
+  return tmp;
+}
+
+char hexbright::get_tilt_rotation() {
+  static byte last = 0;
+  byte current  = tilt & 0x1F; // filter out tap/shake registers
+  // 21,22,26,25 (in order, rotating when horizontal)
+  switch(current ) {
+  case 21: // 10101
+    current  = 1;
+	break;
+  case 22: // 10110
+    current  = 2;
+	break;
+  case 26: // 11010
+    current  = 3;
+	break;
+  case 25: // 11001
+    current  = 4;
+	break;
+  default: // we can't determine orientation with this reading
+    last = 0;
+	return 0;
+  }
+  
+  if(last==0) { // previous reading wasn't usable
+    last = current;
+    return 0;
+  } 
+  
+  // we have two valid values, calculate!
+  char retval = last-current;
+  last = current;
+  if(retval*retval>1) { // switching from a 4 to a 1 or vice-versa
+    retval = -(retval%2);
+  }
+#if (DEBUG==DEBUG_ACCEL)	
+  if(retval!=0) {
+    Serial.print("tilt rotation: ");
+    Serial.println((int)retval);
+  }
+#endif
+  return retval;
+}
+
+/// some sample functions using vector operations
 
 double hexbright::angle_change() {
   int* vec1 = vector(0);
