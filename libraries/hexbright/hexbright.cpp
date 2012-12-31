@@ -109,6 +109,10 @@ void hexbright::update() {
     Serial.print("WARNING: loop time: ");
     Serial.println(avg_loop_time/1000);
   }
+  if(!i) {
+    Serial.print("Free ram: ");
+	Serial.println(freeRam());
+  }
   if (!i)
     i=1000/ms_delay; // display loop output every second
   else
@@ -152,6 +156,13 @@ void hexbright::shutdown() {
   digitalWrite(DPIN_DRV_EN, LOW);
 }
 
+
+//// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
+int hexbright::freeRam () {
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
 
 
 

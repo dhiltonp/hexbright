@@ -35,6 +35,8 @@ either expressed or implied, of the FreeBSD Project.
 #define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 
+// see also freeRam() below
+
 #ifdef ACCELEROMETER 
 #define DPIN_ACC_INT 3
 
@@ -122,6 +124,22 @@ class hexbright {
     //  behavior after turning the light off and on again in 
     // less than .5 seconds.
     static void shutdown();
+	
+
+	// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
+	// Arduino uses ~400 bytes of ram, leaving us with 600 to play with 
+    //  (between function calls (including local variables) and global variables).
+    // The library uses < 100 bytes (Accelerometer support adds about 60 bytes).
+    //  But, debug mode uses another 100 bytes.
+    //  Between your variables and stack, you should be able to use ~400 safely.
+	// Use it if you are experiencing weird crashes.
+	//  You can view the value by using code like this:
+	//   Serial.println(hb.freeRam());
+	// or, if you can't enable debugging:
+	//   if(!hb.printing_number())
+	//     hb.print_number(hb.freeRam());
+	static int freeRam ();
+
 
     
     // go from start_level to end_level over time (in milliseconds)
