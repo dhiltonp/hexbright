@@ -177,8 +177,11 @@ void hexbright::set_light(int start_level, int end_level, int time) {
 // duration ranges from 1-MAXINT
 // light_level can be from 0-1000
   if(start_level == CURRENT_LEVEL) {
-    start_light_level = get_safe_light_level();
+    start_light_level = get_light_level();
     end_light_level = end_level;
+  } else if (end_level == CURRENT_LEVEL) {
+    end_light_level = get_light_level();
+    start_light_level = start_level;
   } else {
     start_light_level = start_level;
     end_light_level = end_level;

@@ -127,7 +127,7 @@ class hexbright {
     // go from start_level to end_level over time (in milliseconds)
     // level is from 0-1000. 
     // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
-    // start_level can be CURRENT_LEVEL
+    // either start_level or end level can be CURRENT_LEVEL
     static void set_light(int start_level, int end_level, int time);
     // get light level (before overheat protection adjustment)
     static int get_light_level();
