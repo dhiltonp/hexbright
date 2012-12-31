@@ -3,13 +3,13 @@ Copyright (c) 2012, "David Hilton" <dhiltonp@gmail.com>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+modification, are permitted provided that the following conditions are met: 
 
 1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
+   list of conditions and the following disclaimer. 
 2. Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
+   and/or other materials provided with the distribution. 
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -23,7 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies,
+of the authors and should not be interpreted as representing official policies, 
 either expressed or implied, of the FreeBSD Project.
 */
 
@@ -82,7 +82,7 @@ void hexbright::init_hardware() {
 #ifdef ACCELEROMETER
   enable_accelerometer();
 #endif
-
+  
   time = micros();
 }
 
@@ -91,7 +91,7 @@ void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
   time = time+(1000*ms_delay);
   while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
-
+  
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
@@ -111,7 +111,7 @@ void hexbright::update() {
   }
   if(!i) {
     Serial.print("Free ram: ");
-    Serial.println(freeRam());
+	Serial.println(freeRam());
   }
   if (!i)
     i=1000/ms_delay; // display loop output every second
@@ -119,12 +119,12 @@ void hexbright::update() {
     i--;
   last_time = time;
 #endif
-
-
+  
+  
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
 
-  #ifdef LED
+  #ifdef LED  
   // regardless of desired led state, turn it off so we can read the button
   _led_off(RLED);
   delayMicroseconds(50); // let the light stabilize...
@@ -137,16 +137,16 @@ void hexbright::update() {
 #else
   read_button();
 #endif
-
+  
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer();
   find_down();
 #endif
-  overheat_protection();
-
+  overheat_protection();    
+  
   // change light levels as requested
-  adjust_light();
+  adjust_light(); 
 }
 
 void hexbright::shutdown() {
@@ -159,9 +159,9 @@ void hexbright::shutdown() {
 
 //// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
 int hexbright::freeRam () {
-  extern int __heap_start, *__brkval;
-  int v;
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
 
 
@@ -210,8 +210,8 @@ void hexbright::set_light(int start_level, int end_level, int time) {
 int hexbright::get_light_level() {
   if(change_done>=change_duration)
     return end_light_level;
-  else
-    return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level;
+  else 
+    return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level; 
 }
 
 int hexbright::get_safe_light_level() {
@@ -224,7 +224,7 @@ int hexbright::get_safe_light_level() {
 
 
 void hexbright::set_light_level(unsigned long level) {
-// LOW 255 approximately equals HIGH 48/49.  There is a color change.
+// LOW 255 approximately equals HIGH 48/49.  There is a color change.  
 // Values < 4 do not provide any light.
 // I don't know about relative power draw.
 
@@ -239,7 +239,7 @@ void hexbright::set_light_level(unsigned long level) {
   if(level == 0) {
   // lowest possible power, but still running (DPIN_PWR still high)
     digitalWrite(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, 0);
+    analogWrite(DPIN_DRV_EN, 0); 
   }
   else if(level<=500) {
     digitalWrite(DPIN_DRV_MODE, LOW);
@@ -248,7 +248,7 @@ void hexbright::set_light_level(unsigned long level) {
     level -= 500;
     digitalWrite(DPIN_DRV_MODE, HIGH);
     analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
-  }
+  }  
 }
 
 void hexbright::adjust_light() {
@@ -264,10 +264,10 @@ void hexbright::adjust_light() {
 
   // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
   // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
-  // Here's an example: ambient temperature is >
+  // Here's an example: ambient temperature is > 
 void hexbright::overheat_protection() {
   int temperature = get_thermal_sensor();
-
+  
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
@@ -378,7 +378,7 @@ inline void hexbright::adjust_leds() {
       led_on_time[i]--;
     } else if(led_on_time[i]==0) {
       _led_off(i);
-      led_on_time[i]--;
+	  led_on_time[i]--;
     } else if (led_wait_time[i]>=0) {
       led_wait_time[i]--;
     }
@@ -399,7 +399,7 @@ boolean hexbright::button_released() {
 }
 
 int hexbright::button_held() {
-  return time_held*ms_delay;// && !red_on_time;
+  return time_held*ms_delay;// && !red_on_time; 
 }
 
 void hexbright::read_button() {
@@ -414,7 +414,7 @@ void hexbright::read_button() {
     Serial.print("time_held: ");
     Serial.println(time_held*ms_delay);
 #endif
-    time_held = 0;
+    time_held = 0; 
   } else if (!button_on) { // we're off.  don't reset time_held so we can read it one last time
     released = true;
   } else {  // increment time_held one cycle after released has been set, for debouncing
@@ -442,7 +442,7 @@ void hexbright::read_button() {
 //  offset by still needing to do /some/ things as ints.  I've not completely
 //  tested which is more compact, but preliminary work suggests difficulty
 //  in the implementation with little to no benefit.
-
+      
 
 byte tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
@@ -472,7 +472,7 @@ void hexbright::enable_accelerometer() {
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
-
+ 
  // pinMode(DPIN_ACC_INT,  INPUT);
  // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
@@ -484,7 +484,7 @@ void hexbright::read_accelerometer() {
   next_vector();
   while(1) {
     Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT,
+    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT, 
     Wire.endTransmission(false);
     Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT
     for(int i=0; i<4; i++) {
@@ -494,12 +494,12 @@ void hexbright::read_accelerometer() {
       if(tmp & 0x40) // Bx1xxxxxx, re-read per data sheet page 14
         continue;
       if(i==3){ //read tilt register
-        tilt = tmp;
-      } else { // read vector
+	    tilt = tmp;
+	  } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
         vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
-      }
+	  }
     }
     break;
   }
@@ -510,7 +510,7 @@ byte hexbright::read_accelerometer(byte acc_reg) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(acc_reg);
     Wire.endTransmission(false);       // End, but do not stop!
-    Wire.requestFrom(ACC_ADDRESS, 1);
+    Wire.requestFrom(ACC_ADDRESS, 1);  
     return Wire.read();
   }
   return 0;
@@ -518,7 +518,7 @@ byte hexbright::read_accelerometer(byte acc_reg) {
 
 inline void hexbright::find_down() {
   // currently, we're just averaging the last four data points.
-  //  Down is the strongest constant acceleration we experience
+  //  Down is the strongest constant acceleration we experience 
   //  (assuming we're not dropped).  Heuristics to only find down
   //  under specific circumstances have been tried, but they only
   //  tell us when down is less certain, not where it is...
@@ -550,7 +550,7 @@ byte hexbright::get_tilt_orientation() {
   byte tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
   tmp = tmp>>2; // shift us all the way to the right
   // PoLa: 5, 6 = horizontal, 1 = up, 2 = down, 0 = unknown
-  if(tmp & 0x04)
+  if(tmp & 0x04) 
     return TILT_HORIZONTAL;
   return tmp;
 }
@@ -562,33 +562,33 @@ char hexbright::get_tilt_rotation() {
   switch(current ) {
   case 21: // 10101
     current  = 1;
-    break;
+	break;
   case 22: // 10110
     current  = 2;
-    break;
+	break;
   case 26: // 11010
     current  = 3;
-    break;
+	break;
   case 25: // 11001
     current  = 4;
-    break;
+	break;
   default: // we can't determine orientation with this reading
     last = 0;
-    return 0;
+	return 0;
   }
-
+  
   if(last==0) { // previous reading wasn't usable
     last = current;
     return 0;
-  }
-
+  } 
+  
   // we have two valid values, calculate!
   char retval = last-current;
   last = current;
   if(retval*retval>1) { // switching from a 4 to a 1 or vice-versa
     retval = -(retval%2);
   }
-#if (DEBUG==DEBUG_ACCEL)
+#if (DEBUG==DEBUG_ACCEL)	
   if(retval!=0) {
     Serial.print("tilt rotation: ");
     Serial.println((int)retval);
@@ -618,7 +618,7 @@ double hexbright::difference_from_down() {
 
 boolean hexbright::stationary(int tolerance) {
   // low acceleration vectors
-  return abs(magnitude(vector(0))-100)<tolerance && abs(magnitude(vector(1))-100)<tolerance;
+  return abs(magnitude(vector(0))-100)<tolerance && abs(magnitude(vector(1))-100)<tolerance; 
 }
 
 boolean hexbright::moved(int tolerance) {
@@ -627,11 +627,11 @@ boolean hexbright::moved(int tolerance) {
 
 char hexbright::get_spin() {
   // quick formula:
-  //(atan2(vector(1)[0], vector(1)[2]) - atan2(vector(0)[0], vector(0)[2]))*32;
+  //(atan2(vector(1)[0], vector(1)[2]) - atan2(vector(0)[0], vector(0)[2]))*32;  
   // we cache the last position, because it takes up less space.
   static char last_position = 0;
   // 2*PI*32 = 200
-  char position = atan2(vector(0)[0], vector(0)[2])*32;
+  char position = atan2(vector(0)[0], vector(0)[2])*32;  
   char tmp = last_position-position;
   last_position = position;
   return tmp;
@@ -658,8 +658,8 @@ double hexbright::angle_difference(int dot_product, double magnitude1, double ma
 
 int hexbright::dot_product(int* vector1, int* vector2) {
   // the max value sum could hit is technically > 2^16.
-  //  However, the only instance where this is possible is if both vectors have
-  //  experienced maximum acceleration on all axes - with 4 of the 6 being the max in the negative
+  //  However, the only instance where this is possible is if both vectors have 
+  //  experienced maximum acceleration on all axes - with 4 of the 6 being the max in the negative 
   //  direction (-32 min, 31 max), (31*100/21.3) = 145, (-32*100/21.3) = -150
   //  3*(150^2) = 67500 (not safe)
   //  (150*150)+(150*150)+(145*145) = 66025 (not safe)
@@ -668,21 +668,21 @@ int hexbright::dot_product(int* vector1, int* vector2) {
   // Given the difficulty of triggering this condition, I'm using an int.
   //  This could also be avoided by /100 inside the loop, costing 12 bytes.
   //  We should revisit this decision when drop detect code has been written.
-  // An alternate solution would be to convert using READING*100/21.65, giving
-  //  a max of 147.  3*(147^2) = 64827 (safe).  A max of 148 would be safe so
+  // An alternate solution would be to convert using READING*100/21.65, giving 
+  //  a max of 147.  3*(147^2) = 64827 (safe).  A max of 148 would be safe so 
   //  long as no more than 5 values are -32.
   unsigned int sum = 0; // max value is about 3*(150^2), a tad over the maximum unsigned int
   for(int i=0;i<3;i++) {
     //sum+=vector1[i]*vector2[i]/100; // avoids overflow, but costs space
     sum+=vector1[i]*vector2[i];
-  }
+  } 
   return sum/100; // small danger of overflow
 }
 
-void hexbright::cross_product(int * axes_rotation,
-                              int* in_vector1,
-                              int* in_vector2,
-                              double angle_difference) {
+void hexbright::cross_product(int * axes_rotation, 
+                                        int* in_vector1, 
+										int* in_vector2, 
+										double angle_difference) {
   for(int i=0; i<3; i++) {
       axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3] \
                           - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
@@ -692,11 +692,11 @@ void hexbright::cross_product(int * axes_rotation,
 }
 
 double hexbright::magnitude(int* vector) {
-  // This has a small possibility of failure, see the comments at the start
+  // This has a small possibility of failure, see the comments at the start 
   //  of dot_product.  A long would cost another 28 bytes, a double 42.
   //  A cheaper solution (costing 20 bytes) is to divide the squaring by 100,
   //  then multiply the sqrt by 10 (commented out).
-  unsigned int result = 0;
+  unsigned int result = 0; 
   for(int i=0; i<3;i++) {
     result += vector[i]*vector[i]; // vector[i]*vector[i]/100;
   }
@@ -707,7 +707,7 @@ void hexbright::normalize(int* out_vector, int* in_vector, double magnitude) {
   for(int i=0; i<3; i++) {
   // normalize to 100, not 1
     out_vector[i] = in_vector[i]/magnitude*100;
-  }
+  }  
 }
 
 void hexbright::sum_vectors(int* out_vector, int* in_vector1, int* in_vector2) {
@@ -731,7 +731,7 @@ void hexbright::copy_vector(int* out_vector, int* in_vector) {
 void hexbright::print_vector(int* vector, char* label) {
 #if (DEBUG!=DEBUG_OFF)
   for(int i=0; i<3; i++) {
-    Serial.print(vector[i]);
+    Serial.print(vector[i]); 
     Serial.print("/");
   }
   Serial.println(label);
@@ -753,7 +753,7 @@ int print_wait_time = 0;
 
 #if (defined(LED) && defined(PRINT_NUMBER))
 boolean hexbright::printing_number() {
-  return _number || print_wait_time;
+  return _number || print_wait_time; 
 }
 
 void hexbright::update_number() {
@@ -774,14 +774,14 @@ void hexbright::update_number() {
         _number = 0;
         return;
       } else {
-        print_wait_time = 300/ms_delay;
+        print_wait_time = 300/ms_delay; 
       }
       if(_number/10*10==_number) {
 #if (DEBUG==DEBUG_NUMBER)
-        Serial.println("zero");
+        Serial.println("zero"); 
 #endif
-//        print_wait_time = 500/ms_delay;
-        set_led(_color, 400);
+//        print_wait_time = 500/ms_delay; 
+        set_led(_color, 400); 
       } else {
         set_led(_color, 120);
         _number--;
@@ -792,11 +792,11 @@ void hexbright::update_number() {
         _number = _number/10;
       }
     }
-  }
+  } 
 
   if(print_wait_time) {
     print_wait_time--;
-  }
+  } 
 }
 
 byte hexbright::flip_color(byte color) {
@@ -809,12 +809,12 @@ void hexbright::print_number(long number) {
   boolean negative = false;
   if(number<0) {
     number = 0-number;
-    negative = true;
+    negative = true; 
   }
   _color = GLED;
   _number=1; // to guarantee printing when dealing with trailing zeros (100 can't be stored as 001, use 1001)
   while(number>0) {
-    _number = _number * 10 + (number%10);
+    _number = _number * 10 + (number%10); 
     number = number/10;
     _color = flip_color(_color);
   }
@@ -834,7 +834,7 @@ void hexbright::read_thermal_sensor() {
   // do not call this directly.  Call get_temperature()
   // read temperature setting
   // device data sheet: http://ww1.microchip.com/downloads/en/devicedoc/21942a.pdf
-
+  
   thermal_sensor_value = analogRead(APIN_TEMP);
 }
 
@@ -842,10 +842,10 @@ int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
   // intersection with 0: 50 = (40C-0C)/(275-153)*153
-
-  // 40.05 is to force the division to floating point.  The extra parenthesis are to
+  
+  // 40.05 is to force the division to floating point.  The extra parenthesis are to 
   //  tell the compiler to pre-evaluate the expression.
-  return thermal_sensor_value * ((40.05-0)/(275-153)) - 50;
+  return thermal_sensor_value * ((40.05-0)/(275-153)) - 50; 
 }
 
 int hexbright::get_fahrenheit() {
@@ -880,9 +880,9 @@ byte hexbright::get_charge_state() {
 }
 
 // reading twice costs us 28 bytes, but improves reliability.
-// The root problem is when the charge value goes from <128 to >768 (or the
-//  reverse, from topping off), it passes through the middle range.  If we
-//  read at the wrong time, we can get a BATTERY value while we are still
+// The root problem is when the charge value goes from <128 to >768 (or the 
+//  reverse, from topping off), it passes through the middle range.  If we 
+//  read at the wrong time, we can get a BATTERY value while we are still 
 //  plugged in.
 // Reading twice with a sufficient delay, we can guarantee that our state is correct.
 byte hexbright::get_definite_charge_state() {
@@ -890,7 +890,7 @@ byte hexbright::get_definite_charge_state() {
   // do something that will take some time...
   // delayMicroseconds costs an extra 20 bytes (because nowhere else is it called)
   // If other code needs delayMicroseconds, switch to it.
-  //delayMicroseconds(30);
+  //delayMicroseconds(30); 
   read_thermal_sensor(); // delay a little...
   byte val2 = get_charge_state();
   // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
