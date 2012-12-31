@@ -404,12 +404,10 @@ int hexbright::button_held() {
 
 void hexbright::read_button() {
   byte button_on = digitalRead(DPIN_RLED_SW);
-  if(button_on) {
+  if(button_on && released) {
 #if (DEBUG==DEBUG_BUTTON)
-    if(released)
-      Serial.println("Button pressed");
+    Serial.println("Button pressed");
 #endif
-    time_held++; 
     released = false;
   } else if (released && time_held) { // we've given a chance for the button press to be read, reset time_held
 #if (DEBUG==DEBUG_BUTTON)
@@ -417,8 +415,10 @@ void hexbright::read_button() {
     Serial.println(time_held*ms_delay);
 #endif
     time_held = 0; 
-  } else {
+  } else if (!button_on) { // we're off.  don't reset time_held so we can read it one last time
     released = true;
+  } else {  // increment time_held one cycle after released has been set, for debouncing
+    time_held++;
   }
 }
 
