@@ -33,7 +33,7 @@ either expressed or implied, of the FreeBSD Project.
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
 #define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
-#define ACCELEROMETER //comment out to save 3500 bytes (in development, it will shrink a lot once it's finished)
+#define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 
 #ifdef ACCELEROMETER 
 #define DPIN_ACC_INT 3
@@ -189,26 +189,30 @@ class hexbright {
     // accepts things like ACC_REG_TILT
     static byte read_accelerometer(byte acc_reg);
 
-    // Most units are in 1/100ths of Gs.
-	//  so 100 = 1G.
+    // Most units are in 1/100ths of Gs (so 100 = 1G).
     // last two readings have had minor acceleration
+	//  The sensor has around .1-.05 Gs of noise, so by default we set tolerance = .1 Gs.
+	//  We'll return true if we've had less than that amount of movement in the last two readings.
 	static boolean stationary(int tolerance=10);
-    // last reading had non-gravitational acceleration
+	// last reading had non-gravitational acceleration
+	//  by default, returns true if the last reading has deviated from 1G by more more
+    //  than .5Gs of acceleration.
     static boolean moved(int tolerance=50);
 	
 	// returns a value from 100 to -100. 0 is no movement.
 	//  This returns lots of noise if we're pointing up or down.
-	//  I've found it works well rotating it one-handed.
+	//  It does have issues if spun too fast or too slow.  I've 
+	//  found it works well if rotated one-handed.
 	static char get_spin();
-    //returns the angle between straight down and 
-    // returns 0 to 1. 0 == down, 1 == straight up.  Multiply by 1.8 to get degrees.
-    // expect noise of about 10.
+    //returns the angle between straight down and our current vector
+    // returns a value from 0 to 1. 0 == down, 1 == straight up.  
+	// Multiply by 1.8 to get degrees.  Expect noise of about 10.
     static double difference_from_down();
-    // lots of noise < 5*.  Most noise is <10*
-    // noise varies partially based on sample rate.  120, noise <10*.  64, ~8?
+    // lots of noise < 5 degrees.  Most noise is < 10 degrees
+    // noise varies partially based on sample rate, which is not currently configurable
     static double angle_change();
 	
-	// returns how much acceleration is occurring on a vector - down.
+	// returns how much acceleration is occurring on a vector, ignoring down.
 	//  If no acceleration is occurring, the vector should be close to {0,0,0}.
 	static void absolute_vector(int* out_vector, int* in_vector);
 	
@@ -216,10 +220,10 @@ class hexbright {
 	// Returns the nth vector back from our position.  Currently we only store the last 4 vectors.
 	//  0 = most recent reading,
 	//  3 = most distant reading.
-	// Do not modify the return vector.
+	// Do not modify the returned vector.
 	static int* vector(byte back);
 	// Returns our best guess at which way is down.
-	// Do not modify the return vector.
+	// Do not modify the returned vector.
 	static int* down();
 	
     
