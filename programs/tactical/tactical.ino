@@ -3,6 +3,8 @@
 
 hexbright hb;
 
+#define HOLD_TIME 250 // milliseconds before going to strobe
+
 #define BRIGHTNESS_COUNT 4
 int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, 0};
 int current_brightness = BRIGHTNESS_COUNT; // start on the last mode (off)
@@ -14,16 +16,18 @@ void setup() {
 void loop() {
   hb.update();
   
-  if(hb.button_released() && hb.button_held()<250) { 
+  if(hb.button_released() && hb.button_held()<HOLD_TIME) { 
     // if held for less than 200 ms before release, change regular modes
     current_brightness = (current_brightness+1)%BRIGHTNESS_COUNT;
     set_light();
-  } else if (hb.button_held()>250) {
-    // held for over 200 ms, go to strobe
+  } else if (hb.button_held()>HOLD_TIME) {
+    // held for over HOLD_TIME ms, go to strobe
     static unsigned long flash_time = millis();
-    if(flash_time+70<millis()) { // flash every 60 milliseconds
+    if(flash_time+70<millis()) { // flash every 70 milliseconds
       flash_time = millis(); // reset flash_time
       hb.set_light(MAX_LEVEL, 0, 20); // and pulse (going from max to min over 20 milliseconds)
+      // actually, because of the refresh rate, it's more like 'go from max brightness on high
+      //  to max brightness on low to off.
     }
     if(hb.button_released()) { // we have been doing strobe, but the light is now released
       // after strobe, go to previous light level:
