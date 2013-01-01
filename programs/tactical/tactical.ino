@@ -21,7 +21,7 @@ void loop() {
   } else if (hb.button_held()>250) {
     // held for over 200 ms, go to strobe
     static unsigned long flash_time = millis();
-    if(flash_time+60<millis()) { // flash every 60 milliseconds
+    if(flash_time+70<millis()) { // flash every 60 milliseconds
       flash_time = millis(); // reset flash_time
       hb.set_light(MAX_LEVEL, 0, 20); // and pulse (going from max to min over 20 milliseconds)
     }
