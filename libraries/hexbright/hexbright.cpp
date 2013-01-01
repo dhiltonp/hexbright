@@ -77,6 +77,10 @@ void hexbright::init_hardware() {
     // note the use of TIME_MS/ms_delay.
     set_light(0, MAX_LEVEL, 2500/ms_delay);
   }
+
+  Serial.print("Ram available: ");
+  Serial.print(freeRam());
+  Serial.println("/1024 bytes");
 #endif
 
 #ifdef ACCELEROMETER
@@ -108,10 +112,6 @@ void hexbright::update() {
     // This may be caused by too much processing for our ms_delay, or by too many print statements (each one takes a few ms)
     Serial.print("WARNING: loop time: ");
     Serial.println(avg_loop_time/1000);
-  }
-  if(!i) {
-    Serial.print("Free ram: ");
-    Serial.println(freeRam());
   }
   if (!i)
     i=1000/ms_delay; // display loop output every second
@@ -187,14 +187,15 @@ int safe_light_level = MAX_LEVEL;
 void hexbright::set_light(int start_level, int end_level, int time) {
 // duration ranges from 1-MAXINT
 // light_level can be from 0-1000
+  int current_level = get_light_level();
   if(start_level == CURRENT_LEVEL) {
-    start_light_level = get_light_level();
-    end_light_level = end_level;
-  } else if (end_level == CURRENT_LEVEL) {
-    end_light_level = get_light_level();
-    start_light_level = start_level;
+    start_light_level = current_level;
   } else {
     start_light_level = start_level;
+  }
+  if (end_level == CURRENT_LEVEL) {
+    end_light_level = get_light_level();
+  } else {
     end_light_level = end_level;
   }
 
@@ -220,6 +221,15 @@ int hexbright::get_safe_light_level() {
   if(light_level>safe_light_level)
      return safe_light_level;
   return light_level;
+}
+
+int hexbright::light_change_remaining() {
+  // change_done ends up at -1, add one to counter
+  //  return (change_duration-change_done+1)*ms_delay;
+  int tmp = change_duration-change_done;
+  if(tmp<=0)
+    return 0;
+  return tmp*ms_delay;
 }
 
 

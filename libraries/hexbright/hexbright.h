@@ -57,7 +57,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 1
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -130,7 +130,7 @@ class hexbright {
     // Arduino uses ~400 bytes of ram, leaving us with 600 to play with
     //  (between function calls (including local variables) and global variables).
     // The library uses < 100 bytes (Accelerometer support adds about 60 bytes).
-    //  But, debug mode uses another 100 bytes.
+    //  But, debug mode uses another 100+ bytes.
     //  Between your variables and stack, you should be able to use ~400 safely.
     // Use it if you are experiencing weird crashes.
     //  You can view the value by using code like this:
@@ -145,12 +145,17 @@ class hexbright {
     // go from start_level to end_level over time (in milliseconds)
     // level is from 0-1000.
     // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
-    // either start_level or end level can be CURRENT_LEVEL
+    // start_level and/or end level can be CURRENT_LEVEL.
     static void set_light(int start_level, int end_level, int time);
     // get light level (before overheat protection adjustment)
     static int get_light_level();
     // get light level (after overheat protection adjustment)
     static int get_safe_light_level();
+    // return how long it will be until the light stops changing (in milliseconds).
+    // this allows time to be used as a countdown of sorts, between setting lights:
+    //  if(hb.light_change_remaining()==0)
+    //    hb.set_light(...)
+    static int light_change_remaining();
 
     // Returns the duration the button has been in updates.  Keeps its value
     //  immediately after being released, allowing for use as follows:
