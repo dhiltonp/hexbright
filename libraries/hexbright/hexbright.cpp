@@ -281,7 +281,7 @@ void hexbright::overheat_protection() {
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
-  safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
+  safe_light_level = safe_light_level < MIN_OVERHEAT_LEVEL ? MIN_OVERHEAT_LEVEL : safe_light_level;
 #if (DEBUG==DEBUG_TEMP)
   static float printed_temperature = 0;
   static float average_temperature = -1;
@@ -304,7 +304,7 @@ void hexbright::overheat_protection() {
 #endif
 
   // if safe_light_level has changed, guarantee a light adjustment:
-  if(safe_light_level < MAX_LEVEL) {
+  if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
 #if (DEBUG!=DEBUG_OFF)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);

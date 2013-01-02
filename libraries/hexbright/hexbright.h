@@ -85,6 +85,10 @@ either expressed or implied, of the FreeBSD Project.
 #define MAX_LEVEL 1000
 #define MAX_LOW_LEVEL 500
 #define CURRENT_LEVEL -1
+// We will not go below MIN_OVERHEAT_LEVEL even when overheating.  This
+//  should only matter when ambient temperature is extremely close to
+//  (or above) OVERHEAT_TEMPERATURE.
+#define MIN_OVERHEAT_LEVEL 100
 
 #define NOW 1
 
