@@ -342,8 +342,8 @@ byte hexbright::get_led_state(byte led) {
 
 inline void hexbright::_led_on(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
     pinMode(DPIN_RLED_SW, OUTPUT);
+    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
   } else { // DPIN_GLED
     analogWrite(DPIN_GLED, led_brightness[GLED]);
   }
@@ -351,10 +351,10 @@ inline void hexbright::_led_on(byte led) {
 
 inline void hexbright::_led_off(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    pinMode(DPIN_RLED_SW, INPUT);
     digitalWrite(DPIN_RLED_SW, LOW);
+    pinMode(DPIN_RLED_SW, INPUT);
   } else { // DPIN_GLED
-   digitalWrite(DPIN_GLED, LOW);
+    digitalWrite(DPIN_GLED, LOW);
   }
 }
 
