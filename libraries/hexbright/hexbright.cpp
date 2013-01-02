@@ -50,6 +50,14 @@ unsigned long time;
 hexbright::hexbright() {
 }
 
+int hexbright::flash_checksum() {
+  int checksum = 0;
+  for(int i=0; i<16384; i++) {
+    checksum+=pgm_read_byte(i);
+  }
+  return checksum;
+}
+
 void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
   // into USB, or the user is pressing the power button.
@@ -81,6 +89,8 @@ void hexbright::init_hardware() {
   Serial.print("Ram available: ");
   Serial.print(freeRam());
   Serial.println("/1024 bytes");
+  Serial.print("Flash checksum: ");
+  Serial.println(flash_checksum());
 #endif
 
 #ifdef ACCELEROMETER

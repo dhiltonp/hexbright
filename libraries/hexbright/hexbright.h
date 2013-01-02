@@ -340,4 +340,7 @@ class hexbright {
     static void read_thermal_sensor();
 
     static void read_button();
+
+    // read through flash, return the checksum
+    static int flash_checksum();
 };
