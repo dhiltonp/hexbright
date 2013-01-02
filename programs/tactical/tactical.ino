@@ -36,7 +36,7 @@ hexbright hb;
 
 #define BRIGHTNESS_COUNT 4
 int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, 0};
-int current_brightness = BRIGHTNESS_COUNT; // start on the last mode (off)
+int current_brightness = BRIGHTNESS_COUNT-1; // start on the last mode (off)
 
 void setup() {
   hb.init_hardware(); 
