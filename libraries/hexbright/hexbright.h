@@ -57,7 +57,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 1
+#define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -157,12 +157,18 @@ class hexbright {
     //    hb.set_light(...)
     static int light_change_remaining();
 
-    // Returns the duration the button has been in updates.  Keeps its value
-    //  immediately after being released, allowing for use as follows:
-    // if(button_released() && button_held()>500)
-    static int button_held();
+    // button has been held
+    static boolean button_held();
+    // Returns the duration the button has been in updates.  Keeps its value 
+    //  immediately after being released
+    static int button_held_time();
     // button has been released
     static boolean button_released();
+    // Returns the duration of the last button release.  Keeps its value 
+    //  immediately after being held
+    static int button_released_time();
+    // Return the current state of the button
+    static boolean button_state();
 
     // led = GLED or RLED,
     // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
@@ -252,7 +258,6 @@ class hexbright {
     //  by default, returns true if the last reading has deviated from 1G by more more
     //  than .5Gs of acceleration.
     static boolean moved(int tolerance=50);
-
     // returns a value from 100 to -100. 0 is no movement.
     //  This returns lots of noise if we're pointing up or down.
     //  It does have issues if spun too fast or too slow.  I've
@@ -323,6 +328,7 @@ class hexbright {
     static void adjust_light();
     static void set_light_level(unsigned long level);
     static void overheat_protection();
+    static void oneSecondLoop();
 
     static void update_number();
 

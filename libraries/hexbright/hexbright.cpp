@@ -29,6 +29,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 #include "hexbright.h"
+#include <limits.h>
 
 // Pin assignments
 #define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
@@ -46,6 +47,7 @@ either expressed or implied, of the FreeBSD Project.
 
 const float ms_delay = 8.3333333; // in lock-step with the accelerometer
 unsigned long time;
+unsigned long oneSecondLoopTime = 0;
 
 hexbright::hexbright() {
 }
@@ -90,11 +92,13 @@ void hexbright::init_hardware() {
   time = micros();
 }
 
-
 void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
   time = time+(1000*ms_delay);
   while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
+
+  // thing that we want to do every once in a while.
+  oneSecondLoop();
 
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
@@ -271,6 +275,18 @@ void hexbright::adjust_light() {
   }
 }
 
+void hexbright::oneSecondLoop() {
+  if (time - oneSecondLoopTime < 1000)
+    return;
+
+    oneSecondLoopTime = time;
+
+    // Periodically pull down the button's pin, since
+    // in certain hardware revisions it can float.
+    //pinMode(DPIN_RLED_SW, OUTPUT);
+    //pinMode(DPIN_RLED_SW, INPUT);
+}
+
 
   // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
   // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
@@ -402,33 +418,63 @@ inline void hexbright::adjust_leds() {
 ///////////////////////////////////////////////
 
 int time_held = 0;
+int time_released = 0;
+boolean held = false;
 boolean released = true;
+byte button_on = false;
 
 boolean hexbright::button_released() {
-  return time_held && released;
+  return released && time_released==1;
 }
 
-int hexbright::button_held() {
-  return time_held*ms_delay;// && !red_on_time;
+int hexbright::button_released_time() {
+  return time_released*ms_delay;
+}
+
+boolean hexbright::button_held() {
+  return held && time_held==1;
+}
+
+int hexbright::button_held_time() {
+  return time_held*ms_delay;
+}
+
+boolean hexbright::button_state() {
+  return (boolean)button_on;
 }
 
 void hexbright::read_button() {
-  byte button_on = digitalRead(DPIN_RLED_SW);
-  if(button_on && released) {
+  button_on = digitalRead(DPIN_RLED_SW);
+  if(button_on) {
+    time_held++; 
+    if(time_held<0)
+      time_held=INT_MAX;
+    if(released) {
+      released = false;
+      held = true;
 #if (DEBUG==DEBUG_BUTTON)
-    Serial.println("Button pressed");
+      Serial.print("time_released: ");
+      Serial.println(time_released*ms_delay);
+      Serial.println("Button held");
 #endif
-    released = false;
-  } else if (released && time_held) { // we've given a chance for the button press to be read, reset time_held
+    } else {
+      time_released = 0;
+    }
+  } else { // button is off
+    time_released++;    
+    if(time_released<0)
+      time_released=INT_MAX;
+    if(held) {
+      released = true;
+      held = false;
 #if (DEBUG==DEBUG_BUTTON)
-    Serial.print("time_held: ");
-    Serial.println(time_held*ms_delay);
+      Serial.print("time_held: ");
+      Serial.println(time_held*ms_delay);
+      Serial.println("Button released");
 #endif
-    time_held = 0;
-  } else if (!button_on) { // we're off.  don't reset time_held so we can read it one last time
-    released = true;
-  } else {  // increment time_held one cycle after released has been set, for debouncing
-    time_held++;
+    } else {
+      time_held = 0;
+    }
   }
 }
 
