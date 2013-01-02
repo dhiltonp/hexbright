@@ -30,7 +30,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <hexbright.h>
 #include <Wire.h>
 
-
+// Usage notes are in the readme file in this same directory.
 hexbright hb;
 
 void setup() {
