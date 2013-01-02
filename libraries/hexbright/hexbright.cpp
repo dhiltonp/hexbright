@@ -286,7 +286,8 @@ void hexbright::overheat_protection() {
   average_temperature = (average_temperature*4+temperature)/5;
   if (abs(printed_temperature-average_temperature)>1) {
     printed_temperature = average_temperature;
-    Serial.print("Current average reading: ");
+    Serial.print(millis());
+    Serial.print(" ms, average reading: ");
     Serial.print(printed_temperature);
     Serial.print(" (celsius: ");
     Serial.print(get_celsius());
