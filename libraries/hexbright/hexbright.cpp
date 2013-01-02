@@ -153,13 +153,6 @@ void hexbright::update() {
   adjust_light();
 }
 
-void hexbright::shutdown() {
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, LOW);
-  digitalWrite(DPIN_DRV_MODE, LOW);
-  digitalWrite(DPIN_DRV_EN, LOW);
-}
-
 
 //// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
 int hexbright::freeRam () {
@@ -297,7 +290,7 @@ void hexbright::overheat_protection() {
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
-  safe_light_level = safe_light_level < 0 ? 0 : safe_light_level;
+  safe_light_level = safe_light_level < MIN_OVERHEAT_LEVEL ? MIN_OVERHEAT_LEVEL : safe_light_level;
 #if (DEBUG==DEBUG_TEMP)
   static float printed_temperature = 0;
   static float average_temperature = -1;
@@ -309,7 +302,8 @@ void hexbright::overheat_protection() {
   average_temperature = (average_temperature*4+temperature)/5;
   if (abs(printed_temperature-average_temperature)>1) {
     printed_temperature = average_temperature;
-    Serial.print("Current average reading: ");
+    Serial.print(millis());
+    Serial.print(" ms, average reading: ");
     Serial.print(printed_temperature);
     Serial.print(" (celsius: ");
     Serial.print(get_celsius());
@@ -320,7 +314,9 @@ void hexbright::overheat_protection() {
 #endif
 
   // if safe_light_level has changed, guarantee a light adjustment:
-  if(safe_light_level < MAX_LEVEL) {
+  // the second test guarantees that we won't turn on if we are
+  //  overheating and just shut down
+  if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
 #if (DEBUG!=DEBUG_OFF)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
@@ -363,8 +359,8 @@ byte hexbright::get_led_state(byte led) {
 
 inline void hexbright::_led_on(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
     pinMode(DPIN_RLED_SW, OUTPUT);
+    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
   } else { // DPIN_GLED
     analogWrite(DPIN_GLED, led_brightness[GLED]);
   }
@@ -372,10 +368,10 @@ inline void hexbright::_led_on(byte led) {
 
 inline void hexbright::_led_off(byte led) {
   if(led == RLED) { // DPIN_RLED_SW
-    pinMode(DPIN_RLED_SW, LOW);
     digitalWrite(DPIN_RLED_SW, LOW);
+    pinMode(DPIN_RLED_SW, INPUT);
   } else { // DPIN_GLED
-   digitalWrite(DPIN_GLED, LOW);
+    digitalWrite(DPIN_GLED, LOW);
   }
 }
 
@@ -952,4 +948,19 @@ byte hexbright::get_definite_charge_state() {
   // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
   return val1 & val2;
+}
+
+
+///////////////////////////////////////////////
+//////////////////SHUTDOWN/////////////////////
+///////////////////////////////////////////////
+
+void hexbright::shutdown() {
+  pinMode(DPIN_PWR, OUTPUT);
+  digitalWrite(DPIN_PWR, LOW);
+  digitalWrite(DPIN_DRV_MODE, LOW);
+  digitalWrite(DPIN_DRV_EN, LOW);
+  // make sure we don't try to turn back on
+  change_done = change_duration+1;
+  end_light_level = 0;
 }
