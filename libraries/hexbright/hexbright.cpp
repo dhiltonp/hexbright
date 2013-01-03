@@ -52,6 +52,14 @@ unsigned long oneSecondLoopTime = 0;
 hexbright::hexbright() {
 }
 
+int hexbright::flash_checksum() {
+  int checksum = 0;
+  for(int i=0; i<16384; i++) {
+    checksum+=pgm_read_byte(i);
+  }
+  return checksum;
+}
+
 void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
   // into USB, or the user is pressing the power button.
@@ -83,6 +91,8 @@ void hexbright::init_hardware() {
   Serial.print("Ram available: ");
   Serial.print(freeRam());
   Serial.println("/1024 bytes");
+  Serial.print("Flash checksum: ");
+  Serial.println(flash_checksum());
 #endif
 
 #ifdef ACCELEROMETER
@@ -949,6 +959,15 @@ byte hexbright::get_definite_charge_state() {
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
   return val1 & val2;
 }
+
+void hexbright::print_charge(byte led) {
+  byte charge_state = get_charge_state();
+  if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
+    set_led(led, 350, 350);
+  } else if (charge_state == CHARGED) {
+    set_led(led,50);
+  }
+} 
 
 
 ///////////////////////////////////////////////

@@ -62,12 +62,6 @@ void loop() {
     }
   } else if (mode==OFF_MODE) {
     hb.shutdown(); 
-    if(hb.get_charge_state()==CHARGED) {
-      // always runs = always on (the last parameter could be any positive value)
-      hb.set_led(GLED, 1); 
-    } else if (hb.get_charge_state()==CHARGING && hb.get_led_state(GLED)==LED_OFF) {
-      hb.set_led(GLED, 200,200);
-    }
-  } 
-  
+    hb.print_charge(GLED);
+  }   
 }

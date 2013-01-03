@@ -66,6 +66,7 @@ void loop() {
       //hb.shutdown();
     }
   }
+  hb.print_charge(GLED);
 }
 
 void set_light() {
@@ -74,4 +75,3 @@ void set_light() {
   else
     hb.set_light(CURRENT_LEVEL, brightness[current_brightness], 50);
 }
-

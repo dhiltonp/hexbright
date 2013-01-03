@@ -28,65 +28,23 @@ either expressed or implied, of the FreeBSD Project.
 */
 
 #include <hexbright.h>
-
 #include <Wire.h>
 
-// number of milliseconds between updates
-#define OFF_MODE 0
-#define BLINKY_MODE 1
-#define CYCLE_MODE 2
-
-int mode = 0;
-
-
-#define MS 8.333 // now internally set, keeping us in lockstep with the accelerometer
+// Usage notes are in the readme file in this same directory.
 hexbright hb;
 
 void setup() {
   hb.init_hardware();
-} 
+}
+
+int numbers[] = {-101, -1, 3, 23, 100, 1000000};
+int number = 0;
 
 void loop() {
   hb.update();
-  static int brightness_level = 4;
-
-  //// Button actions to recognize, one-time actions to take as a result
-  if(hb.button_released()) {
-    if(hb.button_held()<1) {
-      // ignore, could be a bounce
-    } else if(hb.button_held()<300) { //<300 milliseconds
-      mode = CYCLE_MODE;
-      int levels[] = {1,250,500,750,1000};
-      brightness_level = (brightness_level+1)%5;
-      hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150);
-    } else if (hb.button_held() < 700) {
-      mode = BLINKY_MODE;
-    }
-  }
-  if(hb.button_held()>700) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
-    mode = OFF_MODE;
-    // in case we are under usb power, reset state
-    hb.set_light(0, 0, 1);
-    brightness_level = 4;
-  }
-
-
-  //// Actions over time for a given mode
-  if(mode == BLINKY_MODE) { // just blink
-    static int i = 0;
-    if(!i) {
-      hb.set_light(MAX_LOW_LEVEL,0,MS); // because time = MS, we'll only hit the endpoints
-      i=400/MS;
-    }
-    i--;
-  } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
-    if(!hb.printing_number()) {
-      hb.print_number(hb.get_fahrenheit());
-    }
-  } else if (mode == OFF_MODE) { // charging, or turning off
-    hb.shutdown();
-    if(!hb.printing_number()) {
-      hb.print_charge(GLED);
-    }
+  if(!hb.printing_number()) {
+    hb.print_number(numbers[number]);
+    number = (number+1)%5;
   }
 }
+
