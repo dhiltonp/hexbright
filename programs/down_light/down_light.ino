@@ -73,14 +73,6 @@ void loop() {
     } 
   } else if (mode==OFF_MODE) {
     hb.shutdown();
-    byte charge_state = hb.get_charge_state();
-//    Serial.println(charge_state);
-    if(charge_state==CHARGED) {
-      // always runs = always on (the last parameter could be any positive value)
-      hb.set_led(GLED, 1); 
-    } else if (charge_state==CHARGING && charge_state==LED_OFF) {
-      hb.set_led(GLED, 200,200);
-    }
-  } 
-
+  }
+  hb.print_charge(GLED);
 }
