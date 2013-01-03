@@ -194,6 +194,17 @@ class hexbright {
     //  modify this as well. Takes up 60 bytes
     static int get_fahrenheit();
 
+    // A convenience function that will print the charge state over the led specified
+    //  CHARGING = 350 ms on, 350 ms off.
+    //  CHARGED = solid on
+    //  BATTERY = nothing.
+    // If you are using print_number, call it before this function if possible.
+    // I recommend the following (if using print_number()):
+    //  ...code that may call print number...
+    //  if(!printing_number())
+    //    print_charge(GLED);
+    //  ...end of loop...
+    static void print_charge(byte led);
     // returns CHARGING, CHARGED, or BATTERY
     // This reads the charge state twice with a small delay, then returns
     //  the actual charge state.  BATTERY will never be returned if we are

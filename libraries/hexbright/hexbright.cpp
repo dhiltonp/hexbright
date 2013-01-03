@@ -914,6 +914,18 @@ byte hexbright::get_definite_charge_state() {
   return val1 & val2;
 }
 
+void hexbright::print_charge(byte led) {
+  byte charge_state = get_charge_state();
+#if defined(PRINT_NUMBER)
+  //  if(!printing_number())
+#endif
+    if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
+      set_led(led, 350, 350);
+    } else if (charge_state == CHARGED) {
+      set_led(led,50);
+    }
+} 
+
 
 ///////////////////////////////////////////////
 //////////////////SHUTDOWN/////////////////////
