@@ -83,7 +83,10 @@ void write_vector(int * vector) {
   if(address<EEPROM_SIZE) {
     char tmp = 0;
     for (int i = 0; i<3; i++) {
-      tmp = vector[i]*(21.4/100);
+      if(vector[i] == 0) 
+        tmp = 0;
+      else 
+        tmp = vector[i]*(21.3/100)+1;
       EEPROM.write(address++, tmp);
     }
   } 
@@ -97,10 +100,7 @@ void read_vector(int * vector) {
        // we lose some information with the repeated integer conversions; this fixes it.
        //  the alternative is to modify read_accelerometer to store the raw data,
        //  but then the vector math methods doesn't work right.
-       if(tmp==0)
-        vector[i] = tmp;
-      else
-        vector[i] = tmp*(100/21.3)+5;
+      vector[i] = tmp*(100/21.3);
     }
   }  
 }
