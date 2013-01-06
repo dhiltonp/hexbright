@@ -19,9 +19,13 @@ Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open 
 
 'functional' is a basic example of how a program might have multiple modes.
 
-'down_test' contains an example of using the accelerometer.
+'down_light' contains an example of using the accelerometer.
 
 libraries/hexbright/hexbright.h has a list of all available methods in the api, and is fairly well commented.
+
+
+I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
+
 
 Be aware that this library is a work in progress.  In particular, the accelerometer api may change, and it is not yet optimized.
 
