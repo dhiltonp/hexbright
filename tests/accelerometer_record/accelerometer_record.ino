@@ -79,13 +79,16 @@ void loop() {
   }
 }
 
+// this writes a 6 bit value into an 8 bit space.
+//  We could optimize this, giving us 1.8 seconds instead of 1.4 seconds of data by 
+//  manually managing the byte boundaries.  For now, 1.4 seconds is good enough.
 void write_vector(int * vector) {
   if(address<EEPROM_SIZE) {
     char tmp = 0;
     for (int i = 0; i<3; i++) {
       if(vector[i] == 0) 
         tmp = 0;
-      else 
+      else
         tmp = vector[i]*(21.3/100)+1; // +1 compensates for flooring from double-integer conversion.
       EEPROM.write(address++, tmp);
     }
