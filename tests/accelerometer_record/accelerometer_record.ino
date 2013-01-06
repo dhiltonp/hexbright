@@ -46,16 +46,16 @@ void loop() {
     }
     break;
   case WAIT_MODE:
+    // we've had a fairly significant change in the vector
     if(abs(hb.magnitude(hb.vector(0)))-100>15) {
-      // don't break, so we get this sample as well
       hb.set_light(500, 500, NOW);
       mode = RECORD_MODE;
       write_vector(hb.vector(3));
       write_vector(hb.vector(2));
       write_vector(hb.vector(1));
-    } else { // we're not ready to record, break!
-      break; 
-    }    
+      write_vector(hb.vector(0));
+    }
+    break;     
   case RECORD_MODE:
     if(address<EEPROM_SIZE) {
       write_vector(hb.vector(0)); 
@@ -86,7 +86,7 @@ void write_vector(int * vector) {
       if(vector[i] == 0) 
         tmp = 0;
       else 
-        tmp = vector[i]*(21.3/100)+1;
+        tmp = vector[i]*(21.3/100)+1; // +1 compensates for flooring from double-integer conversion.
       EEPROM.write(address++, tmp);
     }
   } 
