@@ -57,7 +57,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 1
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -343,7 +343,6 @@ class hexbright {
     static void adjust_light();
     static void set_light_level(unsigned long level);
     static void overheat_protection();
-    static void oneSecondLoop();
 
     static void update_number();
 

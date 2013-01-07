@@ -47,7 +47,6 @@ either expressed or implied, of the FreeBSD Project.
 
 const float ms_delay = 8.3333333; // in lock-step with the accelerometer
 unsigned long time;
-unsigned long oneSecondLoopTime = 0;
 
 hexbright::hexbright() {
 }
@@ -106,9 +105,6 @@ void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
   time = time+(1000*ms_delay);
   while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
-
-  // thing that we want to do every once in a while.
-  oneSecondLoop();
 
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
@@ -277,19 +273,6 @@ void hexbright::adjust_light() {
     change_done++;
   }
 }
-
-void hexbright::oneSecondLoop() {
-  if (time - oneSecondLoopTime < 1000)
-    return;
-
-    oneSecondLoopTime = time;
-
-    // Periodically pull down the button's pin, since
-    // in certain hardware revisions it can float.
-    //pinMode(DPIN_RLED_SW, OUTPUT);
-    //pinMode(DPIN_RLED_SW, INPUT);
-}
-
 
   // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
   // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
