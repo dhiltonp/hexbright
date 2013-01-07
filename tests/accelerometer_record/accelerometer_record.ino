@@ -46,16 +46,16 @@ void loop() {
     }
     break;
   case WAIT_MODE:
+    // we've had a fairly significant change in the vector
     if(abs(hb.magnitude(hb.vector(0)))-100>15) {
-      // don't break, so we get this sample as well
       hb.set_light(500, 500, NOW);
       mode = RECORD_MODE;
       write_vector(hb.vector(3));
       write_vector(hb.vector(2));
       write_vector(hb.vector(1));
-    } else { // we're not ready to record, break!
-      break; 
-    }    
+      write_vector(hb.vector(0));
+    }
+    break;     
   case RECORD_MODE:
     if(address<EEPROM_SIZE) {
       write_vector(hb.vector(0)); 
@@ -79,14 +79,17 @@ void loop() {
   }
 }
 
+// this writes a 6 bit value into an 8 bit space.
+//  We could optimize this, giving us 1.8 seconds instead of 1.4 seconds of data by 
+//  manually managing the byte boundaries.  For now, 1.4 seconds is good enough.
 void write_vector(int * vector) {
   if(address<EEPROM_SIZE) {
     char tmp = 0;
     for (int i = 0; i<3; i++) {
       if(vector[i] == 0) 
         tmp = 0;
-      else 
-        tmp = vector[i]*(21.3/100)+1;
+      else
+        tmp = vector[i]*(21.3/100)+1; // +1 compensates for flooring from double-integer conversion.
       EEPROM.write(address++, tmp);
     }
   } 
