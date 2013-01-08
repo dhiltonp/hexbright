@@ -44,8 +44,13 @@ either expressed or implied, of the FreeBSD Project.
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
 
-const float ms_delay = 8.3333333; // in lock-step with the accelerometer
-unsigned long time;
+const float update_delay = 8.3333333; // in lock-step with the accelerometer
+unsigned long continue_time;
+
+unsigned long next_strobe = STROBE_OFF;
+unsigned long strobe_delay = 0;
+int strobe_duration = 100;
+
 
 hexbright::hexbright() {
 }
@@ -82,8 +87,8 @@ void hexbright::init_hardware() {
   } else if (DEBUG==DEBUG_TEMP) {
     set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
-    // note the use of TIME_MS/ms_delay.
-    set_light(0, MAX_LEVEL, 2500/ms_delay);
+    // note the use of TIME_MS/update_delay.
+    set_light(0, MAX_LEVEL, 2500/update_delay);
   }
 
   Serial.print("Ram available: ");
@@ -97,37 +102,60 @@ void hexbright::init_hardware() {
   enable_accelerometer();
 #endif
 
-  time = micros();
+  continue_time = micros();
 }
 
 
 void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
-  time = time+(1000*ms_delay);
-  while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
+  continue_time = continue_time+(1000*update_delay);
+  
+  unsigned long now;
+  while (true) {
+    do {
+      now = micros();
+    } while (next_strobe > now && // not ready for strobe
+	     continue_time > now); // not ready for update
+     
+    if (next_strobe <= now) {
+      if (now - next_strobe <26) {
+	digitalWrite(DPIN_DRV_EN, HIGH);
+	delayMicroseconds(strobe_duration);
+	digitalWrite(DPIN_DRV_EN, LOW);
+      }
+      next_strobe += strobe_delay;
+    }
+    if(continue_time <= now) {
+      if(strobe_delay>update_delay && // we strobe less than once every 8333 microseconds
+	 next_strobe-continue_time < 4000) // and the next strobe is within 4000 microseconds (may occur before we return)
+	continue;
+      else
+	break;
+    }
+  } // do nothing... (will short circuit once every 70 minutes (micros maxint))
 
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
   static float avg_loop_time = 0;
   static float last_time = 0;
-  avg_loop_time = (avg_loop_time*29 + time-last_time)/30;
+  avg_loop_time = (avg_loop_time*29 + continue_time-last_time)/30;
 #if (DEBUG==DEBUG_LOOP)
   if(!i) {
     Serial.print("Average loop time: ");
     Serial.println(avg_loop_time/1000);
   }
 #endif
-  if(avg_loop_time/1000>ms_delay+1 && !i) {
-    // This may be caused by too much processing for our ms_delay, or by too many print statements (each one takes a few ms)
+  if(avg_loop_time/1000>update_delay+1 && !i) {
+    // This may be caused by too much processing for our update_delay, or by too many print statements (each one takes a few ms)
     Serial.print("WARNING: loop time: ");
     Serial.println(avg_loop_time/1000);
   }
   if (!i)
-    i=1000/ms_delay; // display loop output every second
+    i=1000/update_delay; // display loop output every second
   else
     i--;
-  last_time = time;
+  last_time = continue_time;
 #endif
 
 
@@ -202,7 +230,7 @@ void hexbright::set_light(int start_level, int end_level, int time) {
     end_light_level = end_level;
   }
 
-  change_duration = time/ms_delay;
+  change_duration = time/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("Light adjust requested, start level:");
@@ -228,11 +256,11 @@ int hexbright::get_safe_light_level() {
 
 int hexbright::light_change_remaining() {
   // change_done ends up at -1, add one to counter
-  //  return (change_duration-change_done+1)*ms_delay;
+  //  return (change_duration-change_done+1)*update_delay;
   int tmp = change_duration-change_done;
   if(tmp<=0)
     return 0;
-  return tmp*ms_delay;
+  return tmp*update_delay;
 }
 
 
@@ -319,6 +347,32 @@ void hexbright::overheat_protection() {
   }
 }
 
+
+///////////////STROBE CONTROL//////////////////
+
+void hexbright::set_strobe_delay(unsigned long delay) {
+  strobe_delay = delay;
+  next_strobe = micros()+strobe_delay;
+}
+
+void hexbright::set_strobe_duration(int duration) {
+  strobe_duration = duration;
+}
+
+void hexbright::set_strobe_fpm(unsigned int fpm) {
+  set_strobe_delay(60000000/fpm);
+}
+
+unsigned int hexbright::get_strobe_fpm() {
+  return 60000000 / (strobe_delay/8*8);
+}
+
+unsigned int hexbright::get_strobe_error() {
+  // 90000000 because we have an error of 3*8 microseconds; 1.5 above, 1.5 below
+  return 90000000 / ((strobe_delay/8)*8) - 90000000 / ((strobe_delay/8+1)*8);
+}
+
+
 ///////////////////////////////////////////////
 ///////////////////LED CONTROL/////////////////
 ///////////////////////////////////////////////
@@ -334,8 +388,8 @@ void hexbright::set_led(byte led, int on_time, int wait_time, byte brightness) {
 #if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
-  led_on_time[led] = on_time/ms_delay;
-  led_wait_time[led] = wait_time/ms_delay;
+  led_on_time[led] = on_time/update_delay;
+  led_wait_time[led] = wait_time/update_delay;
   led_brightness[led] = brightness;
 }
 
@@ -374,17 +428,17 @@ inline void hexbright::adjust_leds() {
 #if (DEBUG==DEBUG_LED)
   if(led_on_time[GLED]>=0) {
     Serial.print("green on countdown: ");
-    Serial.println(led_on_time[GLED]*ms_delay);
+    Serial.println(led_on_time[GLED]*update_delay);
   } else if (led_on_time[GLED]<0 && led_wait_time[GLED]>=0) {
     Serial.print("green wait countdown: ");
-    Serial.println((led_wait_time[GLED])*ms_delay);
+    Serial.println((led_wait_time[GLED])*update_delay);
   }
   if(led_on_time[RLED]>=0) {
     Serial.print("red on countdown: ");
-    Serial.println(led_on_time[RLED]*ms_delay);
+    Serial.println(led_on_time[RLED]*update_delay);
   } else if (led_on_time[RLED]<0 && led_wait_time[RLED]>=0) {
     Serial.print("red wait countdown: ");
-    Serial.println((led_wait_time[RLED])*ms_delay);
+    Serial.println((led_wait_time[RLED])*update_delay);
   }
 #endif
   int i=0;
@@ -415,7 +469,7 @@ boolean hexbright::button_released() {
 }
 
 int hexbright::button_held() {
-  return time_held*ms_delay;// && !red_on_time;
+  return time_held*update_delay;// && !red_on_time;
 }
 
 void hexbright::read_button() {
@@ -428,7 +482,7 @@ void hexbright::read_button() {
   } else if (released && time_held) { // we've given a chance for the button press to be read, reset time_held
 #if (DEBUG==DEBUG_BUTTON)
     Serial.print("time_held: ");
-    Serial.println(time_held*ms_delay);
+    Serial.println(time_held*update_delay);
 #endif
     time_held = 0;
   } else if (!button_on) { // we're off.  don't reset time_held so we can read it one last time
@@ -786,24 +840,24 @@ void hexbright::update_number() {
 #endif
     if(!print_wait_time) {
       if(_number==1) { // minimum delay between printing numbers
-        print_wait_time = 2500/ms_delay;
+        print_wait_time = 2500/update_delay;
         _number = 0;
         return;
       } else {
-        print_wait_time = 300/ms_delay;
+        print_wait_time = 300/update_delay;
       }
       if(_number/10*10==_number) {
 #if (DEBUG==DEBUG_NUMBER)
         Serial.println("zero");
 #endif
-//        print_wait_time = 500/ms_delay;
+//        print_wait_time = 500/update_delay;
         set_led(_color, 400);
       } else {
         set_led(_color, 120);
         _number--;
       }
       if(_number && !(_number%10)) { // next digit?
-        print_wait_time = 600/ms_delay;
+        print_wait_time = 600/update_delay;
         _color = flip_color(_color);
         _number = _number/10;
       }
@@ -836,7 +890,7 @@ void hexbright::print_number(long number) {
   }
   if(negative) {
     set_led(flip_color(_color), 500);
-    print_wait_time = 600/ms_delay;
+    print_wait_time = 600/update_delay;
   }
 }
 #endif
@@ -903,11 +957,7 @@ byte hexbright::get_charge_state() {
 // Reading twice with a sufficient delay, we can guarantee that our state is correct.
 byte hexbright::get_definite_charge_state() {
   byte val1 = get_charge_state();
-  // do something that will take some time...
-  // delayMicroseconds costs an extra 20 bytes (because nowhere else is it called)
-  // If other code needs delayMicroseconds, switch to it.
-  //delayMicroseconds(30);
-  read_thermal_sensor(); // delay a little...
+  delayMicroseconds(50); // wait a little in case the value was changing
   byte val2 = get_charge_state();
   // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
