@@ -31,6 +31,8 @@ private:
   int accelerometer_location = 0;
 public:
   hbtest(string file) {
+    accelerometer_data = std::vector<std::vector<int> >();
+
     // read accelerometer_data from file
     ifstream f;
     string line;
@@ -81,12 +83,18 @@ void test_accelerometer(string file) {
     hb.find_down();
     hb.read_accelerometer();
     
-    hb.print_vector(hb.down(), "down"); // normalized, btw
-    hb.print_vector(hb.vector(0), "last vector");
+    hb.print_vector(hb.vector(0), "vector read");
+    hb.print_vector(hb.down(), "estimated down"); // normalized, btw
   }
 }
 
-int main() {
-  test_accelerometer("../slow spin/sample01");
+int main(int argc, char** argv) {
+  for(int i=1; i<argc; i++) {
+    cout<<"------------------"<<argv[i]<<"------------------"<<endl;
+    test_accelerometer(argv[i]);
+  }
+  if(argc==1) {
+    cout<<" usage: "<<argv[0]<<" file1 file2 ..."<<endl;
+  }
   return 0;
 }
