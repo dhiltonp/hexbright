@@ -464,63 +464,59 @@ inline void hexbright::adjust_leds() {
 /////////////////////BUTTON////////////////////
 ///////////////////////////////////////////////
 
-int time_held = 0;
-int time_released = 0;
-boolean held = false;
-boolean released = true;
-byte button_on = false;
+BOOL button_on = false;
+BOOL last_button_on = false;
+unsigned long time_last_pressed = 0; // the time that button was last pressed
+unsigned long time_last_released = 0; // the time that the button was last released
 
-boolean hexbright::button_released() {
-  return released && time_released==1;
+BOOL hexbright::button_pressed() {
+  return (BOOL)button_on;
+}
+
+BOOL hexbright::button_just_pressed() {
+  return button_on and !last_button_on;
+}
+
+BOOL hexbright::button_just_released() {
+  return !button_on and last_button_on;
+}
+
+int hexbright::button_pressed_time() {
+  if(button_on) {
+    return millis()-time_last_pressed;
+  } else {
+    return time_last_released - time_last_pressed;
+  }
 }
 
 int hexbright::button_released_time() {
-  return time_released*ms_delay;
-}
-
-boolean hexbright::button_held() {
-  return held && time_held==1;
-}
-
-int hexbright::button_held_time() {
-  return time_held*ms_delay;
-}
-
-boolean hexbright::button_state() {
-  return (boolean)button_on;
+  if(button_on) {
+    return time_last_pressed-time_last_released;
+  } else {
+    return millis()-time_last_released;
+  }
 }
 
 void hexbright::read_button() {
+  last_button_on = button_on;
   button_on = digitalRead(DPIN_RLED_SW);
   if(button_on) {
-    time_held++; 
-    if(time_held<0)
-      time_held=INT_MAX;
-    if(released) {
-      released = false;
-      held = true;
+    if(!last_button_on) {
+      time_last_pressed=millis();
 #if (DEBUG==DEBUG_BUTTON)
-      Serial.print("time_released: ");
-      Serial.println(time_released*ms_delay);
-      Serial.println("Button held");
+      Serial.println("Button just pressed");
+      Serial.print("Time spent released (ms): ");
+      Serial.println(time_last_pressed-time_last_released);
 #endif
-    } else {
-      time_released = 0;
     }
   } else { // button is off
-    time_released++;    
-    if(time_released<0)
-      time_released=INT_MAX;
-    if(held) {
-      released = true;
-      held = false;
+    if(last_button_on) {
+      time_last_released=millis();
 #if (DEBUG==DEBUG_BUTTON)
-      Serial.print("time_held: ");
-      Serial.println(time_held*ms_delay);
-      Serial.println("Button released");
+      Serial.println("Button just released");
+      Serial.print("Time spent pressed (ms): ");
+      Serial.println(time_last_released-time_last_pressed);
 #endif
-    } else {
-      time_held = 0;
     }
   }
 }

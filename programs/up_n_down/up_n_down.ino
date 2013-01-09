@@ -79,12 +79,12 @@ void loop() {
       hb.set_led(GLED, 100);
 
     // click counting
-    if(hb.button_released()) {
+    if(hb.button_just_released()) {
       glow_mode_set = false;
-      if(hb.button_held_time()<1) {
+      if(hb.button_pressed_time()<=9) {
 	// ignore, could be a bounce
 	Serial.println("Bounce!");
-      } else if(hb.button_held_time() <= short_click) {
+      } else if(hb.button_pressed_time() <= short_click) {
 	click_count++;
       } 
     } 
@@ -100,7 +100,7 @@ void loop() {
     }
 
     // toggle glow mode
-    if(hb.button_state() && hb.button_held_time() >= glow_mode_time && !glow_mode_set) {
+    if(hb.button_pressed() && hb.button_pressed_time() >= glow_mode_time && !glow_mode_set) {
       glow_mode = !glow_mode;
       glow_mode_set = true;
       if(glow_mode)
@@ -110,7 +110,7 @@ void loop() {
     }
     break;
   case MODE_LEVEL:
-    if(hb.button_state() && hb.button_held_time()>short_click) {
+    if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
       d = hb.difference_from_down();
       if(d>=0.01 && d<=1.0) {
 	hb.set_light(CURRENT_LEVEL, (int)(d * 1000.0), NOW);
@@ -129,7 +129,7 @@ void loop() {
     }
     break;
   case MODE_BLINK:
-    if(hb.button_state() && hb.button_held_time()>short_click) {
+    if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
       d = hb.difference_from_down();
       if(d>=0 && d<=0.99) {
 	if(blink_random) {
@@ -172,7 +172,7 @@ void loop() {
   }  
 
   // we turn off on button release unless a submode change was made and we're blocked
-  if(mode!=MODE_OFF && hb.button_released()) {
+  if(mode!=MODE_OFF && hb.button_just_released()) {
     if(block_turning_off)
       block_turning_off=false;
     else
