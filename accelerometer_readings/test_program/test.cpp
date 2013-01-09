@@ -84,7 +84,12 @@ void test_accelerometer(string file) {
   while (hb.data_exists()) {
     hb.find_down();
     hb.read_accelerometer();
-    //cout<<(int)hb.get_spin()<<endl;
+    char vector_buffer[30];
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.vector(0)[0], hb.vector(0)[1], hb.vector(0)[2]);
+    string vec0 = vector_buffer;
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.down()[0], hb.down()[1], hb.down()[2]);
+    string down = vector_buffer;
+    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<down<<endl;
     //cout<<(int)hb.magnitude(hb.vector(0))<<endl;
     spinned += hb.get_spin();
     
