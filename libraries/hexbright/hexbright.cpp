@@ -30,6 +30,10 @@ either expressed or implied, of the FreeBSD Project.
 
 #include "hexbright.h"
 
+#ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
+#include "NotArduino.h"
+#endif
+
 // Pin assignments
 #define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
 #define DPIN_GLED 5
@@ -343,7 +347,7 @@ void hexbright::overheat_protection() {
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif
-    change_done  = min(change_done , change_duration);
+    change_done  = change_done < change_duration ? change_done : change_duration;
   }
 }
 
@@ -382,9 +386,9 @@ unsigned int hexbright::get_strobe_error() {
 // >0 = countdown, 0 = change state, -1 = state changed
 int led_wait_time[2] = {-1, -1};
 int led_on_time[2] = {-1, -1};
-byte led_brightness[2] = {0, 0};
+unsigned char led_brightness[2] = {0, 0};
 
-void hexbright::set_led(byte led, int on_time, int wait_time, byte brightness) {
+void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned char brightness) {
 #if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
@@ -394,7 +398,7 @@ void hexbright::set_led(byte led, int on_time, int wait_time, byte brightness) {
 }
 
 
-byte hexbright::get_led_state(byte led) {
+unsigned char hexbright::get_led_state(unsigned char led) {
   //returns true if the LED is on
   if(led_on_time[led]>=0) {
     return LED_ON;
@@ -405,7 +409,7 @@ byte hexbright::get_led_state(byte led) {
   }
 }
 
-inline void hexbright::_led_on(byte led) {
+inline void hexbright::_led_on(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
     pinMode(DPIN_RLED_SW, OUTPUT);
     analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
@@ -414,7 +418,7 @@ inline void hexbright::_led_on(byte led) {
   }
 }
 
-inline void hexbright::_led_off(byte led) {
+inline void hexbright::_led_off(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
     digitalWrite(DPIN_RLED_SW, LOW);
     pinMode(DPIN_RLED_SW, INPUT);
@@ -462,9 +466,9 @@ inline void hexbright::adjust_leds() {
 ///////////////////////////////////////////////
 
 int time_held = 0;
-boolean released = true;
+BOOL released = true;
 
-boolean hexbright::button_released() {
+BOOL hexbright::button_released() {
   return time_held && released;
 }
 
@@ -473,7 +477,7 @@ int hexbright::button_held() {
 }
 
 void hexbright::read_button() {
-  byte button_on = digitalRead(DPIN_RLED_SW);
+  unsigned char button_on = digitalRead(DPIN_RLED_SW);
   if(button_on && released) {
 #if (DEBUG==DEBUG_BUTTON)
     Serial.println("Button pressed");
@@ -514,10 +518,10 @@ void hexbright::read_button() {
 //  in the implementation with little to no benefit.
 
 
-byte tilt = 0;
+unsigned char tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
 int current_vector = 0;
-byte num_vectors = 4;
+unsigned char num_vectors = 4;
 int down_vector[] = {0,0,0};
 
 
@@ -525,7 +529,7 @@ int down_vector[] = {0,0,0};
 
 void hexbright::enable_accelerometer() {
   // Configure accelerometer
-  byte config[] = {
+  unsigned char config[] = {
     ACC_REG_INTS,  // First register (see next line)
     0xE4,  // Interrupts: shakes, taps
     0x00,  // Mode: not enabled yet
@@ -538,7 +542,7 @@ void hexbright::enable_accelerometer() {
   Wire.endTransmission();
 
   // Enable accelerometer
-  byte enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
+  unsigned char enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
@@ -575,7 +579,7 @@ void hexbright::read_accelerometer() {
   }
 }
 
-byte hexbright::read_accelerometer(byte acc_reg) {
+unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
   if (!digitalRead(DPIN_ACC_INT)) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(acc_reg);
@@ -604,20 +608,20 @@ inline void hexbright::find_down() {
 
 /// tilt register interface
 
-byte hexbright::get_tilt_register() {
+unsigned char hexbright::get_tilt_register() {
   return tilt;
 }
 
-boolean hexbright::tapped() {
+BOOL hexbright::tapped() {
   return tilt & 0x20;
 }
 
-boolean hexbright::shaked() {
+BOOL hexbright::shaked() {
   return tilt & 0x80;
 }
 
-byte hexbright::get_tilt_orientation() {
-  byte tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
+unsigned char hexbright::get_tilt_orientation() {
+  unsigned char tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
   tmp = tmp>>2; // shift us all the way to the right
   // PoLa: 5, 6 = horizontal, 1 = up, 2 = down, 0 = unknown
   if(tmp & 0x04)
@@ -626,8 +630,8 @@ byte hexbright::get_tilt_orientation() {
 }
 
 char hexbright::get_tilt_rotation() {
-  static byte last = 0;
-  byte current  = tilt & 0x1F; // filter out tap/shake registers
+  static unsigned char last = 0;
+  unsigned char current  = tilt & 0x1F; // filter out tap/shake registers
   // 21,22,26,25 (in order, rotating when horizontal)
   switch(current ) {
   case 21: // 10101
@@ -686,12 +690,12 @@ double hexbright::difference_from_down() {
   return (angle_difference(dot_product(light_axis, down_vector), 100, 100));
 }
 
-boolean hexbright::stationary(int tolerance) {
+BOOL hexbright::stationary(int tolerance) {
   // low acceleration vectors
   return abs(magnitude(vector(0))-100)<tolerance && abs(magnitude(vector(1))-100)<tolerance;
 }
 
-boolean hexbright::moved(int tolerance) {
+BOOL hexbright::moved(int tolerance) {
   return abs(magnitude(vector(0))-100)>tolerance;
 }
 
@@ -708,7 +712,7 @@ char hexbright::get_spin() {
 }
 
 /// VECTOR TOOLS
-int* hexbright::vector(byte back) {
+int* hexbright::vector(unsigned char back) {
   return vectors+((current_vector/3+back)%num_vectors)*3;
 }
 
@@ -818,11 +822,11 @@ void hexbright::print_vector(int* vector, char* label) {
 ///////////////////////////////////////////////
 
 long _number = 0;
-byte _color = GLED;
+unsigned char _color = GLED;
 int print_wait_time = 0;
 
 #if (defined(LED) && defined(PRINT_NUMBER))
-boolean hexbright::printing_number() {
+BOOL hexbright::printing_number() {
   return _number || print_wait_time;
 }
 
@@ -869,14 +873,14 @@ void hexbright::update_number() {
   }
 }
 
-byte hexbright::flip_color(byte color) {
+unsigned char hexbright::flip_color(unsigned char color) {
   return (color+1)%2;
 }
 
 
 void hexbright::print_number(long number) {
   // reverse number (so it prints from left to right)
-  boolean negative = false;
+  BOOL negative = false;
   if(number<0) {
     number = 0-number;
     negative = true;
@@ -935,7 +939,7 @@ int hexbright::get_thermal_sensor() {
 //////////////////CHARGING/////////////////////
 ///////////////////////////////////////////////
 
-byte hexbright::get_charge_state() {
+unsigned char hexbright::get_charge_state() {
   int charge_value = analogRead(APIN_CHARGE);
 #if (DEBUG==DEBUG_CHARGE)
   Serial.print("Current charge reading: ");
@@ -955,17 +959,17 @@ byte hexbright::get_charge_state() {
 //  read at the wrong time, we can get a BATTERY value while we are still
 //  plugged in.
 // Reading twice with a sufficient delay, we can guarantee that our state is correct.
-byte hexbright::get_definite_charge_state() {
-  byte val1 = get_charge_state();
+unsigned char hexbright::get_definite_charge_state() {
+  unsigned char val1 = get_charge_state();
   delayMicroseconds(50); // wait a little in case the value was changing
-  byte val2 = get_charge_state();
+  unsigned char val2 = get_charge_state();
   // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
   return val1 & val2;
 }
 
-void hexbright::print_charge(byte led) {
-  byte charge_state = get_charge_state();
+void hexbright::print_charge(unsigned char led) {
+  unsigned char charge_state = get_charge_state();
   if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
     set_led(led, 350, 350);
   } else if (charge_state == CHARGED) {

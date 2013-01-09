@@ -27,8 +27,13 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-#include <Wire.h>
+#ifdef __AVR // we're compiling for arduino
 #include <Arduino.h>
+#include <Wire.h>
+#define BOOL boolean
+#else
+#define BOOL bool
+#endif
 
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
@@ -211,7 +216,7 @@ class hexbright {
     // if(button_released() && button_held()>500)
     static int button_held();
     // button has been released
-    static boolean button_released();
+    static BOOL button_released();
 
     // led = GLED or RLED,
     // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
@@ -220,14 +225,14 @@ class hexbright {
     // brightness (0-255) = brightness of rear led
     //   Defaults to 255 (full brightness)
     // Takes up 16 bytes.
-    static void set_led(byte led, int on_time, int wait_time=100, byte brightness=255);
+    static void set_led(unsigned char led, int on_time, int wait_time=100, unsigned char brightness=255);
     // led = GLED or RLED
     // returns LED_OFF, LED_WAIT, or LED_ON
     // Takes up 54 bytes.
-    static byte get_led_state(byte led);
+    static unsigned char get_led_state(unsigned char led);
     // returns the opposite color than the one passed in
     // Takes up 12 bytes.
-    static byte flip_color(byte color);
+    static unsigned char flip_color(unsigned char color);
 
 
     // Get the raw thermal sensor reading. Takes up 18 bytes.
@@ -249,21 +254,21 @@ class hexbright {
     //  if(!printing_number())
     //    print_charge(GLED);
     //  ...end of loop...
-    static void print_charge(byte led);
+    static void print_charge(unsigned char led);
     // returns CHARGING, CHARGED, or BATTERY
     // This reads the charge state twice with a small delay, then returns
     //  the actual charge state.  BATTERY will never be returned if we are
     //  plugged in.
     // Use this if you take actions based on the charge state (example: you
     //  turn on when you stop charging).  Takes up 56 bytes (34+22).
-    static byte get_definite_charge_state();
+    static unsigned char get_definite_charge_state();
     // returns CHARGING, CHARGED, or BATTERY
     // This reads and returns the charge state, without any verification.
     //  As a result, it may report BATTERY when switching between CHARGED
     //  and CHARGING.
     // Use this if you don't care if the value is sometimes wrong (charging
     //  notification).  Takes up 34 bytes.
-    static byte get_charge_state();
+    static unsigned char get_charge_state();
 
 
     // prints a number through the rear leds
@@ -272,29 +277,29 @@ class hexbright {
     // negative numbers begin with a leading long flash.
     static void print_number(long number);
     // currently printing a number
-    static boolean printing_number();
+    static BOOL printing_number();
 
 #ifdef ACCELEROMETER
     // accepts things like ACC_REG_TILT
     // TILT is now read by default in the private method, at the cost of 12 bytes.
     // using this may cause synchronization errors?
-    static byte read_accelerometer(byte acc_reg);
+    static unsigned char read_accelerometer(unsigned char acc_reg);
 
     /// interface with the tilt register
     // look at the datasheet page 15 for more details
     //  // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf
     // In general, the tilt register is less precise than doing manual
     //  calculations with the vector, but it takes up less space.
-    static byte get_tilt_register();
+    static unsigned char get_tilt_register();
     // return true if the tap flag was set
-    static boolean tapped();
+    static BOOL tapped();
     // return true if the shake flag was set
-    static boolean shaked();
+    static BOOL shaked();
     // returns the tilt orientation:
     //  TILT_UNKNOWN, TILT_HORIZONTAL, TILT_UP, and TILT_DOWN
     //  TILT_UNKNOWN is an extremely rare case (turning on from off, or
     //  the accelerometer turning on from standby).
-    static byte get_tilt_orientation();
+    static unsigned char get_tilt_orientation();
     // returns tilt rotation.
     //  1 for clockwise, -1 for counterclockwise, 0 for same/unknown.
     // The tilt sensor only changes readings every 90 degrees.  If you need
@@ -307,11 +312,11 @@ class hexbright {
     // last two readings have had minor acceleration
     //  The sensor has around .1-.05 Gs of noise, so by default we set tolerance = .1 Gs.
     //  We'll return true if we've had less than that amount of movement in the last two readings.
-    static boolean stationary(int tolerance=10);
+    static BOOL stationary(int tolerance=10);
     // last reading had non-gravitational acceleration
     //  by default, returns true if the last reading has deviated from 1G by more more
     //  than .5Gs of acceleration.
-    static boolean moved(int tolerance=50);
+    static BOOL moved(int tolerance=50);
 
     // returns a value from 100 to -100. 0 is no movement.
     //  This returns lots of noise if we're pointing up or down.
@@ -335,7 +340,7 @@ class hexbright {
     //  0 = most recent reading,
     //  3 = most distant reading.
     // Do not modify the returned vector.
-    static int* vector(byte back);
+    static int* vector(unsigned char back);
     // Returns our best guess at which way is down.
     // Do not modify the returned vector.
     static int* down();
@@ -388,9 +393,9 @@ class hexbright {
 
     // controls actual led hardware set.
     //  As such, state = HIGH or LOW
-    static void _set_led(byte led, byte state);
-    static void _led_on(byte led);
-    static void _led_off(byte led);
+    static void _set_led(unsigned char led, unsigned char state);
+    static void _led_on(unsigned char led);
+    static void _led_off(unsigned char led);
     static void adjust_leds();
 
     static void read_thermal_sensor();
