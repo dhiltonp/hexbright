@@ -803,7 +803,7 @@ void hexbright::copy_vector(int* out_vector, int* in_vector) {
   }
 }
 
-void hexbright::print_vector(int* vector, char* label) {
+void hexbright::print_vector(int* vector, const char* label) {
 #if (DEBUG!=DEBUG_OFF)
   for(int i=0; i<3; i++) {
     Serial.print(vector[i]);

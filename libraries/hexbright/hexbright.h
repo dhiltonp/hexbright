@@ -363,7 +363,7 @@ class hexbright {
   //  (0 = same angle, 1 = opposite).
   static double angle_difference(int dot_product, double magnitude1, double magnitude2);
   
-  static void print_vector(int* vector, char* label);
+  static void print_vector(int* vector, const char* label);
   
  private: // internal to the library
   // good documentation:
