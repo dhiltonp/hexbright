@@ -31,6 +31,10 @@ either expressed or implied, of the FreeBSD Project.
 #include "hexbright.h"
 #include <limits.h>
 
+#ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
+#include "NotArduino.h"
+#endif
+
 // Pin assignments
 #define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
 #define DPIN_GLED 5
@@ -45,8 +49,13 @@ either expressed or implied, of the FreeBSD Project.
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
 
-const float ms_delay = 8.3333333; // in lock-step with the accelerometer
-unsigned long time;
+const float update_delay = 8.3333333; // in lock-step with the accelerometer
+unsigned long continue_time;
+
+unsigned long next_strobe = STROBE_OFF;
+unsigned long strobe_delay = 0;
+int strobe_duration = 100;
+
 
 hexbright::hexbright() {
 }
@@ -71,7 +80,7 @@ void hexbright::init_hardware() {
   pinMode(DPIN_DRV_EN, OUTPUT);
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
-
+  
 #if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
   Serial.begin(9600);
@@ -83,58 +92,81 @@ void hexbright::init_hardware() {
   } else if (DEBUG==DEBUG_TEMP) {
     set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
-    // note the use of TIME_MS/ms_delay.
-    set_light(0, MAX_LEVEL, 2500/ms_delay);
+    // note the use of TIME_MS/update_delay.
+    set_light(0, MAX_LEVEL, 2500/update_delay);
   }
-
+  
   Serial.print("Ram available: ");
   Serial.print(freeRam());
   Serial.println("/1024 bytes");
   Serial.print("Flash checksum: ");
   Serial.println(flash_checksum());
 #endif
-
+  
 #ifdef ACCELEROMETER
   enable_accelerometer();
 #endif
-
-  time = micros();
+  
+  continue_time = micros();
 }
 
 void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
-  time = time+(1000*ms_delay);
-  while (time > micros()) {} // do nothing... (will short circuit once every 70 minutes)
-
+  continue_time = continue_time+(1000*update_delay);
+  
+  unsigned long now;
+  while (true) {
+    do {
+      now = micros();
+    } while (next_strobe > now && // not ready for strobe
+	     continue_time > now); // not ready for update
+    
+    if (next_strobe <= now) {
+      if (now - next_strobe <26) {
+	digitalWrite(DPIN_DRV_EN, HIGH);
+	delayMicroseconds(strobe_duration);
+	digitalWrite(DPIN_DRV_EN, LOW);
+      }
+      next_strobe += strobe_delay;
+    }
+    if(continue_time <= now) {
+      if(strobe_delay>update_delay && // we strobe less than once every 8333 microseconds
+	 next_strobe-continue_time < 4000) // and the next strobe is within 4000 microseconds (may occur before we return)
+	continue;
+      else
+	break;
+    }
+  } // do nothing... (will short circuit once every 70 minutes (micros maxint))
+  
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
   static float avg_loop_time = 0;
   static float last_time = 0;
-  avg_loop_time = (avg_loop_time*29 + time-last_time)/30;
+  avg_loop_time = (avg_loop_time*29 + continue_time-last_time)/30;
 #if (DEBUG==DEBUG_LOOP)
   if(!i) {
     Serial.print("Average loop time: ");
     Serial.println(avg_loop_time/1000);
   }
 #endif
-  if(avg_loop_time/1000>ms_delay+1 && !i) {
-    // This may be caused by too much processing for our ms_delay, or by too many print statements (each one takes a few ms)
+  if(avg_loop_time/1000>update_delay+1 && !i) {
+    // This may be caused by too much processing for our update_delay, or by too many print statements (each one takes a few ms)
     Serial.print("WARNING: loop time: ");
     Serial.println(avg_loop_time/1000);
   }
   if (!i)
-    i=1000/ms_delay; // display loop output every second
+    i=1000/update_delay; // display loop output every second
   else
     i--;
-  last_time = time;
+  last_time = continue_time;
 #endif
-
-
+  
+  
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
-
-  #ifdef LED
+  
+#ifdef LED
   // regardless of desired led state, turn it off so we can read the button
   _led_off(RLED);
   delayMicroseconds(50); // let the light stabilize...
@@ -147,14 +179,14 @@ void hexbright::update() {
 #else
   read_button();
 #endif
-
+  
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer();
   find_down();
 #endif
   overheat_protection();
-
+  
   // change light levels as requested
   adjust_light();
 }
@@ -188,8 +220,8 @@ int safe_light_level = MAX_LEVEL;
 
 
 void hexbright::set_light(int start_level, int end_level, int time) {
-// duration ranges from 1-MAXINT
-// light_level can be from 0-1000
+  // duration ranges from 1-MAXINT
+  // light_level can be from 0-1000
   int current_level = get_light_level();
   if(start_level == CURRENT_LEVEL) {
     start_light_level = current_level;
@@ -201,14 +233,14 @@ void hexbright::set_light(int start_level, int end_level, int time) {
   } else {
     end_light_level = end_level;
   }
-
-  change_duration = time/ms_delay;
+  
+  change_duration = time/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("Light adjust requested, start level:");
   Serial.println(start_light_level);
 #endif
-
+  
 }
 
 int hexbright::get_light_level() {
@@ -220,29 +252,29 @@ int hexbright::get_light_level() {
 
 int hexbright::get_safe_light_level() {
   int light_level = get_light_level();
-
+  
   if(light_level>safe_light_level)
-     return safe_light_level;
+    return safe_light_level;
   return light_level;
 }
 
 int hexbright::light_change_remaining() {
   // change_done ends up at -1, add one to counter
-  //  return (change_duration-change_done+1)*ms_delay;
+  //  return (change_duration-change_done+1)*update_delay;
   int tmp = change_duration-change_done;
   if(tmp<=0)
     return 0;
-  return tmp*ms_delay;
+  return tmp*update_delay;
 }
 
 
 void hexbright::set_light_level(unsigned long level) {
-// LOW 255 approximately equals HIGH 48/49.  There is a color change.
-// Values < 4 do not provide any light.
-// I don't know about relative power draw.
-
-// look at linearity_test.ino for more detail on these algorithms.
-
+  // LOW 255 approximately equals HIGH 48/49.  There is a color change.
+  // Values < 4 do not provide any light.
+  // I don't know about relative power draw.
+  
+  // look at linearity_test.ino for more detail on these algorithms.
+  
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("light level: ");
   Serial.println(level);
@@ -250,7 +282,7 @@ void hexbright::set_light_level(unsigned long level) {
   pinMode(DPIN_PWR, OUTPUT);
   digitalWrite(DPIN_PWR, HIGH);
   if(level == 0) {
-  // lowest possible power, but still running (DPIN_PWR still high)
+    // lowest possible power, but still running (DPIN_PWR still high)
     digitalWrite(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
   }
@@ -269,17 +301,17 @@ void hexbright::adjust_light() {
   if(change_done<=change_duration) {
     int light_level = hexbright::get_safe_light_level();
     set_light_level(light_level);
-
+    
     change_done++;
   }
 }
 
-  // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
-  // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
-  // Here's an example: ambient temperature is >
+// If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
+// this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
+// Here's an example: ambient temperature is >
 void hexbright::overheat_protection() {
   int temperature = get_thermal_sensor();
-
+  
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
@@ -303,9 +335,9 @@ void hexbright::overheat_protection() {
     Serial.print(") (fahrenheit: ");
     Serial.print(get_fahrenheit());
     Serial.println(")");
-    }
+  }
 #endif
-
+  
   // if safe_light_level has changed, guarantee a light adjustment:
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
@@ -314,9 +346,35 @@ void hexbright::overheat_protection() {
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif
-    change_done  = min(change_done , change_duration);
+    change_done  = change_done < change_duration ? change_done : change_duration;
   }
 }
+
+
+///////////////STROBE CONTROL//////////////////
+
+void hexbright::set_strobe_delay(unsigned long delay) {
+  strobe_delay = delay;
+  next_strobe = micros()+strobe_delay;
+}
+
+void hexbright::set_strobe_duration(int duration) {
+  strobe_duration = duration;
+}
+
+void hexbright::set_strobe_fpm(unsigned int fpm) {
+  set_strobe_delay(60000000/fpm);
+}
+
+unsigned int hexbright::get_strobe_fpm() {
+  return 60000000 / (strobe_delay/8*8);
+}
+
+unsigned int hexbright::get_strobe_error() {
+  // 90000000 because we have an error of 3*8 microseconds; 1.5 above, 1.5 below
+  return 90000000 / ((strobe_delay/8)*8) - 90000000 / ((strobe_delay/8+1)*8);
+}
+
 
 ///////////////////////////////////////////////
 ///////////////////LED CONTROL/////////////////
@@ -327,19 +385,19 @@ void hexbright::overheat_protection() {
 // >0 = countdown, 0 = change state, -1 = state changed
 int led_wait_time[2] = {-1, -1};
 int led_on_time[2] = {-1, -1};
-byte led_brightness[2] = {0, 0};
+unsigned char led_brightness[2] = {0, 0};
 
-void hexbright::set_led(byte led, int on_time, int wait_time, byte brightness) {
+void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned char brightness) {
 #if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
-  led_on_time[led] = on_time/ms_delay;
-  led_wait_time[led] = wait_time/ms_delay;
+  led_on_time[led] = on_time/update_delay;
+  led_wait_time[led] = wait_time/update_delay;
   led_brightness[led] = brightness;
 }
 
 
-byte hexbright::get_led_state(byte led) {
+unsigned char hexbright::get_led_state(unsigned char led) {
   //returns true if the LED is on
   if(led_on_time[led]>=0) {
     return LED_ON;
@@ -350,7 +408,7 @@ byte hexbright::get_led_state(byte led) {
   }
 }
 
-inline void hexbright::_led_on(byte led) {
+inline void hexbright::_led_on(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
     pinMode(DPIN_RLED_SW, OUTPUT);
     analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
@@ -359,7 +417,7 @@ inline void hexbright::_led_on(byte led) {
   }
 }
 
-inline void hexbright::_led_off(byte led) {
+inline void hexbright::_led_off(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
     digitalWrite(DPIN_RLED_SW, LOW);
     pinMode(DPIN_RLED_SW, INPUT);
@@ -373,17 +431,17 @@ inline void hexbright::adjust_leds() {
 #if (DEBUG==DEBUG_LED)
   if(led_on_time[GLED]>=0) {
     Serial.print("green on countdown: ");
-    Serial.println(led_on_time[GLED]*ms_delay);
+    Serial.println(led_on_time[GLED]*update_delay);
   } else if (led_on_time[GLED]<0 && led_wait_time[GLED]>=0) {
     Serial.print("green wait countdown: ");
-    Serial.println((led_wait_time[GLED])*ms_delay);
+    Serial.println((led_wait_time[GLED])*update_delay);
   }
   if(led_on_time[RLED]>=0) {
     Serial.print("red on countdown: ");
-    Serial.println(led_on_time[RLED]*ms_delay);
+    Serial.println(led_on_time[RLED]*update_delay);
   } else if (led_on_time[RLED]<0 && led_wait_time[RLED]>=0) {
     Serial.print("red wait countdown: ");
-    Serial.println((led_wait_time[RLED])*ms_delay);
+    Serial.println((led_wait_time[RLED])*update_delay);
   }
 #endif
   int i=0;
@@ -489,10 +547,10 @@ void hexbright::read_button() {
 //  in the implementation with little to no benefit.
 
 
-byte tilt = 0;
+unsigned char tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
 int current_vector = 0;
-byte num_vectors = 4;
+unsigned char num_vectors = 4;
 int down_vector[] = {0,0,0};
 
 
@@ -500,7 +558,7 @@ int down_vector[] = {0,0,0};
 
 void hexbright::enable_accelerometer() {
   // Configure accelerometer
-  byte config[] = {
+  unsigned char config[] = {
     ACC_REG_INTS,  // First register (see next line)
     0xE4,  // Interrupts: shakes, taps
     0x00,  // Mode: not enabled yet
@@ -511,20 +569,20 @@ void hexbright::enable_accelerometer() {
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(config, sizeof(config));
   Wire.endTransmission();
-
+  
   // Enable accelerometer
-  byte enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
+  unsigned char enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
-
- // pinMode(DPIN_ACC_INT,  INPUT);
- // digitalWrite(DPIN_ACC_INT,  HIGH);
+  
+  // pinMode(DPIN_ACC_INT,  INPUT);
+  // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
 
 void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
-  if((millis()-init_time)>*/
+    if((millis()-init_time)>*/
   // advance which vector is considered the first
   next_vector();
   while(1) {
@@ -550,7 +608,7 @@ void hexbright::read_accelerometer() {
   }
 }
 
-byte hexbright::read_accelerometer(byte acc_reg) {
+unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
   if (!digitalRead(DPIN_ACC_INT)) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(acc_reg);
@@ -560,6 +618,7 @@ byte hexbright::read_accelerometer(byte acc_reg) {
   }
   return 0;
 }
+
 
 inline void hexbright::find_down() {
   // currently, we're just averaging the last four data points.
@@ -579,20 +638,20 @@ inline void hexbright::find_down() {
 
 /// tilt register interface
 
-byte hexbright::get_tilt_register() {
+unsigned char hexbright::get_tilt_register() {
   return tilt;
 }
 
-boolean hexbright::tapped() {
+BOOL hexbright::tapped() {
   return tilt & 0x20;
 }
 
-boolean hexbright::shaked() {
+BOOL hexbright::shaked() {
   return tilt & 0x80;
 }
 
-byte hexbright::get_tilt_orientation() {
-  byte tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
+unsigned char hexbright::get_tilt_orientation() {
+  unsigned char tmp = tilt & (0x1F | 0x03); // filter out the tap/shake registers, and the back/front register
   tmp = tmp>>2; // shift us all the way to the right
   // PoLa: 5, 6 = horizontal, 1 = up, 2 = down, 0 = unknown
   if(tmp & 0x04)
@@ -601,8 +660,8 @@ byte hexbright::get_tilt_orientation() {
 }
 
 char hexbright::get_tilt_rotation() {
-  static byte last = 0;
-  byte current  = tilt & 0x1F; // filter out tap/shake registers
+  static unsigned char last = 0;
+  unsigned char current  = tilt & 0x1F; // filter out tap/shake registers
   // 21,22,26,25 (in order, rotating when horizontal)
   switch(current ) {
   case 21: // 10101
@@ -621,12 +680,12 @@ char hexbright::get_tilt_rotation() {
     last = 0;
     return 0;
   }
-
+  
   if(last==0) { // previous reading wasn't usable
     last = current;
     return 0;
   }
-
+  
   // we have two valid values, calculate!
   char retval = last-current;
   last = current;
@@ -661,12 +720,12 @@ double hexbright::difference_from_down() {
   return (angle_difference(dot_product(light_axis, down_vector), 100, 100));
 }
 
-boolean hexbright::stationary(int tolerance) {
+BOOL hexbright::stationary(int tolerance) {
   // low acceleration vectors
   return abs(magnitude(vector(0))-100)<tolerance && abs(magnitude(vector(1))-100)<tolerance;
 }
 
-boolean hexbright::moved(int tolerance) {
+BOOL hexbright::moved(int tolerance) {
   return abs(magnitude(vector(0))-100)>tolerance;
 }
 
@@ -683,7 +742,7 @@ char hexbright::get_spin() {
 }
 
 /// VECTOR TOOLS
-int* hexbright::vector(byte back) {
+int* hexbright::vector(unsigned char back) {
   return vectors+((current_vector/3+back)%num_vectors)*3;
 }
 
@@ -729,11 +788,11 @@ void hexbright::cross_product(int * axes_rotation,
                               int* in_vector2,
                               double angle_difference) {
   for(int i=0; i<3; i++) {
-      axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3] \
-                          - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
-      //axes_rotation[i] /= magnitude(in_vector1)*magnitude(in_vector2);
-      //axes_rotation[i] /= asin(angle_difference*3.14159);
-    }
+    axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3]         \
+                        - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
+    //axes_rotation[i] /= magnitude(in_vector1)*magnitude(in_vector2);
+    //axes_rotation[i] /= asin(angle_difference*3.14159);
+  }
 }
 
 double hexbright::magnitude(int* vector) {
@@ -750,7 +809,7 @@ double hexbright::magnitude(int* vector) {
 
 void hexbright::normalize(int* out_vector, int* in_vector, double magnitude) {
   for(int i=0; i<3; i++) {
-  // normalize to 100, not 1
+    // normalize to 100, not 1
     out_vector[i] = in_vector[i]/magnitude*100;
   }
 }
@@ -773,7 +832,7 @@ void hexbright::copy_vector(int* out_vector, int* in_vector) {
   }
 }
 
-void hexbright::print_vector(int* vector, char* label) {
+void hexbright::print_vector(int* vector, const char* label) {
 #if (DEBUG!=DEBUG_OFF)
   for(int i=0; i<3; i++) {
     Serial.print(vector[i]);
@@ -793,11 +852,11 @@ void hexbright::print_vector(int* vector, char* label) {
 ///////////////////////////////////////////////
 
 long _number = 0;
-byte _color = GLED;
+unsigned char _color = GLED;
 int print_wait_time = 0;
 
 #if (defined(LED) && defined(PRINT_NUMBER))
-boolean hexbright::printing_number() {
+BOOL hexbright::printing_number() {
   return _number || print_wait_time;
 }
 
@@ -815,43 +874,43 @@ void hexbright::update_number() {
 #endif
     if(!print_wait_time) {
       if(_number==1) { // minimum delay between printing numbers
-        print_wait_time = 2500/ms_delay;
+        print_wait_time = 2500/update_delay;
         _number = 0;
         return;
       } else {
-        print_wait_time = 300/ms_delay;
+        print_wait_time = 300/update_delay;
       }
       if(_number/10*10==_number) {
 #if (DEBUG==DEBUG_NUMBER)
         Serial.println("zero");
 #endif
-//        print_wait_time = 500/ms_delay;
+        //        print_wait_time = 500/update_delay;
         set_led(_color, 400);
       } else {
         set_led(_color, 120);
         _number--;
       }
       if(_number && !(_number%10)) { // next digit?
-        print_wait_time = 600/ms_delay;
+        print_wait_time = 600/update_delay;
         _color = flip_color(_color);
         _number = _number/10;
       }
     }
   }
-
+  
   if(print_wait_time) {
     print_wait_time--;
   }
 }
 
-byte hexbright::flip_color(byte color) {
+unsigned char hexbright::flip_color(unsigned char color) {
   return (color+1)%2;
 }
 
 
 void hexbright::print_number(long number) {
   // reverse number (so it prints from left to right)
-  boolean negative = false;
+  BOOL negative = false;
   if(number<0) {
     number = 0-number;
     negative = true;
@@ -865,7 +924,7 @@ void hexbright::print_number(long number) {
   }
   if(negative) {
     set_led(flip_color(_color), 500);
-    print_wait_time = 600/ms_delay;
+    print_wait_time = 600/update_delay;
   }
 }
 #endif
@@ -879,7 +938,7 @@ void hexbright::read_thermal_sensor() {
   // do not call this directly.  Call get_temperature()
   // read temperature setting
   // device data sheet: http://ww1.microchip.com/downloads/en/devicedoc/21942a.pdf
-
+  
   thermal_sensor_value = analogRead(APIN_TEMP);
 }
 
@@ -887,7 +946,7 @@ int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
   // intersection with 0: 50 = (40C-0C)/(275-153)*153
-
+  
   // 40.05 is to force the division to floating point.  The extra parenthesis are to
   //  tell the compiler to pre-evaluate the expression.
   return thermal_sensor_value * ((40.05-0)/(275-153)) - 50;
@@ -910,7 +969,7 @@ int hexbright::get_thermal_sensor() {
 //////////////////CHARGING/////////////////////
 ///////////////////////////////////////////////
 
-byte hexbright::get_charge_state() {
+unsigned char hexbright::get_charge_state() {
   int charge_value = analogRead(APIN_CHARGE);
 #if (DEBUG==DEBUG_CHARGE)
   Serial.print("Current charge reading: ");
@@ -930,21 +989,17 @@ byte hexbright::get_charge_state() {
 //  read at the wrong time, we can get a BATTERY value while we are still
 //  plugged in.
 // Reading twice with a sufficient delay, we can guarantee that our state is correct.
-byte hexbright::get_definite_charge_state() {
-  byte val1 = get_charge_state();
-  // do something that will take some time...
-  // delayMicroseconds costs an extra 20 bytes (because nowhere else is it called)
-  // If other code needs delayMicroseconds, switch to it.
-  //delayMicroseconds(30);
-  read_thermal_sensor(); // delay a little...
-  byte val2 = get_charge_state();
+unsigned char hexbright::get_definite_charge_state() {
+  unsigned char val1 = get_charge_state();
+  delayMicroseconds(50); // wait a little in case the value was changing
+  unsigned char val2 = get_charge_state();
   // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
   // In essence, only return the middle value (BATTERY) if two reads report the same thing.
   return val1 & val2;
 }
 
-void hexbright::print_charge(byte led) {
-  byte charge_state = get_charge_state();
+void hexbright::print_charge(unsigned char led) {
+  unsigned char charge_state = get_charge_state();
   if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
     set_led(led, 350, 350);
   } else if (charge_state == CHARGED) {
@@ -966,3 +1021,14 @@ void hexbright::shutdown() {
   change_done = change_duration+1;
   end_light_level = 0;
 }
+
+
+///////////////////////////////////////////////
+//KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
+///////////////////////////////////////////////
+
+void hexbright::fake_read_accelerometer(int* new_vector) {
+  next_vector();
+  copy_vector(vectors+current_vector, new_vector);
+}
+

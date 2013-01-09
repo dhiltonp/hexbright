@@ -39,7 +39,6 @@ either expressed or implied, of the FreeBSD Project.
 int mode = 0;
 
 
-#define MS 8.333 // now internally set, keeping us in lockstep with the accelerometer
 hexbright hb;
 
 void setup() {
@@ -73,10 +72,11 @@ void loop() {
 
   //// Actions over time for a given mode
   if(mode == BLINKY_MODE) { // just blink
+    Serial.println("blinking?");
     static int i = 0;
     if(!i) {
-      hb.set_light(MAX_LOW_LEVEL,0,MS); // because time = MS, we'll only hit the endpoints
-      i=400/MS;
+      hb.set_light(MAX_LOW_LEVEL,0,30); // fade from 500 to 0 over 30 milliseconds
+      i=400/8.3333; // every fifty times through; currently the library is locked at 8.333 milliseconds
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
