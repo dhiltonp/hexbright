@@ -373,15 +373,20 @@ class hexbright {
     // reads the x,y,z axes + the tilt register.
     static void read_accelerometer();
 
+    static void enable_accelerometer();
+
     // advances the current vector to the next (a place for more data)
     static void next_vector();
+
+#ifndef __AVR
+  public:
+#endif
     // Recalculate down.  If there has been lots of movement, this could easily
     //  be off. But not recalculating down in such cases costs more work, and
     //  even then, we're just guessing.  Overall, a windowed average works fairly
     //  well.
     static void find_down();
 
-    static void enable_accelerometer();
 #endif
 
   private:
@@ -404,4 +409,13 @@ class hexbright {
 
     // read through flash, return the checksum
     static int flash_checksum();
+
+///////////////////////////////////////////////
+//KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
+///////////////////////////////////////////////
+
+ public:
+    // fake accelerometer read.  This should be in a new, derived class, 
+    //  but it can't be because arduino doesn't support class variables
+    static void fake_read_accelerometer(int* new_vector);
 };

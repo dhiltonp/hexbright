@@ -590,6 +590,7 @@ unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
   return 0;
 }
 
+
 inline void hexbright::find_down() {
   // currently, we're just averaging the last four data points.
   //  Down is the strongest constant acceleration we experience
@@ -991,3 +992,14 @@ void hexbright::shutdown() {
   change_done = change_duration+1;
   end_light_level = 0;
 }
+
+
+///////////////////////////////////////////////
+//KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
+///////////////////////////////////////////////
+
+void hexbright::fake_read_accelerometer(int* new_vector) {
+  next_vector();
+  copy_vector(vectors+current_vector, new_vector);
+}
+
