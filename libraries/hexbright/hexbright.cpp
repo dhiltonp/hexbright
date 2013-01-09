@@ -79,7 +79,7 @@ void hexbright::init_hardware() {
   pinMode(DPIN_DRV_EN, OUTPUT);
   digitalWrite(DPIN_DRV_MODE, LOW);
   digitalWrite(DPIN_DRV_EN, LOW);
-
+  
 #if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
   Serial.begin(9600);
@@ -94,18 +94,18 @@ void hexbright::init_hardware() {
     // note the use of TIME_MS/update_delay.
     set_light(0, MAX_LEVEL, 2500/update_delay);
   }
-
+  
   Serial.print("Ram available: ");
   Serial.print(freeRam());
   Serial.println("/1024 bytes");
   Serial.print("Flash checksum: ");
   Serial.println(flash_checksum());
 #endif
-
+  
 #ifdef ACCELEROMETER
   enable_accelerometer();
 #endif
-
+  
   continue_time = micros();
 }
 
@@ -120,7 +120,7 @@ void hexbright::update() {
       now = micros();
     } while (next_strobe > now && // not ready for strobe
 	     continue_time > now); // not ready for update
-     
+    
     if (next_strobe <= now) {
       if (now - next_strobe <26) {
 	digitalWrite(DPIN_DRV_EN, HIGH);
@@ -137,7 +137,7 @@ void hexbright::update() {
 	break;
     }
   } // do nothing... (will short circuit once every 70 minutes (micros maxint))
-
+  
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
@@ -161,12 +161,12 @@ void hexbright::update() {
     i--;
   last_time = continue_time;
 #endif
-
-
+  
+  
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
-
-  #ifdef LED
+  
+#ifdef LED
   // regardless of desired led state, turn it off so we can read the button
   _led_off(RLED);
   delayMicroseconds(50); // let the light stabilize...
@@ -179,14 +179,14 @@ void hexbright::update() {
 #else
   read_button();
 #endif
-
+  
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer();
   find_down();
 #endif
   overheat_protection();
-
+  
   // change light levels as requested
   adjust_light();
 }
@@ -220,8 +220,8 @@ int safe_light_level = MAX_LEVEL;
 
 
 void hexbright::set_light(int start_level, int end_level, int time) {
-// duration ranges from 1-MAXINT
-// light_level can be from 0-1000
+  // duration ranges from 1-MAXINT
+  // light_level can be from 0-1000
   int current_level = get_light_level();
   if(start_level == CURRENT_LEVEL) {
     start_light_level = current_level;
@@ -233,14 +233,14 @@ void hexbright::set_light(int start_level, int end_level, int time) {
   } else {
     end_light_level = end_level;
   }
-
+  
   change_duration = time/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("Light adjust requested, start level:");
   Serial.println(start_light_level);
 #endif
-
+  
 }
 
 int hexbright::get_light_level() {
@@ -252,9 +252,9 @@ int hexbright::get_light_level() {
 
 int hexbright::get_safe_light_level() {
   int light_level = get_light_level();
-
+  
   if(light_level>safe_light_level)
-     return safe_light_level;
+    return safe_light_level;
   return light_level;
 }
 
@@ -269,12 +269,12 @@ int hexbright::light_change_remaining() {
 
 
 void hexbright::set_light_level(unsigned long level) {
-// LOW 255 approximately equals HIGH 48/49.  There is a color change.
-// Values < 4 do not provide any light.
-// I don't know about relative power draw.
-
-// look at linearity_test.ino for more detail on these algorithms.
-
+  // LOW 255 approximately equals HIGH 48/49.  There is a color change.
+  // Values < 4 do not provide any light.
+  // I don't know about relative power draw.
+  
+  // look at linearity_test.ino for more detail on these algorithms.
+  
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("light level: ");
   Serial.println(level);
@@ -282,7 +282,7 @@ void hexbright::set_light_level(unsigned long level) {
   pinMode(DPIN_PWR, OUTPUT);
   digitalWrite(DPIN_PWR, HIGH);
   if(level == 0) {
-  // lowest possible power, but still running (DPIN_PWR still high)
+    // lowest possible power, but still running (DPIN_PWR still high)
     digitalWrite(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
   }
@@ -301,18 +301,18 @@ void hexbright::adjust_light() {
   if(change_done<=change_duration) {
     int light_level = hexbright::get_safe_light_level();
     set_light_level(light_level);
-
+    
     change_done++;
   }
 }
 
 
-  // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
-  // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
-  // Here's an example: ambient temperature is >
+// If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
+// this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
+// Here's an example: ambient temperature is >
 void hexbright::overheat_protection() {
   int temperature = get_thermal_sensor();
-
+  
   safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
   safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
@@ -336,9 +336,9 @@ void hexbright::overheat_protection() {
     Serial.print(") (fahrenheit: ");
     Serial.print(get_fahrenheit());
     Serial.println(")");
-    }
+  }
 #endif
-
+  
   // if safe_light_level has changed, guarantee a light adjustment:
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
@@ -540,20 +540,20 @@ void hexbright::enable_accelerometer() {
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(config, sizeof(config));
   Wire.endTransmission();
-
+  
   // Enable accelerometer
   unsigned char enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
   Wire.beginTransmission(ACC_ADDRESS);
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
-
- // pinMode(DPIN_ACC_INT,  INPUT);
- // digitalWrite(DPIN_ACC_INT,  HIGH);
+  
+  // pinMode(DPIN_ACC_INT,  INPUT);
+  // digitalWrite(DPIN_ACC_INT,  HIGH);
 }
 
 void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
-  if((millis()-init_time)>*/
+    if((millis()-init_time)>*/
   // advance which vector is considered the first
   next_vector();
   while(1) {
@@ -651,12 +651,12 @@ char hexbright::get_tilt_rotation() {
     last = 0;
     return 0;
   }
-
+  
   if(last==0) { // previous reading wasn't usable
     last = current;
     return 0;
   }
-
+  
   // we have two valid values, calculate!
   char retval = last-current;
   last = current;
@@ -759,11 +759,11 @@ void hexbright::cross_product(int * axes_rotation,
                               int* in_vector2,
                               double angle_difference) {
   for(int i=0; i<3; i++) {
-      axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3] \
-                          - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
-      //axes_rotation[i] /= magnitude(in_vector1)*magnitude(in_vector2);
-      //axes_rotation[i] /= asin(angle_difference*3.14159);
-    }
+    axes_rotation[i] = (in_vector1[(i+1)%3]*in_vector2[(i+2)%3]         \
+                        - in_vector1[(i+2)%3]*in_vector2[(i+1)%3]);
+    //axes_rotation[i] /= magnitude(in_vector1)*magnitude(in_vector2);
+    //axes_rotation[i] /= asin(angle_difference*3.14159);
+  }
 }
 
 double hexbright::magnitude(int* vector) {
@@ -780,7 +780,7 @@ double hexbright::magnitude(int* vector) {
 
 void hexbright::normalize(int* out_vector, int* in_vector, double magnitude) {
   for(int i=0; i<3; i++) {
-  // normalize to 100, not 1
+    // normalize to 100, not 1
     out_vector[i] = in_vector[i]/magnitude*100;
   }
 }
@@ -855,7 +855,7 @@ void hexbright::update_number() {
 #if (DEBUG==DEBUG_NUMBER)
         Serial.println("zero");
 #endif
-//        print_wait_time = 500/update_delay;
+        //        print_wait_time = 500/update_delay;
         set_led(_color, 400);
       } else {
         set_led(_color, 120);
@@ -868,7 +868,7 @@ void hexbright::update_number() {
       }
     }
   }
-
+  
   if(print_wait_time) {
     print_wait_time--;
   }
@@ -909,7 +909,7 @@ void hexbright::read_thermal_sensor() {
   // do not call this directly.  Call get_temperature()
   // read temperature setting
   // device data sheet: http://ww1.microchip.com/downloads/en/devicedoc/21942a.pdf
-
+  
   thermal_sensor_value = analogRead(APIN_TEMP);
 }
 
@@ -917,7 +917,7 @@ int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
   // intersection with 0: 50 = (40C-0C)/(275-153)*153
-
+  
   // 40.05 is to force the division to floating point.  The extra parenthesis are to
   //  tell the compiler to pre-evaluate the expression.
   return thermal_sensor_value * ((40.05-0)/(275-153)) - 50;
