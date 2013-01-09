@@ -21,7 +21,7 @@ static const int short_click = 350; // maximum time for a "short" click
 
 static const int nightlight_timeout = 3000; // timeout before nightlight powers down after any movement
 static const int nightlight_red_brightness = 255; // brightness of red led for nightlight
-static const int nightlight_sensitivity = 20; // measured in 100's of a G.
+static const int nightlight_sensitivity = 10; // measured in 100's of a G.
 
 // State
 static bool glow_mode = false;
