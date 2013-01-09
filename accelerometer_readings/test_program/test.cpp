@@ -28,10 +28,11 @@ std::vector<std::string> split(const std::string &s, char delim) {
 class hbtest : public hexbright {
 private:
   std::vector<std::vector<int> > accelerometer_data;
-  int accelerometer_location = 0;
+  int accelerometer_location;
 public:
   hbtest(string file) {
     accelerometer_data = std::vector<std::vector<int> >();
+    accelerometer_location = 0;
 
     // read accelerometer_data from file
     ifstream f;
