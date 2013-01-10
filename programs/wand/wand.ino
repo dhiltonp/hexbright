@@ -18,9 +18,9 @@ int level = 0;
 
 void loop() {
   hb.update();
-  if(hb.button_released() && hb.button_held()<500) {
+  if(hb.button_just_released() && hb.button_pressed_time()<500) {
     mode = WAND_MODE; 
-  } else if (hb.button_held()>1000) {
+  } else if (hb.button_pressed_time()>1000) {
     level = 0;
     mode = OFF_MODE; 
   }

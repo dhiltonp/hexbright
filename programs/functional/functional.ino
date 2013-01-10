@@ -50,19 +50,19 @@ void loop() {
   static int brightness_level = 4;
 
   //// Button actions to recognize, one-time actions to take as a result
-  if(hb.button_released()) {
-    if(hb.button_held()<1) {
+  if(hb.button_just_released()) {
+    if(hb.button_pressed_time()<1) {
       // ignore, could be a bounce
-    } else if(hb.button_held()<300) { //<300 milliseconds
+    } else if(hb.button_pressed_time()<300) { //<300 milliseconds
       mode = CYCLE_MODE;
       int levels[] = {1,250,500,750,1000};
       brightness_level = (brightness_level+1)%5;
       hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150);
-    } else if (hb.button_held() < 700) {
+    } else if (hb.button_pressed_time() < 700) {
       mode = BLINKY_MODE;
     }
   }
-  if(hb.button_held()>700) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
+  if(hb.button_pressed_time()>700) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
     mode = OFF_MODE;
     // in case we are under usb power, reset state
     hb.set_light(0, 0, 1);

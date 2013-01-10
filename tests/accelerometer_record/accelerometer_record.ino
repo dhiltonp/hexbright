@@ -39,7 +39,7 @@ void loop() {
   hb.update();
   switch (mode) {
   case OFF_MODE:
-    if(hb.button_released()) {
+    if(hb.button_just_released()) {
       hb.set_light(100, 100, NOW);
       address = 0;
       mode = WAIT_MODE;

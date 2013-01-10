@@ -45,10 +45,10 @@ static int brightness_level = 0;
 
 void loop() {
   hb.update();
-  if(hb.button_released() && hb.button_held()<300) {
+  if(hb.button_just_released() && hb.button_pressed_time()<300) {
     brightness_level = 0;
     mode = SPIN_LEVEL_MODE; 
-  } else if (hb.button_held()>300) {
+  } else if (hb.button_pressed_time()>300) {
     mode = OFF_MODE; 
   }
   

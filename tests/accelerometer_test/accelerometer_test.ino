@@ -11,7 +11,7 @@ void setup() {
 
 void loop() {
   hb.update();
-  if(hb.button_held()) {
+  if(hb.button_pressed_time()) {
     // http://cache.freescale.com/files/sensors/doc/data_sheet/MMA7660FC.pdf (look at page 14)
     byte tilt = hb.read_accelerometer(ACC_REG_TILT);
     print_binary(tilt);

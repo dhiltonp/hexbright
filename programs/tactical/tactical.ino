@@ -45,11 +45,11 @@ void setup() {
 void loop() {
   hb.update();
   
-  if(hb.button_released() && hb.button_held()<HOLD_TIME) { 
+  if(hb.button_just_released() && hb.button_pressed_time()<HOLD_TIME) { 
     // if held for less than 200 ms before release, change regular modes
     current_brightness = (current_brightness+1)%BRIGHTNESS_COUNT;
     set_light();
-  } else if (hb.button_held()>HOLD_TIME) {
+  } else if (hb.button_pressed_time()>HOLD_TIME) {
     // held for over HOLD_TIME ms, go to strobe
     static unsigned long flash_time = millis();
     if(flash_time+70<millis()) { // flash every 70 milliseconds
@@ -58,7 +58,7 @@ void loop() {
       // actually, because of the refresh rate, it's more like 'go from max brightness on high
       //  to max brightness on low to off.
     }
-    if(hb.button_released()) { // we have been doing strobe, but the light is now released
+    if(hb.button_just_released()) { // we have been doing strobe, but the light is now released
       // after strobe, go to previous light level:
       set_light();
       // or shutdown:

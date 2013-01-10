@@ -1,3 +1,4 @@
+// uncomment (delete // before) '#define STROBE' in hexbright.h
 #include <hexbright.h>
 #include <Wire.h>
 
@@ -17,14 +18,14 @@ void loop() {
   hb.update();
   
   if(mode==OFF_MODE) {
-    if(hb.button_held()<200 && hb.button_released()) {
+    if(hb.button_pressed_time()<200 && hb.button_just_released()) {
       fpm = 2000;
       mode = STROBE_MODE;
     }
   }
   if(mode==STROBE_MODE) {
     // turn off?
-    if (hb.button_held()>200) {
+    if (hb.button_pressed_time()>200) {
       hb.set_strobe_delay(STROBE_OFF);
       hb.shutdown();
       mode = OFF_MODE;

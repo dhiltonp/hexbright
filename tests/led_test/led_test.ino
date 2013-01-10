@@ -27,7 +27,7 @@ void on_off_test() {
 }
 
 void switch_test() {
-  if(hb.button_held()) {
+  if(hb.button_just_released()) {
     if(hb.get_led_state(GLED) == LED_OFF)
       hb.set_led(GLED, 250, 100); 
   } else {

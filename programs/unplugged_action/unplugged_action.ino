@@ -20,7 +20,7 @@ void loop() {
   hb.update();
   byte charge_state = hb.get_definite_charge_state();
   // set mode
-  if(hb.button_held()>1000) { // off signal
+  if(hb.button_pressed_time()>1000) { // off signal
     // turn off light
     hb.set_light(CURRENT_LEVEL,0,NOW);
     if(charge_state==BATTERY) { // battery power or real off?
