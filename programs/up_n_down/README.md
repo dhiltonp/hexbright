@@ -1,5 +1,5 @@
 
-An excellent everyday program written by [wbattestilli)[https://github.com/wbattestilli/hexbright].
+An excellent everyday program written by [wbattestilli](https://github.com/wbattestilli/hexbright).
 
 ------------------------------------------------
 
