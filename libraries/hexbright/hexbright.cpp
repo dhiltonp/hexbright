@@ -52,14 +52,16 @@ either expressed or implied, of the FreeBSD Project.
 const float update_delay = 8.3333333; // in lock-step with the accelerometer
 unsigned long continue_time;
 
+#ifdef STROBE
 unsigned long next_strobe = STROBE_OFF;
 unsigned long strobe_delay = 0;
 int strobe_duration = 100;
-
+#endif
 
 hexbright::hexbright() {
 }
 
+#ifdef FLASH_CHECKSUM
 int hexbright::flash_checksum() {
   int checksum = 0;
   for(int i=0; i<16384; i++) {
@@ -67,6 +69,7 @@ int hexbright::flash_checksum() {
   }
   return checksum;
 }
+#endif
 
 void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
@@ -96,12 +99,17 @@ void hexbright::init_hardware() {
     set_light(0, MAX_LEVEL, 2500/update_delay);
   }
   
+#ifdef FREE_RAM
   Serial.print("Ram available: ");
   Serial.print(freeRam());
   Serial.println("/1024 bytes");
+#endif
+#ifdef FLASH_CHECKSUM
   Serial.print("Flash checksum: ");
   Serial.println(flash_checksum());
 #endif
+
+#endif // DEBUG!=DEBUG_OFF
   
 #ifdef ACCELEROMETER
   enable_accelerometer();
@@ -113,14 +121,15 @@ void hexbright::init_hardware() {
 void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
   continue_time = continue_time+(1000*update_delay);
-  
   unsigned long now;
+
+#ifdef STROBE  
   while (true) {
     do {
       now = micros();
     } while (next_strobe > now && // not ready for strobe
 	     continue_time > now); // not ready for update
-    
+
     if (next_strobe <= now) {
       if (now - next_strobe <26) {
 	digitalWrite(DPIN_DRV_EN, HIGH);
@@ -137,7 +146,12 @@ void hexbright::update() {
 	break;
     }
   } // do nothing... (will short circuit once every 70 minutes (micros maxint))
-  
+#else
+    do {
+      now = micros();
+    } while (continue_time > now); // not ready for update
+#endif  
+
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF)
   static int i=0;
@@ -191,14 +205,14 @@ void hexbright::update() {
   adjust_light();
 }
 
-
+#ifdef FREE_RAM
 //// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
 int hexbright::freeRam () {
   extern int __heap_start, *__brkval;
   int v;
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
-
+#endif
 
 
 ///////////////////////////////////////////////
@@ -351,6 +365,8 @@ void hexbright::overheat_protection() {
 }
 
 
+#ifdef STROBE
+
 ///////////////STROBE CONTROL//////////////////
 
 void hexbright::set_strobe_delay(unsigned long delay) {
@@ -375,6 +391,7 @@ unsigned int hexbright::get_strobe_error() {
   return 90000000 / ((strobe_delay/8)*8) - 90000000 / ((strobe_delay/8+1)*8);
 }
 
+#endif
 
 ///////////////////////////////////////////////
 ///////////////////LED CONTROL/////////////////
@@ -938,6 +955,10 @@ void hexbright::read_thermal_sensor() {
   thermal_sensor_value = analogRead(APIN_TEMP);
 }
 
+int hexbright::get_thermal_sensor() {
+  return thermal_sensor_value;
+}
+
 int hexbright::get_celsius() {
   // 0C ice water bath for 20 minutes: 153.
   // 40C water bath for 20 minutes (measured by medical thermometer): 275
@@ -948,17 +969,13 @@ int hexbright::get_celsius() {
   return thermal_sensor_value * ((40.05-0)/(275-153)) - 50;
 }
 
+
 int hexbright::get_fahrenheit() {
   //return get_celsius()*18/10+32;
   // algebraic form of (get_celsius' formula)*18/10+32
   // I was lazy and pasted (x*((40.05-0)/(275-153)) - 50)*18/10+32 into wolfram alpha
   return .590902*thermal_sensor_value-58;
 }
-
-int hexbright::get_thermal_sensor() {
-  return thermal_sensor_value;
-}
-
 
 
 ///////////////////////////////////////////////

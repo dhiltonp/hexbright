@@ -37,10 +37,12 @@ either expressed or implied, of the FreeBSD Project.
 
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
-#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
+//#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
-
 // see also freeRam() below
+//#define FLASH_CHECKSUM // comment out to save 56 bytes when in debug mode
+//#define FREE_RAM // comment out to save 146 bytes when in debug mode
+//#define STROBE // comment out to save 260 bytes
 
 #ifdef ACCELEROMETER
 #define DPIN_ACC_INT 3
@@ -62,7 +64,7 @@ either expressed or implied, of the FreeBSD Project.
 
 
 // debugging related definitions
-#define DEBUG 5
+#define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_ON 1 // initialize printing
@@ -99,7 +101,6 @@ either expressed or implied, of the FreeBSD Project.
 
 // turn off strobe... (aka max unsigned long)
 #define STROBE_OFF -1
-
 
 // led constants
 #define RLED 0
@@ -138,6 +139,7 @@ class hexbright {
   static void shutdown();
   
   
+#ifdef FREE_RAM
   // freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
   // Arduino uses ~400 bytes of ram, leaving us with 600 to play with
   //  (between function calls (including local variables) and global variables).
@@ -151,7 +153,7 @@ class hexbright {
   //   if(!hb.printing_number())
   //     hb.print_number(hb.freeRam());
   static int freeRam ();
-  
+#endif  
   
   
   // go from start_level to end_level over time (in milliseconds)
@@ -169,6 +171,7 @@ class hexbright {
   //    hb.set_light(...)
   static int light_change_remaining();
 
+#ifdef STROBE
 /////// STROBING ///////
 
   // Strobing features, limitations, and usage notes:
@@ -208,7 +211,8 @@ class hexbright {
   unsigned int get_strobe_fpm();
   // returns the current margin of error in fpm
   unsigned int get_strobe_error();
-  
+#endif // STROBE
+
   // Returns true if the button is being pressed
   static BOOL button_pressed();
   // button has just been pressed
@@ -389,7 +393,7 @@ class hexbright {
   //  well.
   static void find_down();
   
-#endif
+#endif // ACCELEROMETER
   
  private:
   static void adjust_light();
@@ -409,9 +413,10 @@ class hexbright {
 
   static void read_button();
   
+#ifdef FLASH_CHECKSUM
   // read through flash, return the checksum
   static int flash_checksum();
-
+#endif
 ///////////////////////////////////////////////
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
