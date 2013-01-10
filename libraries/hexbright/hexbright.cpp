@@ -746,12 +746,15 @@ char hexbright::get_spin() {
   // quick formula:
   //(atan2(vector(1)[0], vector(1)[2]) - atan2(vector(0)[0], vector(0)[2]))*32;
   // we cache the last position, because it takes up less space.
-  static char last_position = 0;
+  static char last_spin = 0;
   // 2*PI*32 = 200
-  char position = atan2(vector(0)[0], vector(0)[2])*32;
-  char tmp = last_position-position;
-  last_position = position;
-  return tmp;
+  return atan2(down()[0], down()[2])*32 - atan2(vector(0)[0], vector(0)[2])*32;
+  char spin = atan2(vector(0)[0], vector(0)[2])*32;
+  if(abs(last_spin)-10<0) {
+
+  }
+  
+  return spin;
 }
 
 /// VECTOR TOOLS

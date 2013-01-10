@@ -80,18 +80,29 @@ public:
 
 void test_accelerometer(string file) {
   hbtest hb(file);
+  int spinned = 0;
   while (hb.data_exists()) {
     hb.find_down();
     hb.read_accelerometer();
+    char vector_buffer[30];
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.vector(0)[0], hb.vector(0)[1], hb.vector(0)[2]);
+    string vec0 = vector_buffer;
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.down()[0], hb.down()[1], hb.down()[2]);
+    string down = vector_buffer;
+    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<down<<endl;
+    //cout<<(int)hb.magnitude(hb.vector(0))<<endl;
+    spinned += hb.get_spin();
     
-    hb.print_vector(hb.vector(0), "vector read");
-    hb.print_vector(hb.down(), "estimated down"); // normalized, btw
+    // hb.print_vector(hb.vector(0), "vector read");
+    //hb.print_vector(hb.down(), "estimated down"); // normalized, btw
   }
+  cout<<"  total rotation: "<<spinned<<endl;
+  cout<<"------------------------------"<<endl;
 }
 
 int main(int argc, char** argv) {
   for(int i=1; i<argc; i++) {
-    cout<<"------------------"<<argv[i]<<"------------------"<<endl;
+    cout<<"file: "<<argv[i]<<endl;
     test_accelerometer(argv[i]);
   }
   if(argc==1) {
