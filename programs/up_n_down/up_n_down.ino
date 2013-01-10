@@ -31,13 +31,12 @@ static int mode = MODE_OFF;
 static int new_mode = MODE_OFF;  
 static int click_count = 0;
 static int block_turning_off = false;
-static int submode_lockout = 0;
+static unsigned int submode_lockout=0;
 
 static unsigned long nightlight_move_time;
 
 static boolean blink_random = true;
 static int dazzle_odds = 4; // odds of being on are 1:N
-
 static int blink_frequency = 4;
 static int blink_count = 0;
 
@@ -80,7 +79,7 @@ void loop() {
     // glow mode
     if(glow_mode)
       hb.set_led(GLED, 100);
-
+    
     // click counting
     if(hb.button_just_released()) {
       glow_mode_set = false;
@@ -101,7 +100,7 @@ void loop() {
       new_mode=click_count;
       click_count=0;
     }
-
+    
     // toggle glow mode
     if(hb.button_pressed() && hb.button_pressed_time() >= glow_mode_time && !glow_mode_set) {
       glow_mode = !glow_mode;
@@ -134,48 +133,53 @@ void loop() {
     }
     break;
   case MODE_BLINK:
-    if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
-      d = hb.difference_from_down();
-      if(d>=0 && d<=0.99) {
-	if(blink_random) {
-	  int new_odds = (int)(d*10.0)+2;
-	  if(new_odds != dazzle_odds) {
-	    dazzle_odds = new_odds;
-	    Serial.print("Dazzle Odds: "); Serial.println(dazzle_odds);
-	    block_turning_off = true;
-	  }
-	} else {
-	  int new_freq = (int)(d*100.0)-4;
-	  if(new_freq<=0)
-	    new_freq=1;
-	  if(new_freq != blink_frequency) {
-	    blink_frequency = new_freq;
-	    Serial.print("Blink Freq: "); Serial.println(blink_frequency);
-	    block_turning_off = true;
-	    submode_lockout = time + short_click;
+    if(hb.button_pressed()) {
+	if( hb.button_pressed_time()>short_click) {
+	  d = hb.difference_from_down();
+	  if(d>=0 && d<=0.99) {
+	    if(blink_random) {
+	      int new_odds = (int)(d*10.0)+2;
+	      if(new_odds != dazzle_odds) {
+		dazzle_odds = new_odds;
+		Serial.print("Dazzle Odds: "); Serial.println(dazzle_odds);
+		block_turning_off = true;
+		submode_lockout = time + short_click;
+	      }
+	    } else {
+	      int new_freq = (int)(d*100.0)-4;
+	      if(new_freq<=0)
+		new_freq=1;
+	      if(new_freq != blink_frequency) {
+		blink_frequency = new_freq;
+		Serial.print("Blink Freq: "); Serial.println(blink_frequency);
+		block_turning_off = true;
+		submode_lockout = time + short_click;
+	      }
+	    }
 	  }
 	}
+      } else {
+	if(hb.tapped() and time > submode_lockout) {
+	  Serial.println("Tapped");
+	  blink_random = !blink_random;
+	  submode_lockout = time + short_click;
+	}
       }
-    }
-    if(hb.tapped() and time > submode_lockout) {
-      Serial.println("Tapped");
-      blink_random = !blink_random;
-      submode_lockout = time + short_click;
-    }
-    if(blink_random) {
-      if(random(dazzle_odds)<1)
-	hb.set_light(CURRENT_LEVEL, 1000, NOW);
-      else
-	hb.set_light(CURRENT_LEVEL, 0, NOW);      
-    } else {
-      if(blink_count>=blink_frequency) {
-	i = hb.get_light_level()==0 ? 1000 : 0;
-	hb.set_light(CURRENT_LEVEL, i, NOW);
-	blink_count=0;
-      } else
-	blink_count++;
+      if(blink_random) {
+	if(random(dazzle_odds)<1)
+	  hb.set_light(CURRENT_LEVEL, 1000, NOW);
+	else
+	  hb.set_light(CURRENT_LEVEL, 0, NOW);      
+      } else {
+	if(blink_count>=blink_frequency) {
+	  i = hb.get_light_level()==0 ? 1000 : 0;
+	  hb.set_light(CURRENT_LEVEL, i, NOW);
+	  blink_count=0;
+	} else {
+	  blink_count++;
+	}
+      }
       break;
-    }
   }  
 
   // we turn off on button release unless a submode change was made and we're blocked
