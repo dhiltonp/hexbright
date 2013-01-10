@@ -158,7 +158,9 @@ void loop() {
       }
     }
     if(hb.tapped() and time > submode_lockout) {
+      Serial.println("Tapped");
       blink_random = !blink_random;
+      submode_lockout = time + short_click;
     }
     if(blink_random) {
       if(random(dazzle_odds)<1)
