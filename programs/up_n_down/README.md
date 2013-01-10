@@ -1,3 +1,8 @@
+
+An excellent everyday program written by [wbattestilli)[https://github.com/wbattestilli/hexbright].
+
+------------------------------------------------
+
 Up-n-Down is intended to be a everyday, useful program.  It requires my fork (with slight modifications) to Dave Hilton's awesome hexbright library.
 
 Short (<350ms) clicks change the mode.  Mode can only be changed from the off state. A simple click will always turn off the flashlight when it is on. The modes are as follows:
