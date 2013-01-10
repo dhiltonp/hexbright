@@ -44,7 +44,6 @@ either expressed or implied, of the FreeBSD Project.
 #define APIN_TEMP 0
 #define APIN_CHARGE 3
 
-
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
@@ -214,6 +213,20 @@ int hexbright::freeRam () {
 }
 #endif
 
+///////////////////////////////////////////////
+////////////////Kalman Filter//////////////////
+///////////////////////////////////////////////
+void hexbright::kalman_update(kalman_state* state, float measurement)
+{
+  //prediction update
+  //omit x = x
+  state->p = state->p + state->q;
+
+  //measurement update
+  float k = state->p / (state->p + state->r);
+  state->x = state->x + k * (measurement - state->x);
+  state->p = (1.0 - k) * state->p;
+}
 
 ///////////////////////////////////////////////
 ////////////////LIGHT CONTROL//////////////////
@@ -566,6 +579,12 @@ int current_vector = 0;
 unsigned char num_vectors = 4;
 int down_vector[] = {0,0,0};
 
+// the state is defined by: 
+//    process noise, q
+//    the sensor noise, r
+//    the initial estimated error, p
+//    the initial value x,
+kalman_state kalman[3];
 
 /// SETUP/MANAGEMENT
 
@@ -591,6 +610,19 @@ void hexbright::enable_accelerometer() {
   
   // pinMode(DPIN_ACC_INT,  INPUT);
   // digitalWrite(DPIN_ACC_INT,  HIGH);
+
+#ifdef KALMAN
+  float q = 1.0; 
+  float r = 1.0;
+  float p = 1.0; // not important to adjust
+
+  for(int i=0; i<3; i++) {
+    kalman[i].p = p;
+    kalman[i].q = q;
+    kalman[i].r = r;
+    kalman[i].x = 0;
+  }
+#endif
 }
 
 void hexbright::read_accelerometer() {
@@ -614,7 +646,8 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-        vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
+	kalman_update(&kalman[i], (float)tmp*(100.0/21.3)); // 1~=.05 Gs(datasheet page 28)
+	vectors[current_vector+i] = (int)(kalman[i].x);
       }
     }
     break;

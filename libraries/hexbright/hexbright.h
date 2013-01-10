@@ -43,6 +43,7 @@ either expressed or implied, of the FreeBSD Project.
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
 //#define STROBE // comment out to save 260 bytes (strobe is designed for high-precision
 //               //  stroboscope code, not general periodic flashing)
+#define KALMAN
 
 // The above #defines can help if you are running out of flash.  If you are having weird lockups,
 //  you may be running out of ram.  See freeRam's definition for additional information.
@@ -65,7 +66,6 @@ either expressed or implied, of the FreeBSD Project.
 #define TILT_DOWN 2
 #define TILT_HORIZONTAL 3
 #endif
-
 
 // debugging related definitions
 #define DEBUG 0
@@ -118,6 +118,13 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGING 1
 #define BATTERY 7
 #define CHARGED 3
+
+typedef struct {
+  float p; //estimation error covariance
+  float q; //process noise covariance
+  float r; //measurement noise covariance
+  float x; //value
+} kalman_state;
 
 class hexbright {
  public:
@@ -216,6 +223,8 @@ class hexbright {
   // returns the current margin of error in fpm
   unsigned int get_strobe_error();
 #endif // STROBE
+
+  static void kalman_update(kalman_state* state, float measurement);
 
   // Returns true if the button is being pressed
   static BOOL button_pressed();
