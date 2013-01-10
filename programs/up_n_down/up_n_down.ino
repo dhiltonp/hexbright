@@ -21,7 +21,7 @@ static const int short_click = 350; // maximum time for a "short" click
 
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const int nightlight_red_brightness = 255; // brightness of red led for nightlight
-static const int nightlight_sensitivity = 10; // measured in 100's of a G.
+static const int nightlight_sensitivity = 20; // measured in 100's of a G.
 
 // State
 static bool glow_mode = false;
@@ -56,7 +56,6 @@ void setup() {
     lastOnMode = MODE_MED;
   }
   */
-
   Serial.println("Powered up!");
 } 
 
@@ -68,9 +67,13 @@ void loop() {
   hb.update();
 
   // Charging
+#ifdef PRINTING_NUMBER:
   if(!hb.printing_number() && !glow_mode)
     hb.print_charge(GLED);
-  
+#else
+  if(!glow_mode)
+    hb.print_charge(GLED);
+#endif
   // Check for mode and do in-mode activities
   switch(mode) {
   case MODE_OFF:
@@ -124,7 +127,9 @@ void loop() {
       hb.set_light(CURRENT_LEVEL, 1000, 1000);
     } else if(time > nightlight_move_time + nightlight_timeout) {
       hb.set_light(CURRENT_LEVEL, 0, 1000);
+#ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
+#endif
 	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
     }
     break;
@@ -204,7 +209,9 @@ void loop() {
     case MODE_NIGHTLIGHT:
       Serial.println("Mode = nightlight");
       //hb.set_light(CURRENT_LEVEL, 1, NOW);
+#ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
+#endif
 	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
       break;
     case MODE_BLINK:
