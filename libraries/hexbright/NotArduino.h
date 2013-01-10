@@ -16,10 +16,13 @@
 int __heap_start=300;
 int* __brkval=&__heap_start;
 
+// costs us 0 in Arduino
 int pgm_read_byte(int i) {
   return 0;
 }
 
+// functions pinMode through analogRead cost us 850 bytes in total.  
+//  Implementing these in avr-c may be ideal.
 void pinMode(unsigned char pin, unsigned char io) {
   return;
 }
@@ -40,10 +43,11 @@ unsigned char analogRead(unsigned char pin) {
   return 0;
 }
 
+// costs us 80 bytes
 unsigned long micros() {
   return 0;
 }
-
+// costs us 24 bytes
 void delayMicroseconds(int time) {
   return;
 }
