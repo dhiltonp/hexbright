@@ -4,3 +4,5 @@
 *#
 *.o
 *.bin
+*.core
+*.stackdump
