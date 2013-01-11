@@ -120,10 +120,16 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGED 3
 
 typedef struct {
-  float p; //estimation error covariance
-  float q; //process noise covariance
-  float r; //measurement noise covariance
-  float x; //value
+  float accel_variance; //estimation error covariance
+  float jerk_accel_covariance; //process noise covariance
+  float jerk_variance; //measurement noise covariance
+
+  float accel_estimate;
+  float jerk_estimate;
+
+  float accel_process_variance;
+  float jerk_process_variance;
+  float measurement_noise_variance;
 } kalman_state;
 
 class hexbright {
@@ -225,6 +231,7 @@ class hexbright {
 #endif // STROBE
 
   static void kalman_update(kalman_state* state, float measurement);
+  static void init_kalman_filter();
 
   // Returns true if the button is being pressed
   static BOOL button_pressed();

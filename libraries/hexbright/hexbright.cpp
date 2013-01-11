@@ -213,20 +213,6 @@ int hexbright::freeRam () {
 }
 #endif
 
-///////////////////////////////////////////////
-////////////////Kalman Filter//////////////////
-///////////////////////////////////////////////
-void hexbright::kalman_update(kalman_state* state, float measurement)
-{
-  //prediction update
-  //omit x = x
-  state->p = state->p + state->q;
-
-  //measurement update
-  float k = state->p / (state->p + state->r);
-  state->x = state->x + k * (measurement - state->x);
-  state->p = (1.0 - k) * state->p;
-}
 
 ///////////////////////////////////////////////
 ////////////////LIGHT CONTROL//////////////////
@@ -612,16 +598,7 @@ void hexbright::enable_accelerometer() {
   // digitalWrite(DPIN_ACC_INT,  HIGH);
 
 #ifdef KALMAN
-  float q = 1.0; 
-  float r = 1.0;
-  float p = 1.0; // not important to adjust
-
-  for(int i=0; i<3; i++) {
-    kalman[i].p = p;
-    kalman[i].q = q;
-    kalman[i].r = r;
-    kalman[i].x = 0;
-  }
+  init_kalman_filter();
 #endif
 }
 
@@ -647,7 +624,7 @@ void hexbright::read_accelerometer() {
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
 	kalman_update(&kalman[i], (float)tmp*(100.0/21.3)); // 1~=.05 Gs(datasheet page 28)
-	vectors[current_vector+i] = (int)(kalman[i].x);
+	vectors[current_vector+i] = (int)(kalman[i].accel_estimate);
       }
     }
     break;
@@ -679,7 +656,7 @@ inline void hexbright::find_down() {
     sum_vectors(down_vector, down_vector, vtmp);
     magnitudes+=magnitude(vtmp);
   }
-  normalize(down_vector, down_vector, magnitudes);
+  normalize(down_vector, down_vector, magnitudes!=0 ? magnitudes : 1);
 }
 
 /// tilt register interface
@@ -1073,11 +1050,63 @@ void hexbright::shutdown() {
 
 
 ///////////////////////////////////////////////
+////////////////Kalman Filter//////////////////
+///////////////////////////////////////////////
+
+#include <cstdio>
+void hexbright::kalman_update(kalman_state* state, float measurement)
+{
+  // where do we expect to be?
+  state->accel_estimate += state->jerk_estimate;
+
+  state->accel_variance += 2.0*state->jerk_accel_covariance + state->jerk_variance;
+  state->jerk_accel_covariance += state->jerk_variance;
+
+  state->accel_variance += state->accel_process_variance;
+  state->jerk_variance += state->jerk_process_variance;
+
+  // where does the sensor say we are?
+  float tmp = 1.0/(state->accel_variance + state->measurement_noise_variance);
+  float k_accel = state->accel_variance*tmp;
+  float k_jerk = state->jerk_variance*tmp;
+
+  state->accel_estimate += (measurement - state->accel_estimate)*k_accel;
+  state->jerk_estimate += (measurement - state->jerk_estimate)*k_jerk;
+  
+  state->accel_variance *= (1-k_accel);
+  state->jerk_variance *= (1-k_jerk);
+  state->jerk_accel_covariance -= k_jerk*state->jerk_accel_covariance;
+
+  //printf("%5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f\n", state->accel_estimate, state->accel_variance, state->accel_process_variance, state->jerk_estimate, state->jerk_variance, state->jerk_process_variance, state->jerk_accel_covariance, state->measurement_noise_variance, measurement);
+}
+
+void hexbright::init_kalman_filter() {
+  for(int i=0; i<3; i++) {
+    // these values change over time, the variances are very close to the _process_variance
+    kalman[i].accel_variance = 5;
+    kalman[i].jerk_accel_covariance = 3;
+    kalman[i].jerk_variance = 5;
+
+    kalman[i].accel_estimate = 100;  // around 1 G
+    kalman[i].jerk_estimate = 10;
+
+    kalman[i].accel_process_variance = 2.5;
+    kalman[i].jerk_process_variance = 2.5;
+    kalman[i].measurement_noise_variance = 7;
+  }
+}
+
+///////////////////////////////////////////////
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
 
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
-  copy_vector(vectors+current_vector, new_vector);
+  for(int i=0; i<3; i++) {
+    //kalman_update(&kalman[i], (float)new_vector[i]/100); // 1~=.05 Gs(datasheet page 28)
+    //vectors[current_vector+i] = new_vector[i];
+    kalman_update(&kalman[i], (float)new_vector[i]); // 1~=.05 Gs(datasheet page 28)
+    vectors[current_vector+i] = (int)(kalman[i].accel_estimate);
+  }
 }
 
