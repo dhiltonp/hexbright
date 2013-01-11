@@ -224,8 +224,6 @@ class hexbright {
   unsigned int get_strobe_error();
 #endif // STROBE
 
-  static void kalman_update(kalman_state* state, float measurement);
-
   // Returns true if the button is being pressed
   static BOOL button_pressed();
   // button has just been pressed
@@ -405,6 +403,9 @@ class hexbright {
   //  even then, we're just guessing.  Overall, a windowed average works fairly
   //  well.
   static void find_down();
+
+  static void update_kalman(kalman_state* state, float measurement);
+  static void init_kalman(kalman_state* state);
   
 #endif // ACCELEROMETER
   
@@ -437,5 +438,6 @@ class hexbright {
  public:
   // fake accelerometer read.  This should be in a new, derived class, 
   //  but it can't be because arduino doesn't support class variables
+  static void init_accel_kalman();
   static void fake_read_accelerometer(int* new_vector);
 };

@@ -51,6 +51,9 @@ unsigned long micros() {
 void delayMicroseconds(int time) {
   return;
 }
+unsigned long millis() {
+  return 0;
+}
 
 
 /////////////////////

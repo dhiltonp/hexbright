@@ -216,8 +216,8 @@ int hexbright::freeRam () {
 ///////////////////////////////////////////////
 ////////////////Kalman Filter//////////////////
 ///////////////////////////////////////////////
-void hexbright::kalman_update(kalman_state* state, float measurement)
-{
+#include<cstdio>
+void hexbright::update_kalman(kalman_state* state, float measurement) {
   //prediction update
   //omit x = x
   state->p = state->p + state->q;
@@ -226,6 +226,20 @@ void hexbright::kalman_update(kalman_state* state, float measurement)
   float k = state->p / (state->p + state->r);
   state->x = state->x + k * (measurement - state->x);
   state->p = (1.0 - k) * state->p;
+
+  //  printf("%5.3f %5.3f %5.3f %5.3f  \t %5.3f\n", state->p, state->q, state->r, state->x, measurement);
+}
+
+
+void hexbright::init_kalman(kalman_state* state) {
+  float q = 2.0; 
+  float r = 1.0;
+  float p = 1.0; // not important to adjust
+  
+  state->p = p;
+  state->q = q;
+  state->r = r;
+  state->x = 0;
 }
 
 ///////////////////////////////////////////////
@@ -612,16 +626,8 @@ void hexbright::enable_accelerometer() {
   // digitalWrite(DPIN_ACC_INT,  HIGH);
 
 #ifdef KALMAN
-  float q = 1.0; 
-  float r = 1.0;
-  float p = 1.0; // not important to adjust
-
-  for(int i=0; i<3; i++) {
-    kalman[i].p = p;
-    kalman[i].q = q;
-    kalman[i].r = r;
-    kalman[i].x = 0;
-  }
+  for(int i=0; i<3; i++)
+    init_kalman(&kalman[i]);
 #endif
 }
 
@@ -646,7 +652,7 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	kalman_update(&kalman[i], (float)tmp*(100.0/21.3)); // 1~=.05 Gs(datasheet page 28)
+	update_kalman(&kalman[i], (float)tmp*(100.0/21.3)); // 1~=.05 Gs(datasheet page 28)
 	vectors[current_vector+i] = (int)(kalman[i].x);
       }
     }
@@ -1076,8 +1082,18 @@ void hexbright::shutdown() {
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
 
+void hexbright::init_accel_kalman() {
+  for(int i=0; i<3; i++) {
+    init_kalman(&kalman[i]);
+  }
+}
+
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
-  copy_vector(vectors+current_vector, new_vector);
+  //copy_vector(vectors+current_vector, new_vector);
+  for(int i=0; i<3; i++) {
+    update_kalman(&kalman[i], new_vector[i]);
+    vector(0)[i] = kalman[i].x;
+  }
 }
 
