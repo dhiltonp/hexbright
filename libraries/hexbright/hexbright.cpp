@@ -218,8 +218,10 @@ int hexbright::freeRam () {
 ///////////////////////////////////////////////
 
 inline int hexbright::compressed_kalman(int last_estimate, int current_reading) {
-  int adjustment_rate = 60; // this value over 100, 0 to 100 are valid.
-  return last_estimate + (adjustment_rate * (current_reading - last_estimate)) / 100;
+  // The sum of these two constant multipliers (which equals the divisor), 
+  //  should not exceed 210 (to avoid integer overflow)
+  // the individual values selected do effect the resulting sketch size :/
+  return (2*last_estimate + 3*current_reading)/5;
 }
 
 ///////////////////////////////////////////////
