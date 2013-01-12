@@ -397,6 +397,7 @@ class hexbright {
   static void find_down();
 
   static int compressed_kalman(int last_estimate, int current_reading);
+  static int stdev_filter(int last_estimate, int current_reading);
   
 #endif // ACCELEROMETER
   

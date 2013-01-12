@@ -224,6 +224,15 @@ inline int hexbright::compressed_kalman(int last_estimate, int current_reading) 
   return (2*last_estimate + 3*current_reading)/5;
 }
 
+inline int hexbright::stdev_filter(int last_estimate, int current_reading) {
+  int stdev = 3.5; // our standard deviation due to noise (pre calculated using accelerometer data at rest)
+  int diff = -abs(abs(last_estimate)-abs(current_reading));
+  float deviation = diff/stdev;
+  float probability = exp(deviation)/1.25; // 2.5 ~= M_SQRT2PI, /2 because cdf is only one way
+  // exp by itself takes 400-500 bytes.  This isn't good.
+  return probability*last_estimate + (1-probability)*current_reading;
+}
+
 ///////////////////////////////////////////////
 ////////////////LIGHT CONTROL//////////////////
 ///////////////////////////////////////////////
@@ -622,7 +631,7 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	vectors[current_vector+i] = compressed_kalman(vector(1)[i], tmp);
+	vectors[current_vector+i] = compressed_kalman(vector(1)[i], tmp*(100/21.3));
       }
     }
     break;
@@ -1054,6 +1063,7 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
   for(int i=0; i<3; i++) {
     vector(0)[i] = compressed_kalman(vector(1)[i], new_vector[i]);
+    //vector(0)[i] = new_vector[i];
   }
 }
 
