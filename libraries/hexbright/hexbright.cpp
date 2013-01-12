@@ -214,10 +214,10 @@ int hexbright::freeRam () {
 #endif
 
 ///////////////////////////////////////////////
-////////////////Kalman Filter//////////////////
+///////////////////Filters/////////////////////
 ///////////////////////////////////////////////
 
-inline int hexbright::compressed_kalman(int last_estimate, int current_reading) {
+inline int hexbright::low_pass_filter(int last_estimate, int current_reading) {
   // The sum of these two constant multipliers (which equals the divisor), 
   //  should not exceed 210 (to avoid integer overflow)
   // the individual values selected do effect the resulting sketch size :/
@@ -631,7 +631,7 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	vectors[current_vector+i] = compressed_kalman(vector(1)[i], tmp*(100/21.3));
+	vectors[current_vector+i] = low_pass_filter(vector(1)[i], tmp*(100/21.3));
       }
     }
     break;
@@ -1062,7 +1062,7 @@ void hexbright::shutdown() {
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
   for(int i=0; i<3; i++) {
-    vector(0)[i] = compressed_kalman(vector(1)[i], new_vector[i]);
+    vector(0)[i] = low_pass_filter(vector(1)[i], new_vector[i]);
     //vector(0)[i] = new_vector[i];
   }
 }
