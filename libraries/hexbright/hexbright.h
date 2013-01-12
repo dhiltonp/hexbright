@@ -43,7 +43,6 @@ either expressed or implied, of the FreeBSD Project.
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
 //#define STROBE // comment out to save 260 bytes (strobe is designed for high-precision
 //               //  stroboscope code, not general periodic flashing)
-#define KALMAN
 
 // The above #defines can help if you are running out of flash.  If you are having weird lockups,
 //  you may be running out of ram.  See freeRam's definition for additional information.
@@ -118,13 +117,6 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGING 1
 #define BATTERY 7
 #define CHARGED 3
-
-typedef struct {
-  float p; //estimation error covariance
-  float q; //process noise covariance
-  float r; //measurement noise covariance
-  float x; //value
-} kalman_state;
 
 class hexbright {
  public:
@@ -404,8 +396,7 @@ class hexbright {
   //  well.
   static void find_down();
 
-  static void update_kalman(kalman_state* state, float measurement);
-  static void init_kalman(kalman_state* state);
+  static int compressed_kalman(int last_estimate, int current_reading);
   
 #endif // ACCELEROMETER
   
@@ -438,6 +429,5 @@ class hexbright {
  public:
   // fake accelerometer read.  This should be in a new, derived class, 
   //  but it can't be because arduino doesn't support class variables
-  static void init_accel_kalman();
   static void fake_read_accelerometer(int* new_vector);
 };

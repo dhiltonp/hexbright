@@ -216,30 +216,10 @@ int hexbright::freeRam () {
 ///////////////////////////////////////////////
 ////////////////Kalman Filter//////////////////
 ///////////////////////////////////////////////
-#include<cstdio>
-void hexbright::update_kalman(kalman_state* state, float measurement) {
-  //prediction update
-  //omit x = x
-  state->p = state->p + state->q;
 
-  //measurement update
-  float k = state->p / (state->p + state->r);
-  state->x = state->x + k * (measurement - state->x);
-  state->p = (1.0 - k) * state->p;
-
-  //  printf("%5.3f %5.3f %5.3f %5.3f  \t %5.3f\n", state->p, state->q, state->r, state->x, measurement);
-}
-
-
-void hexbright::init_kalman(kalman_state* state) {
-  float q = 2.0; 
-  float r = 1.0;
-  float p = 1.0; // not important to adjust
-  
-  state->p = p;
-  state->q = q;
-  state->r = r;
-  state->x = 0;
+inline int hexbright::compressed_kalman(int last_estimate, int current_reading) {
+  int adjustment_rate = 60; // this value over 100, 0 to 100 are valid.
+  return last_estimate + (adjustment_rate * (current_reading - last_estimate)) / 100;
 }
 
 ///////////////////////////////////////////////
@@ -593,13 +573,6 @@ int current_vector = 0;
 unsigned char num_vectors = 4;
 int down_vector[] = {0,0,0};
 
-// the state is defined by: 
-//    process noise, q
-//    the sensor noise, r
-//    the initial estimated error, p
-//    the initial value x,
-kalman_state kalman[3];
-
 /// SETUP/MANAGEMENT
 
 void hexbright::enable_accelerometer() {
@@ -624,11 +597,6 @@ void hexbright::enable_accelerometer() {
   
   // pinMode(DPIN_ACC_INT,  INPUT);
   // digitalWrite(DPIN_ACC_INT,  HIGH);
-
-#ifdef KALMAN
-  for(int i=0; i<3; i++)
-    init_kalman(&kalman[i]);
-#endif
 }
 
 void hexbright::read_accelerometer() {
@@ -652,8 +620,8 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	update_kalman(&kalman[i], (float)tmp*(100.0/21.3)); // 1~=.05 Gs(datasheet page 28)
-	vectors[current_vector+i] = (int)(kalman[i].x);
+	//vectors[current_vector+i] = tmp*(100/21.3); // 1~=.05 Gs(datasheet page 28)
+	vectors[current_vector+i] = compressed_kalman(vector(1)[i], tmp);
       }
     }
     break;
@@ -1082,18 +1050,10 @@ void hexbright::shutdown() {
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
 
-void hexbright::init_accel_kalman() {
-  for(int i=0; i<3; i++) {
-    init_kalman(&kalman[i]);
-  }
-}
-
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
-  //copy_vector(vectors+current_vector, new_vector);
   for(int i=0; i<3; i++) {
-    update_kalman(&kalman[i], new_vector[i]);
-    vector(0)[i] = kalman[i].x;
+    vector(0)[i] = compressed_kalman(vector(1)[i], new_vector[i]);
   }
 }
 
