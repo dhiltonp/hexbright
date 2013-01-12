@@ -59,7 +59,6 @@ public:
     accelerometer_location = 0;
 
     // pre-load accelerometer buffers
-    hexbright::init_kalman_filter();
     int * data = &(accelerometer_data[accelerometer_location])[0];
     hexbright::fake_read_accelerometer(data);
     hexbright::fake_read_accelerometer(data);

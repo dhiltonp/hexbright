@@ -51,7 +51,7 @@ void loop() {
 
   //// Button actions to recognize, one-time actions to take as a result
   if(hb.button_just_released()) {
-    if(hb.button_pressed_time()<1) {
+    if(hb.button_pressed_time()<=9) {
       // ignore, could be a bounce
     } else if(hb.button_pressed_time()<300) { //<300 milliseconds
       mode = CYCLE_MODE;

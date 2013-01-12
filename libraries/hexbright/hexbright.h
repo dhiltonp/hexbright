@@ -43,7 +43,6 @@ either expressed or implied, of the FreeBSD Project.
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
 //#define STROBE // comment out to save 260 bytes (strobe is designed for high-precision
 //               //  stroboscope code, not general periodic flashing)
-#define KALMAN
 
 // The above #defines can help if you are running out of flash.  If you are having weird lockups,
 //  you may be running out of ram.  See freeRam's definition for additional information.
@@ -118,19 +117,6 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGING 1
 #define BATTERY 7
 #define CHARGED 3
-
-typedef struct {
-  float accel_variance; //estimation error covariance
-  float jerk_accel_covariance; //process noise covariance
-  float jerk_variance; //measurement noise covariance
-
-  float accel_estimate;
-  float jerk_estimate;
-
-  float accel_process_variance;
-  float jerk_process_variance;
-  float measurement_noise_variance;
-} kalman_state;
 
 class hexbright {
  public:
@@ -230,18 +216,15 @@ class hexbright {
   unsigned int get_strobe_error();
 #endif // STROBE
 
-  static void kalman_update(kalman_state* state, float measurement);
-  static void init_kalman_filter();
-
   // Returns true if the button is being pressed
   static BOOL button_pressed();
   // button has just been pressed
   static BOOL button_just_pressed();
   // button has just been released
   static BOOL button_just_released();
-  // returns the ammount of time (in ms) that the button was last (or is currently being) pressed
+  // returns the amount of time (in ms) that the button was last (or is currently being) pressed
   static int button_pressed_time();
-  // returns the ammount of time (in ms) that the button was last (or is currently being) released
+  // returns the amount of time (in ms) that the button was last (or is currently being) released
   static int button_released_time();
   
   // led = GLED or RLED,
@@ -351,7 +334,7 @@ class hexbright {
   static char get_spin();
   //returns the angle between straight down and our current vector
   // returns a value from 0 to 1. 0 == down, 1 == straight up.
-  // Multiply by 1.8 to get degrees.  Expect noise of about 10.
+  // Multiply by 1.8 to get degrees.  Expect noise of about .1.
   static double difference_from_down();
   // lots of noise < 5 degrees.  Most noise is < 10 degrees
   // noise varies partially based on sample rate, which is not currently configurable
@@ -412,6 +395,8 @@ class hexbright {
   //  even then, we're just guessing.  Overall, a windowed average works fairly
   //  well.
   static void find_down();
+
+  static int compressed_kalman(int last_estimate, int current_reading);
   
 #endif // ACCELEROMETER
   
