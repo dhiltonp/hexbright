@@ -398,6 +398,8 @@ class hexbright {
 
   static int low_pass_filter(int last_estimate, int current_reading);
   static int stdev_filter(int last_estimate, int current_reading);
+  static int stdev_filter2(int last_estimate, int current_reading);
+  static int stdev_filter3(int last_estimate, int current_reading);
   
 #endif // ACCELEROMETER
   

@@ -225,12 +225,41 @@ inline int hexbright::low_pass_filter(int last_estimate, int current_reading) {
 }
 
 inline int hexbright::stdev_filter(int last_estimate, int current_reading) {
-  int stdev = 3.5; // our standard deviation due to noise (pre calculated using accelerometer data at rest)
-  int diff = -abs(abs(last_estimate)-abs(current_reading));
+  float stdev = 3.3; // our standard deviation due to noise (pre calculated using accelerometer data at rest)
+  int diff = -abs(last_estimate-current_reading);
   float deviation = diff/stdev;
   float probability = exp(deviation)/1.25; // 2.5 ~= M_SQRT2PI, /2 because cdf is only one way
   // exp by itself takes 400-500 bytes.  This isn't good.
   return probability*last_estimate + (1-probability)*current_reading;
+}
+
+
+inline int hexbright::stdev_filter2(int last_estimate, int current_reading) {
+  // uses 1/deviation^2 for our cdf approximation
+  float stdev = 3.5; // our standard deviation due to noise (pre calculated using accelerometer data at rest)
+  int diff = abs(last_estimate-current_reading);
+  float deviation = diff/stdev;
+  float probability;
+  if(deviation>1) // estimate where we fall on the cdf
+    probability = 1/(deviation*deviation);
+  else
+    probability = .65;
+  // exp by itself takes 400-500 bytes.  This isn't good.
+  return probability*last_estimate + (1-probability)*current_reading;
+}
+
+inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
+  // uses 1/deviation^2 for our cdf approximation, switched to ints
+  int stdev = 3.5*10; // our standard deviation due to noise (pre calculated using accelerometer data at rest)
+  int diff = abs(last_estimate-current_reading)*10;
+  // differences < 4 have a deviation of 0
+  int deviation = diff/stdev;
+  int probability;
+  if(deviation>1) // estimate where we fall on the cdf
+    probability = 100/(deviation*deviation);
+  else
+    probability = 70;
+  return (probability*last_estimate + (100-probability)*current_reading)/100;
 }
 
 ///////////////////////////////////////////////
@@ -631,7 +660,7 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	vectors[current_vector+i] = low_pass_filter(vector(1)[i], tmp*(100/21.3));
+	vectors[current_vector+i] = stdev_filter3(vector(1)[i], tmp*(100/21.3));
       }
     }
     break;
@@ -1062,7 +1091,7 @@ void hexbright::shutdown() {
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
   for(int i=0; i<3; i++) {
-    vector(0)[i] = low_pass_filter(vector(1)[i], new_vector[i]);
+    vector(0)[i] = stdev_filter3(vector(1)[i], new_vector[i]);
     //vector(0)[i] = new_vector[i];
   }
 }
