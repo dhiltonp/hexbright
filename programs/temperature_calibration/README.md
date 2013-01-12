@@ -1,7 +1,9 @@
 This program is to aid in calibrating your temperature sensor.
 
 
- - Finding your sensor calibration:
+Finding your sensor calibration
+-------------------------------
+
 
 Upload the program to your flashlight.
 
@@ -13,7 +15,8 @@ Put your flashlight in a thermos.  Fill it with lukewarm water (104 fahrenheit o
 
 
  
- - Reading the temperature:
+Reading the temperature
+-----------------------
 
 Read the tail cap LEDs, as follows:
 
@@ -28,7 +31,8 @@ for example: 2 green flashes, 6 red flashes, 3 green flashes = 263
 
 
 
- - Updating your calibration
+Updating your calibration
+-------------------------
 
 Test your new thermometer by replacing 'get_thermal_sensor' with 'get_fahrenheit' or 'get_celsius' in temperature_calibration.
 
