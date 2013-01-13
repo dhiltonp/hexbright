@@ -46,7 +46,8 @@ static int brightness_level = 0;
 void loop() {
   hb.update();
   if(hb.button_just_released() && hb.button_pressed_time()<300) {
-    brightness_level = 0;
+    brightness_level = 1;
+    hb.set_light(CURRENT_LEVEL, brightness_level, NOW);
     mode = SPIN_LEVEL_MODE; 
   } else if (hb.button_pressed_time()>300) {
     hb.shutdown(); 
