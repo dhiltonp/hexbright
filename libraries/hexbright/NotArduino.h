@@ -23,18 +23,20 @@ int pgm_read_byte(int i) {
 
 // functions pinMode through analogRead cost us 850 bytes in total.  
 //  Implementing these in avr-c may be ideal.
-void pinMode(unsigned char pin, unsigned char io) {
+// *Fast are from this library: http://code.google.com/p/digitalwritefast/downloads/detail?name=digitalWriteFastinterruptSafe.zip&can=2&q= which hasn't merged into mainline arduino for an unknown reason (http://code.google.com/p/arduino/issues/detail?id=140)
+void pinModeFast(unsigned char pin, unsigned char io) {
   return;
 }
 
-void digitalWrite(unsigned char pin, unsigned char lh) {
+void digitalWriteFast(unsigned char pin, unsigned char lh) {
   return;
 }
 
-bool digitalRead(unsigned char pin) {
+bool digitalReadFast(unsigned char pin) {
   return true;
 }
 
+// analogRead and analogWrite still use the arduino code.  These amy be optimized
 void analogWrite(unsigned char pin, unsigned char lh) {
   return;
 }

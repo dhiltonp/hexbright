@@ -33,6 +33,8 @@ either expressed or implied, of the FreeBSD Project.
 
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
 #include "NotArduino.h"
+#else
+#include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
 // Pin assignments
@@ -73,15 +75,15 @@ int hexbright::flash_checksum() {
 void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
   // into USB, or the user is pressing the power button.
-  pinMode(DPIN_PWR, INPUT);
-  digitalWrite(DPIN_PWR, LOW);
+  pinModeFast(DPIN_PWR, INPUT);
+  digitalWriteFast(DPIN_PWR, LOW);
   // Initialize GPIO
-  pinMode(DPIN_RLED_SW, INPUT);
-  pinMode(DPIN_GLED, OUTPUT);
-  pinMode(DPIN_DRV_MODE, OUTPUT);
-  pinMode(DPIN_DRV_EN, OUTPUT);
-  digitalWrite(DPIN_DRV_MODE, LOW);
-  digitalWrite(DPIN_DRV_EN, LOW);
+  pinModeFast(DPIN_RLED_SW, INPUT);
+  pinModeFast(DPIN_GLED, OUTPUT);
+  pinModeFast(DPIN_DRV_MODE, OUTPUT);
+  pinModeFast(DPIN_DRV_EN, OUTPUT);
+  digitalWriteFast(DPIN_DRV_MODE, LOW);
+  digitalWriteFast(DPIN_DRV_EN, LOW);
   
 #if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
@@ -131,9 +133,9 @@ void hexbright::update() {
 
     if (next_strobe <= now) {
       if (now - next_strobe <26) {
-	digitalWrite(DPIN_DRV_EN, HIGH);
+	digitalWriteFast(DPIN_DRV_EN, HIGH);
 	delayMicroseconds(strobe_duration);
-	digitalWrite(DPIN_DRV_EN, LOW);
+	digitalWriteFast(DPIN_DRV_EN, LOW);
       }
       next_strobe += strobe_delay;
     }
@@ -340,19 +342,19 @@ void hexbright::set_light_level(unsigned long level) {
   Serial.print("light level: ");
   Serial.println(level);
 #endif
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, HIGH);
+  pinModeFast(DPIN_PWR, OUTPUT);
+  digitalWriteFast(DPIN_PWR, HIGH);
   if(level == 0) {
     // lowest possible power, but still running (DPIN_PWR still high)
-    digitalWrite(DPIN_DRV_MODE, LOW);
+    digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
   }
   else if(level<=500) {
-    digitalWrite(DPIN_DRV_MODE, LOW);
+    digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
   } else {
     level -= 500;
-    digitalWrite(DPIN_DRV_MODE, HIGH);
+    digitalWriteFast(DPIN_DRV_MODE, HIGH);
     analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
   }
 }
@@ -474,7 +476,7 @@ unsigned char hexbright::get_led_state(unsigned char led) {
 
 inline void hexbright::_led_on(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
-    pinMode(DPIN_RLED_SW, OUTPUT);
+    pinModeFast(DPIN_RLED_SW, OUTPUT);
     analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
   } else { // DPIN_GLED
     analogWrite(DPIN_GLED, led_brightness[GLED]);
@@ -483,10 +485,10 @@ inline void hexbright::_led_on(unsigned char led) {
 
 inline void hexbright::_led_off(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
-    digitalWrite(DPIN_RLED_SW, LOW);
-    pinMode(DPIN_RLED_SW, INPUT);
+    digitalWriteFast(DPIN_RLED_SW, LOW);
+    pinModeFast(DPIN_RLED_SW, INPUT);
   } else { // DPIN_GLED
-    digitalWrite(DPIN_GLED, LOW);
+    digitalWriteFast(DPIN_GLED, LOW);
   }
 }
 
@@ -563,7 +565,7 @@ int hexbright::button_released_time() {
 
 void hexbright::read_button() {
   last_button_on = button_on;
-  button_on = digitalRead(DPIN_RLED_SW);
+  button_on = digitalReadFast(DPIN_RLED_SW);
   if(button_on) {
     if(!last_button_on) {
       time_last_pressed=millis();
@@ -635,8 +637,8 @@ void hexbright::enable_accelerometer() {
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
   
-  // pinMode(DPIN_ACC_INT,  INPUT);
-  // digitalWrite(DPIN_ACC_INT,  HIGH);
+  // pinModeFast(DPIN_ACC_INT,  INPUT);
+  // digitalWriteFast(DPIN_ACC_INT,  HIGH);
 }
 
 void hexbright::read_accelerometer() {
@@ -668,7 +670,7 @@ void hexbright::read_accelerometer() {
 }
 
 unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
-  if (!digitalRead(DPIN_ACC_INT)) {
+  if (!digitalReadFast(DPIN_ACC_INT)) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(acc_reg);
     Wire.endTransmission(false);       // End, but do not stop!
@@ -1075,10 +1077,10 @@ void hexbright::print_charge(unsigned char led) {
 ///////////////////////////////////////////////
 
 void hexbright::shutdown() {
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, LOW);
-  digitalWrite(DPIN_DRV_MODE, LOW);
-  digitalWrite(DPIN_DRV_EN, LOW);
+  pinModeFast(DPIN_PWR, OUTPUT);
+  digitalWriteFast(DPIN_PWR, LOW);
+  digitalWriteFast(DPIN_DRV_MODE, LOW);
+  digitalWriteFast(DPIN_DRV_EN, LOW);
   // make sure we don't try to turn back on
   change_done = change_duration+1;
   end_light_level = 0;
