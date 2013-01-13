@@ -67,6 +67,7 @@ void loop() {
     // in case we are under usb power, reset state
     hb.set_light(0, 0, 1);
     brightness_level = 4;
+    hb.shutdown();
   }
 
 
@@ -84,7 +85,6 @@ void loop() {
       hb.print_number(hb.get_fahrenheit());
     }
   } else if (mode == OFF_MODE) { // charging, or turning off
-    hb.shutdown();
     if(!hb.printing_number()) {
       hb.print_charge(GLED);
     }

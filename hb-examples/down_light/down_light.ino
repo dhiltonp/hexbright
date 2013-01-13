@@ -50,6 +50,7 @@ void loop() {
     mode = USE_MODE; 
   } else if (hb.button_pressed_time()>300) {
     mode = OFF_MODE; 
+    hb.shutdown();
   }
    
    
@@ -71,8 +72,6 @@ void loop() {
        smoothed_difference=100; // reset so when we stop we build up with no jerks.
        hb.set_light(CURRENT_LEVEL, 200, 50);
     } 
-  } else if (mode==OFF_MODE) {
-    hb.shutdown();
   }
   hb.print_charge(GLED);
 }

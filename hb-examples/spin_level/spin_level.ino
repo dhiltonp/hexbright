@@ -49,6 +49,7 @@ void loop() {
     brightness_level = 0;
     mode = SPIN_LEVEL_MODE; 
   } else if (hb.button_pressed_time()>300) {
+    hb.shutdown(); 
     mode = OFF_MODE; 
   }
   
@@ -61,7 +62,6 @@ void loop() {
       hb.set_light(CURRENT_LEVEL, brightness_level, 100);
     }
   } else if (mode==OFF_MODE) {
-    hb.shutdown(); 
     hb.print_charge(GLED);
   }   
 }

@@ -23,6 +23,7 @@ void loop() {
   } else if (hb.button_pressed_time()>1000) {
     level = 0;
     mode = OFF_MODE; 
+    hb.shutdown(); 
   }
   
   if(mode==WAND_MODE) {
@@ -47,7 +48,6 @@ void loop() {
     }
     last_dp = dp;
   } else if (mode==OFF_MODE) {
-    hb.shutdown(); 
     hb.print_charge(GLED);
   } 
 }
