@@ -282,7 +282,7 @@ int change_done  = 0;
 int safe_light_level = MAX_LEVEL;
 
 
-void hexbright::set_light(int start_level, int end_level, int time) {
+void hexbright::set_light(int start_level, int end_level, long time) {
   // duration ranges from 1-MAXINT
   // light_level can be from 0-1000
   int current_level = get_light_level();
@@ -297,11 +297,14 @@ void hexbright::set_light(int start_level, int end_level, int time) {
     end_light_level = end_level;
   }
   
-  change_duration = time/update_delay;
+  change_duration = ((float)time)/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
-  Serial.print("Light adjust requested, start level:");
+  Serial.print("Light adjust requested, start level: ");
   Serial.println(start_light_level);
+  Serial.print("Over ");
+  Serial.print(change_duration);
+  Serial.println(" updates");
 #endif
   
 }
@@ -1008,7 +1011,6 @@ unsigned int hexbright::get_input_digit() {
 
 void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
   unsigned int tmp2 = 999 - atan2(vector(0)[0], vector(0)[2])*159 - 500; // scale from 0-999, counterclockwise = higher
-  Serial.println(tmp2);
   tmp2 = (tmp2*(max_digit-min_digit))/1000+min_digit;
   if(tmp2 == read_value) {
     if(!printing_number()) {

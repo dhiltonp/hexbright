@@ -164,7 +164,9 @@ class hexbright {
   // level is from 0-1000.
   // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
   // start_level and/or end level can be CURRENT_LEVEL.
-  static void set_light(int start_level, int end_level, int time);
+  // max change time is about 4.5 minutes ((2^15-1)*8.333 milliseconds).
+  //  I have had weird issues when passing in 3*60*1000, 180000 works fine though.
+  static void set_light(int start_level, int end_level, long time);
   // get light level (before overheat protection adjustment)
   static int get_light_level();
   // get light level (after overheat protection adjustment)
