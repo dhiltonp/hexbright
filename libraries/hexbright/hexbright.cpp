@@ -924,6 +924,11 @@ BOOL hexbright::printing_number() {
   return _number || print_wait_time;
 }
 
+void hexbright::reset_print_number() {
+  _number = 1;
+  print_wait_time = 0;
+}
+
 void hexbright::update_number() {
   if(_number>0) { // we have something to do...
 #ifdef DEBUG
@@ -990,6 +995,30 @@ void hexbright::print_number(long number) {
     set_led(flip_color(_color), 500);
     print_wait_time = 600/update_delay;
   }
+}
+
+
+
+//// Numeric entry
+static unsigned int read_value = 0;
+
+unsigned int hexbright::get_input_digit() {
+  return read_value;
+}
+
+void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
+  unsigned int tmp2 = 999 - atan2(vector(0)[0], vector(0)[2])*159 - 500; // scale from 0-999, counterclockwise = higher
+  Serial.println(tmp2);
+  tmp2 = (tmp2*(max_digit-min_digit))/1000+min_digit;
+  if(tmp2 == read_value) {
+    if(!printing_number()) {
+      print_number(tmp2);
+    }
+  } else {
+    reset_print_number();
+    set_led(GLED,100);
+  }
+  read_value = tmp2; 
 }
 #endif
 
