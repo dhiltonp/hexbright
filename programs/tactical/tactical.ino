@@ -50,15 +50,16 @@ void loop() {
     current_brightness = (current_brightness+1)%BRIGHTNESS_COUNT;
     set_light();
   } else if (hb.button_pressed_time()>HOLD_TIME) {
-    // held for over HOLD_TIME ms, go to strobe
-    static unsigned long flash_time = millis();
-    if(flash_time+70<millis()) { // flash every 70 milliseconds
-      flash_time = millis(); // reset flash_time
-      hb.set_light(MAX_LEVEL, 0, 20); // and pulse (going from max to min over 20 milliseconds)
-      // actually, because of the refresh rate, it's more like 'go from max brightness on high
-      //  to max brightness on low to off.
-    }
-    if(hb.button_just_released()) { // we have been doing strobe, but the light is now released
+    if(hb.button_pressed()) {
+      // held for over HOLD_TIME ms, go to strobe
+      static unsigned long flash_time = millis();
+      if(flash_time+70<millis()) { // flash every 70 milliseconds
+        flash_time = millis(); // reset flash_time
+        hb.set_light(MAX_LEVEL, 0, 20); // and pulse (going from max to min over 20 milliseconds)
+        // actually, because of the refresh rate, it's more like 'go from max brightness on high
+        //  to max brightness on low to off.
+      }
+    } else { // we have been doing strobe, but the light is now released
       // after strobe, go to previous light level:
       set_light();
       // or shutdown:
@@ -70,8 +71,9 @@ void loop() {
 }
 
 void set_light() {
-  if(brightness[current_brightness] == 0)
+  if(brightness[current_brightness] == 0) {
     hb.shutdown();
-  else
+  } else {
     hb.set_light(CURRENT_LEVEL, brightness[current_brightness], 50);
+  }
 }
