@@ -1111,7 +1111,7 @@ void hexbright::shutdown() {
   pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, LOW);
   digitalWriteFast(DPIN_DRV_MODE, LOW);
-  digitalWriteFast(DPIN_DRV_EN, LOW);
+  analogWrite(DPIN_DRV_EN, 0);
   // make sure we don't try to turn back on
   change_done = change_duration+1;
   end_light_level = 0;
