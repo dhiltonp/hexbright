@@ -87,6 +87,10 @@ void loop() {
     
     // change mode?
     if(hb.button_just_released() && hb.button_pressed_time() < 300) {
+      if(hb.get_light_level() == 0) {
+        // make sure we don't turn off.  This should be modified in the api to be cleaner.
+        hb.set_light(0,0,NOW); 
+      }
       primary_mode = SECOND_PRESS_WAIT_MODE; 
     } else if (hb.button_pressed_time() > 5000) {
       primary_mode = WAIT_MODE;
