@@ -1,16 +1,19 @@
 Main operation:
 One short click: turn on light, enter light select mode.
-Two short clicks: enter action set mode.
-One long click: turn off the light, leave timer running if it exists.
-One really, really long click (about 5 seconds): turn off the light, turn off the timer.
+Two short clicks: enter action timer set mode.
+Press and hold for over 300 ms: turn off the light, leave timer running (if it's there)
+Press and hold for over 3 seconds: turn off the light, turn off the timer.
 
 
 Light select mode: spin to select your brightness, click to set it.
 
+Last light level used is saved in ram; it's preserved so long as a timer is running.
 
-Action set mode: 
-spin to select hours, click to accept.
-spin to select 00-50 minutes, click to accept.
-spin to select 0-9 minutes, click to accept.
 
-When this length of time passes, slowly fade to the brightness of the light when the action was set over the course of 2 minutes.
+Action timer set mode: 
+(save the current brightness to go to when the timer expires)
+spin to select hours, long click to accept.  Short click for previous value (default 0)
+spin to select 00-50 minutes, long click to accept.  Short click for previous value (default 0)
+spin to select 0-9 minutes, long click to accept.  Short click for previous value (default 0)
+
+When the time set is up, go to the saved brightness over the course of 12 seconds.

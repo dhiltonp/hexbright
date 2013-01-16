@@ -53,9 +53,10 @@ int action_mode = OFF_MODE;
 const int time[] = {12, 6, 10}; // 0-11 hours, 0-50 minutes, 0-9 minutes
 char place = 0; // hours, minutes or seconds?
 unsigned int action_time = 0; // HHMM
+unsigned int previous_action_time = 0; // HHMM
 int action_light_level = 0;
 
-int brightness_level = 50;
+int brightness_level = 0;
 
 
 void loop() {
@@ -73,8 +74,8 @@ void loop() {
       }
     } else if (action_mode == WAIT_MODE) {
       // we are waiting to do something
-      if(action_time_remaining(action_time) == action_time) { // we start turning on the minute before our time is up, because it's easy
-        hb.set_light(CURRENT_LEVEL, action_light_level, 120000);
+      if(action_time_remaining(action_time) == 0) {
+        hb.set_light(CURRENT_LEVEL, action_light_level, 12000);
         action_mode=OFF_MODE;
       } else {
         // display our current wait time...
@@ -92,10 +93,11 @@ void loop() {
         hb.set_light(0,0,NOW); 
       }
       primary_mode = SECOND_PRESS_WAIT_MODE; 
-    } else if (hb.button_pressed_time() > 5000) {
+    } else if (hb.button_pressed() && hb.button_pressed_time() > 3000) {
       primary_mode = WAIT_MODE;
       action_mode = OFF_MODE;
-    } else if (hb.button_pressed_time() > 300) {
+    } else if (hb.button_pressed() && hb.button_pressed_time() > 300) {
+      brightness_level = 0;
       hb.set_light(CURRENT_LEVEL, 0, 100);
       primary_mode = WAIT_MODE;
     }
@@ -105,6 +107,7 @@ void loop() {
       primary_mode = SET_ACTION_MODE;
       action_mode = OFF_MODE;
       place = 0;
+      previous_action_time = 0;
       action_time = 0;
       action_light_level = brightness_level;
     } else if (hb.button_released_time() > 500) {
@@ -127,8 +130,23 @@ void loop() {
     break;
   case SET_ACTION_MODE:
     hb.input_digit(action_time*10, action_time*10+time[place]);
-    if(hb.button_just_released() && hb.button_pressed_time()<300) {
+    if(hb.button_just_released() && hb.button_pressed_time()>300) {
       action_time = hb.get_input_digit();
+      place++;
+    } else if (hb.button_just_released() && hb.button_pressed_time()<300) {
+      // use the value from the last timer (0 on the first run)
+      switch(place) {
+      case 0: // hours
+        action_time = (previous_action_time/100)*100;
+        break;
+      case 1: // greater minutes
+        action_time = (previous_action_time/10)*10 % 6;
+        break;
+      case 2: // lesser minutes
+        action_time = previous_action_time % 10;
+        break;
+      }
+      
       place++;
     }
     if(place==PLACES) {
