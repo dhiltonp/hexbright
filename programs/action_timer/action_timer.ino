@@ -107,7 +107,7 @@ void loop() {
       primary_mode = SET_ACTION_MODE;
       action_mode = OFF_MODE;
       place = 0;
-      previous_action_time = 0;
+      previous_action_time = action_time;
       action_time = 0;
       action_light_level = brightness_level;
     } else if (hb.button_released_time() > 500) {
