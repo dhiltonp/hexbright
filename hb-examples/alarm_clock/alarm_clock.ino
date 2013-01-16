@@ -55,7 +55,7 @@ void loop() {
     break;
   case SLEEP_MODE:
     
-    if(duration_remaining(duration) == duration) { // we start turning on the minute before our time is up, because it's easy
+    if(duration_remaining(duration) == 0) {
       hb.set_light(1, wake_light_level, 180000);
       mode = WAKE_MODE;
     } else {
