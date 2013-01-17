@@ -140,7 +140,7 @@ void loop() {
         action_time = (previous_action_time/100)*100;
         break;
       case 1: // greater minutes
-        action_time = (previous_action_time/10)*10 % 6;
+        action_time = (previous_action_time/10)*10 % 100;
         break;
       case 2: // lesser minutes
         action_time = previous_action_time % 10;
