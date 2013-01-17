@@ -90,6 +90,8 @@ void hexbright::init_hardware() {
   Serial.begin(9600);
   Wire.begin();
   Serial.println("DEBUG MODE ON");
+#endif
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   if(DEBUG==DEBUG_LIGHT) {
     // do a full light range sweep, (printing all light intensity info)
     set_light(0,1000,1000);
@@ -154,7 +156,7 @@ void hexbright::update() {
 #endif  
 
   // if we're in debug mode, let us know if our loops are too large
-#if (DEBUG!=DEBUG_OFF)
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   static int i=0;
   static float avg_loop_time = 0;
   static float last_time = 0;
@@ -408,7 +410,7 @@ void hexbright::overheat_protection() {
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
   if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
-#if (DEBUG!=DEBUG_OFF)
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif

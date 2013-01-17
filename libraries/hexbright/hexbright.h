@@ -71,15 +71,16 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
-#define DEBUG_ON 1 // initialize printing
-#define DEBUG_LOOP 2 // main loop
-#define DEBUG_LIGHT 3 // Light control
-#define DEBUG_TEMP 4  // temperature safety
-#define DEBUG_BUTTON 5 // button presses - you may experience some flickering LEDs if enabled
-#define DEBUG_LED 6 // rear LEDs - you may get flickering LEDs with this enabled
-#define DEBUG_ACCEL 7 // accelerometer
-#define DEBUG_NUMBER 8 // number printing utility
-#define DEBUG_CHARGE 9 // charge state
+#define DEBUG_PRINT 1 // initialize printing only
+#define DEBUG_ON 2 // initialize printing, print if certain things are obviously wrong
+#define DEBUG_LOOP 3 // main loop
+#define DEBUG_LIGHT 4 // Light control
+#define DEBUG_TEMP 5  // temperature safety
+#define DEBUG_BUTTON 6 // button presses - you may experience some flickering LEDs if enabled
+#define DEBUG_LED 7 // rear LEDs - you may get flickering LEDs with this enabled
+#define DEBUG_ACCEL 8 // accelerometer
+#define DEBUG_NUMBER 9 // number printing utility
+#define DEBUG_CHARGE 10 // charge state
 
 
 
