@@ -30,6 +30,7 @@ either expressed or implied, of the FreeBSD Project.
 #ifdef __AVR // we're compiling for arduino
 #include <Arduino.h>
 #include <Wire.h>
+#include <digitalWriteFast.h>
 #define BOOL boolean
 #else
 #define BOOL bool
@@ -70,15 +71,16 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
-#define DEBUG_ON 1 // initialize printing
-#define DEBUG_LOOP 2 // main loop
-#define DEBUG_LIGHT 3 // Light control
-#define DEBUG_TEMP 4  // temperature safety
-#define DEBUG_BUTTON 5 // button presses - you may experience some flickering LEDs if enabled
-#define DEBUG_LED 6 // rear LEDs - you may get flickering LEDs with this enabled
-#define DEBUG_ACCEL 7 // accelerometer
-#define DEBUG_NUMBER 8 // number printing utility
-#define DEBUG_CHARGE 9 // charge state
+#define DEBUG_PRINT 1 // initialize printing only
+#define DEBUG_ON 2 // initialize printing, print if certain things are obviously wrong
+#define DEBUG_LOOP 3 // main loop
+#define DEBUG_LIGHT 4 // Light control
+#define DEBUG_TEMP 5  // temperature safety
+#define DEBUG_BUTTON 6 // button presses - you may experience some flickering LEDs if enabled
+#define DEBUG_LED 7 // rear LEDs - you may get flickering LEDs with this enabled
+#define DEBUG_ACCEL 8 // accelerometer
+#define DEBUG_NUMBER 9 // number printing utility
+#define DEBUG_CHARGE 10 // charge state
 
 
 
@@ -163,7 +165,9 @@ class hexbright {
   // level is from 0-1000.
   // 0 = no light (but still on), 500 = MAX_LOW_LEVEL, MAX_LEVEL=1000.
   // start_level and/or end level can be CURRENT_LEVEL.
-  static void set_light(int start_level, int end_level, int time);
+  // max change time is about 4.5 minutes ((2^15-1)*8.333 milliseconds).
+  //  I have had weird issues when passing in 3*60*1000, 180000 works fine though.
+  static void set_light(int start_level, int end_level, long time);
   // get light level (before overheat protection adjustment)
   static int get_light_level();
   // get light level (after overheat protection adjustment)
@@ -287,6 +291,19 @@ class hexbright {
   static void print_number(long number);
   // currently printing a number
   static BOOL printing_number();
+  // reset printing; this immediately terminates the currently printing number.
+  static void reset_print_number();
+
+  // reads a value between min_digit to max_digit-1, see hb-examples/numeric_input
+  //  Twist the light to change the value.  When the current value changes, 
+  //   the green LED will flash, and the number that is currently being printed 
+  //   will be reset.  Suppose you are at 2 and you want to go to 5.  Rotate 
+  //   clockwise 3 green flashes, and you'll be there.
+  //  The current value is printed through the rear leds.
+  // Get the result with get_input_digit.
+  static void input_digit(unsigned int min_digit, unsigned int max_digit);
+  // grab the value that is currently selected (based on twist orientation)
+  static unsigned int get_input_digit();
   
 #ifdef ACCELEROMETER
   // accepts things like ACC_REG_TILT

@@ -33,6 +33,8 @@ either expressed or implied, of the FreeBSD Project.
 
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
 #include "NotArduino.h"
+#else
+#include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
 // Pin assignments
@@ -73,24 +75,26 @@ int hexbright::flash_checksum() {
 void hexbright::init_hardware() {
   // We just powered on! That means either we got plugged
   // into USB, or the user is pressing the power button.
-  pinMode(DPIN_PWR, INPUT);
-  digitalWrite(DPIN_PWR, LOW);
+  pinModeFast(DPIN_PWR, INPUT);
+  digitalWriteFast(DPIN_PWR, LOW);
   // Initialize GPIO
-  pinMode(DPIN_RLED_SW, INPUT);
-  pinMode(DPIN_GLED, OUTPUT);
-  pinMode(DPIN_DRV_MODE, OUTPUT);
-  pinMode(DPIN_DRV_EN, OUTPUT);
-  digitalWrite(DPIN_DRV_MODE, LOW);
-  digitalWrite(DPIN_DRV_EN, LOW);
+  pinModeFast(DPIN_RLED_SW, INPUT);
+  pinModeFast(DPIN_GLED, OUTPUT);
+  pinModeFast(DPIN_DRV_MODE, OUTPUT);
+  pinModeFast(DPIN_DRV_EN, OUTPUT);
+  digitalWriteFast(DPIN_DRV_MODE, LOW);
+  digitalWriteFast(DPIN_DRV_EN, LOW);
   
 #if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
   Serial.begin(9600);
   Wire.begin();
   Serial.println("DEBUG MODE ON");
+#endif
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   if(DEBUG==DEBUG_LIGHT) {
     // do a full light range sweep, (printing all light intensity info)
-    set_light(0,1000,1000);
+    set_light(0,1000,update_delay*1002);
   } else if (DEBUG==DEBUG_TEMP) {
     set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
@@ -131,9 +135,9 @@ void hexbright::update() {
 
     if (next_strobe <= now) {
       if (now - next_strobe <26) {
-	digitalWrite(DPIN_DRV_EN, HIGH);
+	digitalWriteFast(DPIN_DRV_EN, HIGH);
 	delayMicroseconds(strobe_duration);
-	digitalWrite(DPIN_DRV_EN, LOW);
+	digitalWriteFast(DPIN_DRV_EN, LOW);
       }
       next_strobe += strobe_delay;
     }
@@ -152,7 +156,7 @@ void hexbright::update() {
 #endif  
 
   // if we're in debug mode, let us know if our loops are too large
-#if (DEBUG!=DEBUG_OFF)
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   static int i=0;
   static float avg_loop_time = 0;
   static float last_time = 0;
@@ -280,7 +284,7 @@ int change_done  = 0;
 int safe_light_level = MAX_LEVEL;
 
 
-void hexbright::set_light(int start_level, int end_level, int time) {
+void hexbright::set_light(int start_level, int end_level, long time) {
   // duration ranges from 1-MAXINT
   // light_level can be from 0-1000
   int current_level = get_light_level();
@@ -295,11 +299,14 @@ void hexbright::set_light(int start_level, int end_level, int time) {
     end_light_level = end_level;
   }
   
-  change_duration = time/update_delay;
+  change_duration = ((float)time)/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
-  Serial.print("Light adjust requested, start level:");
+  Serial.print("Light adjust requested, start level: ");
   Serial.println(start_light_level);
+  Serial.print("Over ");
+  Serial.print(change_duration);
+  Serial.println(" updates");
 #endif
   
 }
@@ -340,19 +347,19 @@ void hexbright::set_light_level(unsigned long level) {
   Serial.print("light level: ");
   Serial.println(level);
 #endif
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, HIGH);
+  pinModeFast(DPIN_PWR, OUTPUT);
+  digitalWriteFast(DPIN_PWR, HIGH);
   if(level == 0) {
     // lowest possible power, but still running (DPIN_PWR still high)
-    digitalWrite(DPIN_DRV_MODE, LOW);
+    digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
   }
   else if(level<=500) {
-    digitalWrite(DPIN_DRV_MODE, LOW);
+    digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
   } else {
     level -= 500;
-    digitalWrite(DPIN_DRV_MODE, HIGH);
+    digitalWriteFast(DPIN_DRV_MODE, HIGH);
     analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
   }
 }
@@ -403,7 +410,7 @@ void hexbright::overheat_protection() {
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
   if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
-#if (DEBUG!=DEBUG_OFF)
+#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif
@@ -474,7 +481,7 @@ unsigned char hexbright::get_led_state(unsigned char led) {
 
 inline void hexbright::_led_on(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
-    pinMode(DPIN_RLED_SW, OUTPUT);
+    pinModeFast(DPIN_RLED_SW, OUTPUT);
     analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
   } else { // DPIN_GLED
     analogWrite(DPIN_GLED, led_brightness[GLED]);
@@ -483,10 +490,10 @@ inline void hexbright::_led_on(unsigned char led) {
 
 inline void hexbright::_led_off(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
-    digitalWrite(DPIN_RLED_SW, LOW);
-    pinMode(DPIN_RLED_SW, INPUT);
+    digitalWriteFast(DPIN_RLED_SW, LOW);
+    pinModeFast(DPIN_RLED_SW, INPUT);
   } else { // DPIN_GLED
-    digitalWrite(DPIN_GLED, LOW);
+    digitalWriteFast(DPIN_GLED, LOW);
   }
 }
 
@@ -563,7 +570,7 @@ int hexbright::button_released_time() {
 
 void hexbright::read_button() {
   last_button_on = button_on;
-  button_on = digitalRead(DPIN_RLED_SW);
+  button_on = digitalReadFast(DPIN_RLED_SW);
   if(button_on) {
     if(!last_button_on) {
       time_last_pressed=millis();
@@ -635,8 +642,8 @@ void hexbright::enable_accelerometer() {
   Wire.write(enable, sizeof(enable));
   Wire.endTransmission();
   
-  // pinMode(DPIN_ACC_INT,  INPUT);
-  // digitalWrite(DPIN_ACC_INT,  HIGH);
+  // pinModeFast(DPIN_ACC_INT,  INPUT);
+  // digitalWriteFast(DPIN_ACC_INT,  HIGH);
 }
 
 void hexbright::read_accelerometer() {
@@ -668,7 +675,7 @@ void hexbright::read_accelerometer() {
 }
 
 unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
-  if (!digitalRead(DPIN_ACC_INT)) {
+  if (!digitalReadFast(DPIN_ACC_INT)) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(acc_reg);
     Wire.endTransmission(false);       // End, but do not stop!
@@ -922,6 +929,11 @@ BOOL hexbright::printing_number() {
   return _number || print_wait_time;
 }
 
+void hexbright::reset_print_number() {
+  _number = 1;
+  print_wait_time = 0;
+}
+
 void hexbright::update_number() {
   if(_number>0) { // we have something to do...
 #ifdef DEBUG
@@ -988,6 +1000,29 @@ void hexbright::print_number(long number) {
     set_led(flip_color(_color), 500);
     print_wait_time = 600/update_delay;
   }
+}
+
+
+
+//// Numeric entry
+static unsigned int read_value = 0;
+
+unsigned int hexbright::get_input_digit() {
+  return read_value;
+}
+
+void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
+  unsigned int tmp2 = 999 - atan2(vector(0)[0], vector(0)[2])*159 - 500; // scale from 0-999, counterclockwise = higher
+  tmp2 = (tmp2*(max_digit-min_digit))/1000+min_digit;
+  if(tmp2 == read_value) {
+    if(!printing_number()) {
+      print_number(tmp2);
+    }
+  } else {
+    reset_print_number();
+    set_led(GLED,100);
+  }
+  read_value = tmp2; 
 }
 #endif
 
@@ -1075,10 +1110,10 @@ void hexbright::print_charge(unsigned char led) {
 ///////////////////////////////////////////////
 
 void hexbright::shutdown() {
-  pinMode(DPIN_PWR, OUTPUT);
-  digitalWrite(DPIN_PWR, LOW);
-  digitalWrite(DPIN_DRV_MODE, LOW);
-  digitalWrite(DPIN_DRV_EN, LOW);
+  pinModeFast(DPIN_PWR, OUTPUT);
+  digitalWriteFast(DPIN_PWR, LOW);
+  digitalWriteFast(DPIN_DRV_MODE, LOW);
+  analogWrite(DPIN_DRV_EN, 0);
   // make sure we don't try to turn back on
   change_done = change_duration+1;
   end_light_level = 0;
