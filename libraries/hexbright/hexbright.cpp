@@ -94,7 +94,7 @@ void hexbright::init_hardware() {
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   if(DEBUG==DEBUG_LIGHT) {
     // do a full light range sweep, (printing all light intensity info)
-    set_light(0,1000,1000);
+    set_light(0,1000,update_delay*1002);
   } else if (DEBUG==DEBUG_TEMP) {
     set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
