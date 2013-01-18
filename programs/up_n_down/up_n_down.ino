@@ -121,6 +121,7 @@ void loop() {
     }
     break;
   case MODE_NIGHTLIGHT:
+    hb.set_led(RLED, 100, 0, nightlight_red_brightness);
     if(hb.moved(nightlight_sensitivity)) {
       nightlight_move_time = time;
       hb.set_light(CURRENT_LEVEL, 1000, 1000);
@@ -129,7 +130,6 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
     }
     break;
   case MODE_BLINK:
@@ -218,7 +218,7 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
+	hb.set_led(RLED, 1000, 0, nightlight_red_brightness);
       break;
     case MODE_BLINK:
       Serial.println("Mode = blink");
