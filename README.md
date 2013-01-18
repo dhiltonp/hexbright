@@ -23,7 +23,8 @@ Text instructions
         *   **git clone git@github.com:dhiltonp/hexbright.git** Command line, read-only access.
     2. Share your code
         *   **[Fork](https://github.com/dhiltonp/hexbright/fork)** Click fork to generate your own copy of the project (requires a free account on github).
-            *   **[Clone in Windows/Mac](github-windows://openRepo/https://github.com/dhiltonp/hexbright)** Great for first-time users, the command line interface is also available.
+            *   **[Clone in Windows/Mac](github-windows://openRepo/https://github.com/dhiltonp/hexbright)** Great for first-time git users.  Provides a graphical interface in 
+                addition to the command line interface with an easy install process.
             *   **git clone git@github.com:USERNAME/hexbright.git** Command line, read-write access.
 
 3.  Open the arduino ide, and click on 'File'->'Preferences' in the menu.
