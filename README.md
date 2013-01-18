@@ -18,10 +18,10 @@ Text instructions
 1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).  Most linux kernels come with the driver pre-built.
 
 2.  Download this folder/repository using one of the following methods, accessible at the top of the [project page](https://github.com/dhiltonp/hexbright).
-    A. Read-Only (no integrated sharing mechanism)
+    1. Read-Only (no integrated sharing mechanism)
         *   **ZIP** Extremely easy to get started, but you will need to manually update the library for new features.
         *   **git clone git@github.com:dhiltonp/hexbright.git** Command line, read-only access.
-    B. Share your code
+    2. Share your code
         *   **Fork** Click fork to generate your own copy of the project (requires a free account on github).
             *   **Clone in Windows/Mac** Great for first-time users, the command line interface is also available.
             *   **git clone git@github.com:USERNAME/hexbright.git** Command line, read-write access.
