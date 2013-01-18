@@ -23,8 +23,7 @@ Text instructions
         *   **git clone git@github.com:dhiltonp/hexbright.git** Command line, read-only access.
     2. Share your code
         *   **[Fork](https://github.com/dhiltonp/hexbright/fork)** Click fork to generate your own copy of the project (requires a free account on github).
-            *   **[Clone in Windows/Mac](github-windows://openRepo/https://github.com/dhiltonp/hexbright)** Great for first-time git users.  Provides a graphical interface in 
-
+            *   **[Clone in Windows/Mac](github-windows://openRepo/https://github.com/dhiltonp/hexbright)** Great for first-time git users.  Provides a graphical interface in  
                 addition to the command line interface with an easy install process.
             *   **git clone git@github.com:USERNAME/hexbright.git** Command line, read-write access.
 
