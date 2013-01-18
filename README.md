@@ -3,7 +3,17 @@ hexbright
 
 This is the easiest way to get started with programming your hexbright.
 
----
+Video Instructions
+------------------
+
+[Setting up your development environment](http://www.youtube.com/watch?v=sUbAkz_Lwxk) (development environment setup, minus driver install).
+
+[How to share your code on github](http://www.youtube.com/watch?v=r5VUDEbd08o).
+
+[Writing a program](http://www.youtube.com/watch?v=Q7eRACjCixE).
+
+Text instructions
+-----------------
 
 1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).  Most linux kernels come with the driver pre-built.
 
@@ -27,7 +37,8 @@ This is the easiest way to get started with programming your hexbright.
 
 9.  Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open a program).  Click on it, go to 'programs', and select a program.
 
----
+Overview
+-----------------
 
 *   'temperature_calibration' is one of the simplest programs you could write.
 
