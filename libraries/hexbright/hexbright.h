@@ -68,7 +68,7 @@ either expressed or implied, of the FreeBSD Project.
 #endif
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 1
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_PRINT 1 // initialize printing only
@@ -367,6 +367,8 @@ class hexbright {
   //  3 = most distant reading.
   // Do not modify the returned vector.
   static int* vector(unsigned char back);
+  // Returns the number of samples the associated vector was close to its read value
+  static unsigned int samples(unsigned char back);
   // Returns our best guess at which way is down.
   // Do not modify the returned vector.
   static int* down();

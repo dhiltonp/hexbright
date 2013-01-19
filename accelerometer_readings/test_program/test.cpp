@@ -70,6 +70,9 @@ public:
     hexbright::fake_read_accelerometer(data);
     accelerometer_location++;
   }
+  int * current_sample() {
+    return &(accelerometer_data[accelerometer_location])[0];
+  }
   bool data_exists() {
     if(accelerometer_location<accelerometer_data.size())
       return true;
@@ -81,15 +84,19 @@ public:
 void test_accelerometer(string file) {
   hbtest hb(file);
   int spinned = 0;
+  char vector_buffer[30];
   while (hb.data_exists()) {
     hb.find_down();
+
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.current_sample()[0], hb.current_sample()[1], hb.current_sample()[2]);
+    string raw = vector_buffer;
+
     hb.read_accelerometer();
-    char vector_buffer[30];
+
     sprintf(vector_buffer, "\t    %4d %4d %4d", hb.vector(0)[0], hb.vector(0)[1], hb.vector(0)[2]);
     string vec0 = vector_buffer;
-    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.down()[0], hb.down()[1], hb.down()[2]);
-    string down = vector_buffer;
-    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<down<<endl;
+  
+    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<raw<<endl;
     //cout<<(int)hb.magnitude(hb.vector(0))<<endl;
     spinned += hb.get_spin();
     

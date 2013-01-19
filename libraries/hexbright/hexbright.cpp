@@ -616,6 +616,7 @@ void hexbright::read_button() {
 
 unsigned char tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
+unsigned int sample_counter[] = {0,0,0,0};  // number of samples the associated vector has been read.
 int current_vector = 0;
 unsigned char num_vectors = 4;
 int down_vector[] = {0,0,0};
@@ -650,13 +651,14 @@ void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
     if((millis()-init_time)>*/
   // advance which vector is considered the first
-  next_vector();
+  int tmp_vector[3];
+  int i;
   while(1) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT,
     Wire.endTransmission(false);
     Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT
-    for(int i=0; i<4; i++) {
+    for(i=0; i<4; i++) {
       if (!Wire.available())
         continue;
       char tmp = Wire.read();
@@ -667,11 +669,36 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	vectors[current_vector+i] = stdev_filter3(vector(1)[i], tmp*(100/21.3));
+	tmp_vector[i] = stdev_filter3(vectors[current_vector+i], tmp*(100/21.3));
       }
     }
     break;
   }
+  // categorize read vector...
+  //  next_vector();
+  BOOL changed = false;
+  for(i = 0; i<3; i++) {
+    if(abs(tmp_vector[i] - vectors[current_vector+i]) > 4) {
+      // add condition of continued change in the same direction?
+      changed = true;
+    }
+  }
+  if(changed) {
+    Serial.println("something.");
+    print_vector(&vectors[current_vector], "last vector");
+    Serial.println(sample_counter[current_vector]);
+    next_vector();
+    copy_vector(&vectors[current_vector], tmp_vector);
+    sample_counter[current_vector] = 1;
+  } else {
+    Serial.println("something?");
+    sample_counter[current_vector]++;
+    for(i = 0; i<3; i++) {
+      // basic low-pass filter
+      vectors[current_vector+i] = (vectors[current_vector+i]*3+tmp_vector[i])/4;
+    }
+  }
+  return;
 }
 
 unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
@@ -813,6 +840,10 @@ char hexbright::get_spin() {
 /// VECTOR TOOLS
 int* hexbright::vector(unsigned char back) {
   return vectors+((current_vector/3+back)%num_vectors)*3;
+}
+
+unsigned int hexbright::samples(unsigned char back) {
+  return sample_counter[(current_vector+back)%num_vectors];
 }
 
 int* hexbright::down() {
@@ -1124,10 +1155,65 @@ void hexbright::shutdown() {
 ///////////////////////////////////////////////
 
 void hexbright::fake_read_accelerometer(int* new_vector) {
-  next_vector();
-  for(int i=0; i<3; i++) {
-    vector(0)[i] = stdev_filter3(vector(1)[i], new_vector[i]);
-    //vector(0)[i] = new_vector[i];
+  //next_vector();
+  int i;
+  int tmp_vector[3];
+  for(i=0; i<3; i++) {
+    //vector(0)[i] = stdev_filter3(vector(1)[i], new_vector[i]);
+    tmp_vector[i] = stdev_filter3(vectors[current_vector+i], new_vector[i]);
   }
+
+  // categorize read vector...
+  //  next_vector();
+  BOOL changed = false;
+
+  if(abs(magnitude(tmp_vector)-magnitude(vector(0))) > 20 ||
+     angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 20) {
+    /*    for(i = 0; i<3; i++) {
+      int diff1 = tmp_vector[i] - vectors[current_vector+i];
+      int diff2 = vectors[current_vector+i] - vector(1)[i];
+      //Serial.println(diff1-diff2);
+      if(samples(0)<5 && abs(diff1-diff2) < 12) {
+      /*      if((diff1>10 && diff2>10) || // change in acceleration is in the same direction
+	      (diff1<10 && diff2<10)) {
+	continue;
+      } else {
+	Serial.println("changed");
+	changed = true;
+      }
+    }*/
+
+    //    if(samples(0)>2 && angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 10)
+    changed = true;
+  }
+  /*  for(i = 0; i<3; i++) {
+    if(abs(tmp_vector[i] - vectors[current_vector+i]) > 10) {
+      int diff = tmp_vector[i] - vectors[current_vector+i];
+      int diff2 = vectors[current_vector+i] - vector(1)[i];
+      
+      if(abs(diff-diff2) > abs(diff)-5) {
+	Serial.println(diff);
+	Serial.println(diff2);
+	// add condition of continued change in the same direction?
+	changed = true;
+      }
+    }
+    }*/
+  if(changed) {
+    //print_vector(&vectors[current_vector], "last vector");
+    Serial.println(sample_counter[current_vector]);
+    next_vector();
+    copy_vector(&vectors[current_vector], tmp_vector);
+    sample_counter[current_vector] = 1;
+  } else {
+    sample_counter[current_vector]++;
+    int significance = sample_counter[current_vector]<5 ? sample_counter[current_vector] : 4;
+    for(i = 0; i<3; i++) {
+      // basic low-pass filter
+      vectors[current_vector+i] = (vectors[current_vector+i]*significance+tmp_vector[i])/(significance+1);
+      //vectors[current_vector+i] = (vectors[current_vector+i]*3+tmp_vector[i])/4;
+    }
+  }
+
 }
 
