@@ -369,6 +369,7 @@ class hexbright {
   static int* vector(unsigned char back);
   // Returns the number of samples the associated vector was close to its read value
   static unsigned int samples(unsigned char back);
+  static int* get_vector_drift();
   // Returns our best guess at which way is down.
   // Do not modify the returned vector.
   static int* down();

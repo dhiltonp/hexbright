@@ -616,9 +616,13 @@ void hexbright::read_button() {
 
 unsigned char tilt = 0;
 int vectors[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
+int vector_drift[] = {0,0,0};
 unsigned int sample_counter[] = {0,0,0,0};  // number of samples the associated vector has been read.
 int current_vector = 0;
 unsigned char num_vectors = 4;
+int last_vector[] = {0,0,0};
+
+// down_vector is out of date...
 int down_vector[] = {0,0,0};
 
 /// SETUP/MANAGEMENT
@@ -692,7 +696,7 @@ void hexbright::read_accelerometer() {
     sample_counter[current_vector] = 1;
   } else {
     Serial.println("something?");
-    sample_counter[current_vector]++;
+    sample_counter[current_vector/3]++;
     for(i = 0; i<3; i++) {
       // basic low-pass filter
       vectors[current_vector+i] = (vectors[current_vector+i]*3+tmp_vector[i])/4;
@@ -844,6 +848,10 @@ int* hexbright::vector(unsigned char back) {
 
 unsigned int hexbright::samples(unsigned char back) {
   return sample_counter[(current_vector/3+back)%num_vectors];
+}
+
+int* hexbright::get_vector_drift() {
+  return vector_drift;
 }
 
 int* hexbright::down() {
@@ -1157,27 +1165,37 @@ void hexbright::shutdown() {
 void hexbright::fake_read_accelerometer(int* new_vector) {
   //next_vector();
   int i;
-  int tmp_vector[3];
+  int read_vector[3];
   for(i=0; i<3; i++) {
     //vector(0)[i] = stdev_filter3(vector(1)[i], new_vector[i]);
-    tmp_vector[i] = stdev_filter3(vectors[current_vector+i], new_vector[i]);
+    read_vector[i] = stdev_filter3(vectors[current_vector+i], new_vector[i]);
   }
+
+  copy_vector(last_vector, vector(0));
 
   // categorize read vector...
   //  next_vector();
   unsigned int changed = 0;
   // magnitude difference: 0-100 added to changed
-  changed += abs(magnitude(tmp_vector) - magnitude(vector(0)))/2;
+  changed += abs(magnitude(read_vector) - magnitude(vector(0)))/2;
   // angle difference: 0-100 added to changed
-  changed += angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0)))*100;
+  if(magnitude(read_vector) > 10)
+    changed += angle_difference(dot_product(read_vector, vector(0)), magnitude(read_vector), magnitude(vector(0)))*100;
+
+  // consistency of acceleration vector change
+  int tmp_vector[3];
+  sum_vectors(tmp_vector, vector(0), vector_drift);
+  sub_vectors(tmp_vector, tmp_vector, read_vector);
+  //    print_vector(tmp_vector, "vsum");
+  changed+=magnitude(tmp_vector);
   
   // 25, 12.5...
-  changed += 50/(samples(0)+1);
+  //changed += 50/(samples(0)+1);
 
-  /*  if(abs(magnitude(tmp_vector)-magnitude(vector(0))) > 20 ||
-     angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 20) {
+  /*  if(abs(magnitude(read_vector)-magnitude(vector(0))) > 20 ||
+     angle_difference(dot_product(read_vector, vector(0)), magnitude(read_vector), magnitude(vector(0))) > 20) {
     /*    for(i = 0; i<3; i++) {
-      int diff1 = tmp_vector[i] - vectors[current_vector+i];
+      int diff1 = read_vector[i] - vectors[current_vector+i];
       int diff2 = vectors[current_vector+i] - vector(1)[i];
       //Serial.println(diff1-diff2);
       if(samples(0)<5 && abs(diff1-diff2) < 12) {
@@ -1190,12 +1208,12 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
       }
     }
 
-    //    if(samples(0)>2 && angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 10)
+    //    if(samples(0)>2 && angle_difference(dot_product(read_vector, vector(0)), magnitude(read_vector), magnitude(vector(0))) > 10)
     changed = true;
   }*/
   /*  for(i = 0; i<3; i++) {
-    if(abs(tmp_vector[i] - vectors[current_vector+i]) > 10) {
-      int diff = tmp_vector[i] - vectors[current_vector+i];
+    if(abs(read_vector[i] - vectors[current_vector+i]) > 10) {
+      int diff = read_vector[i] - vectors[current_vector+i];
       int diff2 = vectors[current_vector+i] - vector(1)[i];
       
       if(abs(diff-diff2) > abs(diff)-5) {
@@ -1211,15 +1229,20 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
     //print_vector(&vectors[current_vector], "last vector");
     Serial.println(sample_counter[current_vector/3]);
     next_vector();
-    copy_vector(&vectors[current_vector], tmp_vector);
+    copy_vector(&vectors[current_vector], read_vector);
     sample_counter[current_vector/3] = 1;
+
+    sub_vectors(vector_drift, vector(0), vector(1));
   } else {
     sample_counter[current_vector/3]++;
     int significance = sample_counter[current_vector]<5 ? sample_counter[current_vector] : 4;
     for(i = 0; i<3; i++) {
       // basic low-pass filter
-      vectors[current_vector+i] = (vectors[current_vector+i]*significance+tmp_vector[i])/(significance+1);
-      //vectors[current_vector+i] = (vectors[current_vector+i]*3+tmp_vector[i])/4;
+      vectors[current_vector+i] = (vectors[current_vector+i]*significance+read_vector[i])/(significance+1);
+      //vectors[current_vector+i] = (vectors[current_vector+i]*3+read_vector[i])/4;
+
+      // what sort of drift are we seeing?
+      vector_drift[i] = (vector_drift[i]*2 + (vectors[current_vector+i] - last_vector[i])*10)/3;
     }
   }
 
