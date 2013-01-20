@@ -405,7 +405,7 @@ class hexbright {
   static void enable_accelerometer();
   
   // advances the current vector to the next (a place for more data)
-  static void next_vector();
+  static void next_bin();
   
 #ifndef __AVR
  public:
