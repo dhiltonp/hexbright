@@ -843,7 +843,7 @@ int* hexbright::vector(unsigned char back) {
 }
 
 unsigned int hexbright::samples(unsigned char back) {
-  return sample_counter[(current_vector+back)%num_vectors];
+  return sample_counter[(current_vector/3+back)%num_vectors];
 }
 
 int* hexbright::down() {
@@ -1165,9 +1165,16 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
 
   // categorize read vector...
   //  next_vector();
-  BOOL changed = false;
+  unsigned int changed = 0;
+  // magnitude difference: 0-100 added to changed
+  changed += abs(magnitude(tmp_vector) - magnitude(vector(0)))/2;
+  // angle difference: 0-100 added to changed
+  changed += angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0)))*100;
+  
+  // 25, 12.5...
+  changed += 50/(samples(0)+1);
 
-  if(abs(magnitude(tmp_vector)-magnitude(vector(0))) > 20 ||
+  /*  if(abs(magnitude(tmp_vector)-magnitude(vector(0))) > 20 ||
      angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 20) {
     /*    for(i = 0; i<3; i++) {
       int diff1 = tmp_vector[i] - vectors[current_vector+i];
@@ -1181,11 +1188,11 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
 	Serial.println("changed");
 	changed = true;
       }
-    }*/
+    }
 
     //    if(samples(0)>2 && angle_difference(dot_product(tmp_vector, vector(0)), magnitude(tmp_vector), magnitude(vector(0))) > 10)
     changed = true;
-  }
+  }*/
   /*  for(i = 0; i<3; i++) {
     if(abs(tmp_vector[i] - vectors[current_vector+i]) > 10) {
       int diff = tmp_vector[i] - vectors[current_vector+i];
@@ -1199,14 +1206,15 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
       }
     }
     }*/
-  if(changed) {
+  if(changed>40) {
+    Serial.println(changed);
     //print_vector(&vectors[current_vector], "last vector");
-    Serial.println(sample_counter[current_vector]);
+    Serial.println(sample_counter[current_vector/3]);
     next_vector();
     copy_vector(&vectors[current_vector], tmp_vector);
-    sample_counter[current_vector] = 1;
+    sample_counter[current_vector/3] = 1;
   } else {
-    sample_counter[current_vector]++;
+    sample_counter[current_vector/3]++;
     int significance = sample_counter[current_vector]<5 ? sample_counter[current_vector] : 4;
     for(i = 0; i<3; i++) {
       // basic low-pass filter
