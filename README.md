@@ -3,15 +3,29 @@ hexbright
 
 This is the easiest way to get started with programming your hexbright.
 
----
+Video Instructions
+------------------
+
+[Setting up your development environment](http://www.youtube.com/watch?v=sUbAkz_Lwxk) (development environment setup, minus driver install).
+
+[How to share your code on github](http://www.youtube.com/watch?v=r5VUDEbd08o).
+
+[Writing a program](http://www.youtube.com/watch?v=Q7eRACjCixE).
+
+Text instructions
+-----------------
 
 1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).  Most linux kernels come with the driver pre-built.
 
-2.  Download this folder using one of these methods, accessible at the top of the [project page](https://github.com/dhiltonp/hexbright).
-    *   **Clone in Windows/Mac** This is an easy way to keep an up-to-date version of the code.
-    *   **ZIP** Extremely easy to get started, but you will need to manually update the project.
-    *   **git clone git@github.com:dhiltonp/hexbright.git** Command line, read-only access.
-    *   **Fork** Click fork to generate your own copy of the project if at some point you will want to submit or share your code.
+2.  Download this folder/repository using one of the following methods, accessible at the top of the [project page](https://github.com/dhiltonp/hexbright).
+    1. Read-Only (no integrated sharing mechanism)
+        *   **[ZIP](https://github.com/dhiltonp/hexbright/archive/master.zip)** Extremely easy to get started, but you will need to manually update the library for new features.
+        *   **git clone git@github.com:dhiltonp/hexbright.git** Command line, read-only access.
+    2. Share your code
+        *   **[Fork](https://github.com/dhiltonp/hexbright/fork)** Click fork to generate your own copy of the project (requires a free account on github).
+            *   **[Clone in Windows/Mac](github-windows://openRepo/https://github.com/dhiltonp/hexbright)** Great for first-time git users.  Provides a graphical interface in  
+                addition to the command line interface with an easy install process.
+            *   **git clone git@github.com:USERNAME/hexbright.git** Command line, read-write access.
 
 3.  Open the arduino ide, and click on 'File'->'Preferences' in the menu.
 
@@ -27,7 +41,8 @@ This is the easiest way to get started with programming your hexbright.
 
 9.  Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open a program).  Click on it, go to 'programs', and select a program.
 
----
+Overview
+-----------------
 
 *   'temperature_calibration' is one of the simplest programs you could write.
 
