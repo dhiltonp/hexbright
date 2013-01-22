@@ -57,7 +57,7 @@ void loop() {
       mode = CYCLE_MODE;
       int levels[] = {1,250,500,750,1000};
       brightness_level = (brightness_level+1)%5;
-      hb.set_light(CURRENT_LEVEL, levels[brightness_level], 150);
+      hb.set_light(CREE, CURRENT_LEVEL, levels[brightness_level], 150);
     } else if (hb.button_pressed_time() < 700) {
       mode = BLINKY_MODE;
     }
@@ -65,7 +65,7 @@ void loop() {
   if(hb.button_pressed_time()>700) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
     mode = OFF_MODE;
     // in case we are under usb power, reset state
-    hb.set_light(0, 0, 1);
+    hb.set_light(CREE, 0, 0, 1);
     brightness_level = 4;
     hb.shutdown();
   }
@@ -76,17 +76,17 @@ void loop() {
     Serial.println("blinking?");
     static int i = 0;
     if(!i) {
-      hb.set_light(MAX_LOW_LEVEL,0,30); // fade from 500 to 0 over 30 milliseconds
+      hb.set_light(CREE, MAX_LOW_LEVEL,0,30); // fade from 500 to 0 over 30 milliseconds
       i=400/8.3333; // every fifty times through; currently the library is locked at 8.333 milliseconds
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
-    if(!hb.printing_number()) {
-      hb.print_number(hb.get_fahrenheit());
-    }
+  //  if(!hb.printing_number()) {
+  //    hb.print_number(hb.get_fahrenheit());
+  //  }
   } else if (mode == OFF_MODE) { // charging, or turning off
-    if(!hb.printing_number()) {
+//    if(!hb.printing_number()) {
       hb.print_charge(GLED);
-    }
+//    }
   }
 }

@@ -1108,10 +1108,10 @@ unsigned char hexbright::get_definite_charge_state() {
 
 void hexbright::print_charge(unsigned char led) {
   unsigned char charge_state = get_charge_state();
-  if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
-    set_led(led, 350, 350);
+  if(charge_state == CHARGING && get_light_level(led)==0) {//get_led_state(led) == LED_OFF) {
+    set_light(led, 255, 0, 600);
   } else if (charge_state == CHARGED) {
-    set_led(led,50);
+    set_light(led, 255, 255, 50);
   }
 } 
 
