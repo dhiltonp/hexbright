@@ -200,6 +200,7 @@ void hexbright::update() {
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
 #ifdef ACCELEROMETER
   read_accelerometer();
+  bin_vector2();
   find_down();
 #endif
   overheat_protection();
@@ -656,8 +657,10 @@ void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
     if((millis()-init_time)>*/
   // advance which vector is considered the first
-  int tmp_vector[3];
   int i;
+
+  copy_vector(last_vector, current_vector);
+
   while(1) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT,
@@ -674,36 +677,11 @@ void hexbright::read_accelerometer() {
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	tmp_vector[i] = stdev_filter3(bins[current_bin+i], tmp*(100/21.3));
+	current_vector[i] = stdev_filter3(last_vector[i], tmp*(100/21.3));
       }
     }
     break;
   }
-  // categorize read vector...
-  //  next_vector();
-  BOOL changed = false;
-  for(i = 0; i<3; i++) {
-    if(abs(tmp_vector[i] - bins[current_bin+i]) > 4) {
-      // add condition of continued change in the same direction?
-      changed = true;
-    }
-  }
-  if(changed) {
-    Serial.println("something.");
-    print_vector(&bins[current_bin], "last vector");
-    Serial.println(sample_counter[current_bin]);
-    next_bin();
-    copy_vector(&bins[current_bin], tmp_vector);
-    sample_counter[current_bin] = 1;
-  } else {
-    Serial.println("something?");
-    sample_counter[current_bin/3]++;
-    for(i = 0; i<3; i++) {
-      // basic low-pass filter
-      bins[current_bin+i] = (bins[current_bin+i]*3+tmp_vector[i])/4;
-    }
-  }
-  return;
 }
 
 unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
@@ -715,6 +693,139 @@ unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
     return Wire.read();
   }
   return 0;
+}
+
+void hexbright::bin_vector() {
+  int i;
+  int tmp_vector[3];
+
+  // categorize read vector...
+  if(samples(0) == 1) { // changing or stable drift?
+    sub_vectors(tmp_vector, current_vector, last_vector);
+    if(magnitude(tmp_vector)<20)
+      copy_vector(vector_drift, tmp_vector);
+  }
+
+  sub_vectors(tmp_vector, current_vector, vector_drift);
+  sub_vectors(tmp_vector, tmp_vector, last_vector);
+  //print_vector(tmp_vector, "vsum");
+
+  /*for(i=0; i<3; i++) {
+    if((current_vector[i] == 145 && last_vector[i] == 145) || 
+       (current_vector[i] == -140 && last_vector[i] == -140)) {
+      vector_drift[i] = 0;
+    }
+    }*/
+  //print_vector(tmp_vector, "vsum");
+
+
+  if(magnitude(tmp_vector)>45) {
+    Serial.println(magnitude(tmp_vector));
+    //print_vector(&bins[current_bin], "last bin");
+    Serial.println(sample_counter[current_bin/3]);
+    next_bin();
+    copy_vector(&bins[current_bin], current_vector);
+    sample_counter[current_bin/3] = 1;
+
+    sub_vectors(vector_drift, current_vector, last_vector);
+  } else {
+    sample_counter[current_bin/3]++;
+    int significance = sample_counter[current_bin]<5 ? sample_counter[current_bin] : 4;
+    for(i = 0; i<3; i++) {
+      // basic low-pass filter
+      bins[current_bin+i] = (bins[current_bin+i]*significance+current_vector[i])/(significance+1);
+      //vectors[current_vector+i] = (vectors[current_vector+i]*3+current_vector[i])/4;
+
+      vector_drift[i] = (vector_drift[i]*2 + (current_vector[i] - last_vector[i]))/3;
+    }
+  }
+}
+
+void hexbright::bin_vector2() {
+  int i;
+  int tmp_vector[3];
+  BOOL changed = false;
+  static BOOL drifting = false;
+
+
+  // categorize read vector...
+  if(samples(0) == 1) { // changing or stable drift?
+    sub_vectors(tmp_vector, current_vector, last_vector);
+    if(magnitude(tmp_vector)<20) {
+      copy_vector(vector_drift, tmp_vector);
+      drifting = false;
+    }
+  }
+
+  // get current vector drift
+  sub_vectors(tmp_vector, current_vector, last_vector);
+  /*Serial.print(magnitude(tmp_vector));
+  Serial.print("\t");
+  Serial.print(magnitude(vector_drift));
+  Serial.print("\t");
+  Serial.print(dot_product(vector_drift, tmp_vector));
+  Serial.print("\t");
+  Serial.println(dot_product(current_vector, last_vector));*/
+  //if((magnitude(tmp_vector) > 8 && magnitude(vector_drift) > 8) &&
+  /*  if(dot_product(tmp_vector, vector_drift)>20) {
+    
+      }*/
+
+
+  sub_vectors(tmp_vector, current_vector, vector_drift);
+  sub_vectors(tmp_vector, tmp_vector, last_vector);
+  //print_vector(tmp_vector, "vsum");
+
+  /*for(i=0; i<3; i++) {
+    if((current_vector[i] == 145 && last_vector[i] == 145) || 
+       (current_vector[i] == -140 && last_vector[i] == -140)) {
+      vector_drift[i] = 0;
+    }
+    }*/
+  //print_vector(tmp_vector, "vsum");
+
+  sub_vectors(tmp_vector, current_vector, last_vector);
+  if((drifting && magnitude(tmp_vector)<20) ||
+     (!drifting && magnitude(tmp_vector)>20)) {
+    //changed = true;
+      
+
+  //Serial.println(magnitude(tmp_vector));
+  //if(dot_product(tmp_vector, vector_drift)>100) {
+  //if(magnitude(tmp_vector)>30) {
+    //print_vector(&bins[current_bin], "last bin");
+    //Serial.println(sample_counter[current_bin/3]);
+    // should we merge the bins, or leave them separate?
+    sub_vectors(tmp_vector, vector(0), vector(1));
+  
+    Serial.println(magnitude(tmp_vector));
+    /*    if(magnitude(tmp_vector)<20) {
+      for(i=0; i<3; i++) {
+	vector(1)[i] = (vector(0)[i]+vector(1)[i])/2;
+      }
+      sample_counter[(current_bin/3+1)%num_bins] += samples(0);
+      print_vector(vector(1), "merged bin");
+    } else {
+      next_bin();
+      }*/
+    next_bin();
+    copy_vector(&bins[current_bin], current_vector);
+    sample_counter[current_bin/3] = 1;
+
+    sub_vectors(vector_drift, current_vector, last_vector);
+  } else {
+    sample_counter[current_bin/3]++;
+    int significance = sample_counter[current_bin]<10 ? sample_counter[current_bin] : 10;
+    for(i = 0; i<3; i++) {
+      // basic low-pass filter
+      bins[current_bin+i] = (bins[current_bin+i]*significance+current_vector[i])/(significance+1);
+      //vectors[current_vector+i] = (vectors[current_vector+i]*3+current_vector[i])/4;
+
+
+      sub_vectors(vector_drift, current_vector, last_vector);
+      //vector_drift[i] = (vector_drift[i]*2 + (current_vector[i] - last_vector[i]))/3;
+    }
+  }
 }
 
 
@@ -882,7 +993,7 @@ int hexbright::dot_product(int* vector1, int* vector2) {
   // An alternate solution would be to convert using READING*100/21.65, giving
   //  a max of 147.  3*(147^2) = 64827 (safe).  A max of 148 would be safe so
   //  long as no more than 5 values are -32.
-  unsigned int sum = 0; // max value is about 3*(150^2), a tad over the maximum unsigned int
+  long sum = 0; // max value is about 3*(150^2), a tad over the maximum unsigned int
   for(int i=0;i<3;i++) {
     //sum+=vector1[i]*vector2[i]/100; // avoids overflow, but costs space
     sum+=vector1[i]*vector2[i];
@@ -941,11 +1052,10 @@ void hexbright::copy_vector(int* out_vector, int* in_vector) {
 
 void hexbright::print_vector(int* vector, const char* label) {
 #if (DEBUG!=DEBUG_OFF)
-  for(int i=0; i<3; i++) {
-    Serial.print(vector[i]);
-    Serial.print("/");
-  }
-  Serial.println(label);
+  char tmp[15];
+  sprintf(tmp, ": %d/%d/%d", vector[0], vector[1], vector[2]);
+  Serial.print(label);
+  Serial.println(tmp);
 #endif
 }
 
@@ -1170,39 +1280,6 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
     //vector(0)[i] = stdev_filter3(vector(1)[i], new_vector[i]);
     current_vector[i] = stdev_filter3(last_vector[i], new_vector[i]);
   }
-
-  // categorize read vector...
-  int tmp_vector[3];
-  if(samples(0) == 1) { // changing or stable drift?
-    sub_vectors(tmp_vector, current_vector, last_vector);
-    if(magnitude(tmp_vector)<20)
-      copy_vector(vector_drift, tmp_vector);
-  }
-
-  sub_vectors(tmp_vector, current_vector, vector_drift);
-  sub_vectors(tmp_vector, tmp_vector, last_vector);
-  //print_vector(tmp_vector, "vsum");
-
-  if(magnitude(tmp_vector)>40) {
-    Serial.println(magnitude(tmp_vector));
-    //print_vector(&bins[current_bin], "last bin");
-    Serial.println(sample_counter[current_bin/3]);
-    next_bin();
-    copy_vector(&bins[current_bin], current_vector);
-    sample_counter[current_bin/3] = 1;
-
-    sub_vectors(vector_drift, current_vector, last_vector);
-  } else {
-    sample_counter[current_bin/3]++;
-    int significance = sample_counter[current_bin]<5 ? sample_counter[current_bin] : 4;
-    for(i = 0; i<3; i++) {
-      // basic low-pass filter
-      bins[current_bin+i] = (bins[current_bin+i]*significance+current_vector[i])/(significance+1);
-      //vectors[current_vector+i] = (vectors[current_vector+i]*3+current_vector[i])/4;
-
-      vector_drift[i] = (vector_drift[i]*2 + (current_vector[i] - last_vector[i]))/3;
-    }
-  }
-
+  bin_vector2();
 }
 

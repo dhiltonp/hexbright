@@ -60,10 +60,10 @@ public:
 
     // pre-load accelerometer buffers
     int * data = &(accelerometer_data[accelerometer_location])[0];
+    /*hexbright::fake_read_accelerometer(data);
     hexbright::fake_read_accelerometer(data);
     hexbright::fake_read_accelerometer(data);
-    hexbright::fake_read_accelerometer(data);
-    hexbright::fake_read_accelerometer(data);
+    hexbright::fake_read_accelerometer(data);*/
   }
   void read_accelerometer() {
     int * data = &(accelerometer_data[accelerometer_location])[0];

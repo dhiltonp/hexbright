@@ -407,6 +407,11 @@ class hexbright {
   // advances the current vector to the next (a place for more data)
   static void next_bin();
   
+  // runs the binning algorithm
+  static void bin_vector();
+  static void bin_vector2();
+
+  
 #ifndef __AVR
  public:
 #endif
