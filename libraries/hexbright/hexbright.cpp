@@ -276,103 +276,114 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
 // This is handled inside of set_light_level.
 
 
-int start_light_level = 0;
-int end_light_level = 0;
-int change_duration = 0;
-int change_done  = 0;
+int start_light_level[3] = {0,0,0};
+int end_light_level[3] = {0,0,0};
+int change_duration[3] = {0,0,0};
+int change_done[3] = {0,0,0};
 
 int safe_light_level = MAX_LEVEL;
 
 
-void hexbright::set_light(int start_level, int end_level, long time) {
+void hexbright::set_light(int led, int start_level, int end_level, long time) {
   // duration ranges from 1-MAXINT
   // light_level can be from 0-1000
-  int current_level = get_light_level();
+  int current_level = get_light_level(led);
   if(start_level == CURRENT_LEVEL) {
-    start_light_level = current_level;
+    start_light_level[led] = current_level;
   } else {
-    start_light_level = start_level;
+    start_light_level[led] = start_level;
   }
   if (end_level == CURRENT_LEVEL) {
-    end_light_level = get_light_level();
+    end_light_level[led] = get_light_level(led);
   } else {
-    end_light_level = end_level;
+    end_light_level[led] = end_level;
   }
   
-  change_duration = ((float)time)/update_delay;
-  change_done = 0;
+  change_duration[led] = ((float)time)/update_delay;
+  change_done[led] = 0;
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("Light adjust requested, start level: ");
-  Serial.println(start_light_level);
+  Serial.println(start_light_level[led]);
   Serial.print("Over ");
-  Serial.print(change_duration);
+  Serial.print(change_duration[led]);
   Serial.println(" updates");
 #endif
   
 }
 
-int hexbright::get_light_level() {
-  if(change_done>=change_duration)
-    return end_light_level;
+int hexbright::get_light_level(int led) {
+  if(change_done[led]>=change_duration[led])
+    return end_light_level[led];
   else
-    return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level;
+    return (end_light_level[led]-start_light_level[led])*((float)change_done[led]/change_duration[led]) +start_light_level[led];
 }
 
-int hexbright::get_safe_light_level() {
-  int light_level = get_light_level();
+int hexbright::get_safe_light_level(int led) {
+  int light_level = get_light_level(led);
   
-  if(light_level>safe_light_level)
+  if(led == CREE && light_level>safe_light_level)
     return safe_light_level;
   return light_level;
 }
 
-int hexbright::light_change_remaining() {
+int hexbright::light_change_remaining(int led) {
   // change_done ends up at -1, add one to counter
   //  return (change_duration-change_done+1)*update_delay;
-  int tmp = change_duration-change_done;
+  int tmp = change_duration[led]-change_done[led];
   if(tmp<=0)
     return 0;
   return tmp*update_delay;
 }
 
 
-void hexbright::set_light_level(unsigned long level) {
+void hexbright::set_light_level(int led, unsigned long level) {
   // LOW 255 approximately equals HIGH 48/49.  There is a color change.
   // Values < 4 do not provide any light.
   // I don't know about relative power draw.
   
   // look at linearity_test.ino for more detail on these algorithms.
   
+  if(led==CREE) {
 #if (DEBUG==DEBUG_LIGHT)
-  Serial.print("light level: ");
-  Serial.println(level);
+    Serial.print("light level: ");
+    Serial.println(level);
 #endif
-  pinModeFast(DPIN_PWR, OUTPUT);
-  digitalWriteFast(DPIN_PWR, HIGH);
-  if(level == 0) {
-    // lowest possible power, but still running (DPIN_PWR still high)
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, 0);
+    pinModeFast(DPIN_PWR, OUTPUT);
+    digitalWriteFast(DPIN_PWR, HIGH);
+    if(level == 0) {
+      // lowest possible power, but still running (DPIN_PWR still high)
+      digitalWriteFast(DPIN_DRV_MODE, LOW);
+      analogWrite(DPIN_DRV_EN, 0);
+    }
+    else if(level<=500) {
+      digitalWriteFast(DPIN_DRV_MODE, LOW);
+      analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
+    } else {
+      level -= 500;
+      digitalWriteFast(DPIN_DRV_MODE, HIGH);
+      analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+    }
+  } else if (led == RLED) { // DPIN_RLED_SW
+    pinModeFast(DPIN_RLED_SW, OUTPUT);
+    digitalWriteFast(DPIN_RLED_SW, level);
+  } else if (led == GLED) { // DPIN_GLED
+    analogWrite(DPIN_GLED, level);
   }
-  else if(level<=500) {
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
-  } else {
-    level -= 500;
-    digitalWriteFast(DPIN_DRV_MODE, HIGH);
-    analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
-  }
+
 }
 
 void hexbright::adjust_light() {
   // sets actual light level, altering value to be perceptually linear, based on steven's area brightness (cube root)
-  if(change_done<=change_duration) {
-    int light_level = hexbright::get_safe_light_level();
-    set_light_level(light_level);
-    
-    change_done++;
+  for(int i=0; i<3; i++) {
+    if(change_done[i]<=change_duration[i]) {
+      int light_level = get_safe_light_level(i);
+      set_light_level(i, light_level);
+      
+      change_done[i]++;
+    }
   }
 }
+
 
 // If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
 // this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
@@ -409,12 +420,12 @@ void hexbright::overheat_protection() {
   // if safe_light_level has changed, guarantee a light adjustment:
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
-  if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
+  if(safe_light_level < MAX_LEVEL && get_light_level(CREE)>MIN_OVERHEAT_LEVEL) {
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
     Serial.print("Estimated safe light level: ");
     Serial.println(safe_light_level);
 #endif
-    change_done  = change_done < change_duration ? change_done : change_duration;
+    change_done[CREE] = change_done[CREE] < change_duration[CREE] ? change_done[CREE] : change_duration[CREE];
   }
 }
 
@@ -1115,8 +1126,8 @@ void hexbright::shutdown() {
   digitalWriteFast(DPIN_DRV_MODE, LOW);
   analogWrite(DPIN_DRV_EN, 0);
   // make sure we don't try to turn back on
-  change_done = change_duration+1;
-  end_light_level = 0;
+  change_done[CREE] = change_duration[CREE]+1;
+  end_light_level[CREE] = 0;
 }
 
 ///////////////////////////////////////////////

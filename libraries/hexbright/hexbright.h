@@ -110,6 +110,7 @@ either expressed or implied, of the FreeBSD Project.
 // led constants
 #define RLED 0
 #define GLED 1
+#define CREE 2
 
 #define LED_OFF 0
 #define LED_WAIT 1
@@ -167,16 +168,16 @@ class hexbright {
   // start_level and/or end level can be CURRENT_LEVEL.
   // max change time is about 4.5 minutes ((2^15-1)*8.333 milliseconds).
   //  I have had weird issues when passing in 3*60*1000, 180000 works fine though.
-  static void set_light(int start_level, int end_level, long time);
+  static void set_light(int led, int start_level, int end_level, long time);
   // get light level (before overheat protection adjustment)
-  static int get_light_level();
+  static int get_light_level(int led);
   // get light level (after overheat protection adjustment)
-  static int get_safe_light_level();
+  static int get_safe_light_level(int led);
   // return how long it will be until the light stops changing (in milliseconds).
   // this allows time to be used as a countdown of sorts, between setting lights:
   //  if(hb.light_change_remaining()==0)
   //    hb.set_light(...)
-  static int light_change_remaining();
+  static int light_change_remaining(int led);
 
 #ifdef STROBE
 /////// STROBING ///////
@@ -422,7 +423,7 @@ class hexbright {
   
  private:
   static void adjust_light();
-  static void set_light_level(unsigned long level);
+  static void set_light_level(int led, unsigned long level);
   static void overheat_protection();
   
   static void update_number();
