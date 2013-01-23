@@ -96,12 +96,12 @@ void test_accelerometer(string file) {
     sprintf(vector_buffer, "\t    %4d %4d %4d", hb.vector(0)[0], hb.vector(0)[1], hb.vector(0)[2]);
     string vec0 = vector_buffer;
 
-    //sprintf(vector_buffer, "\t    %4d %4d %4d", hb.get_vector_drift()[0]/10, hb.get_vector_drift()[1]/10, hb.get_vector_drift()[2]/10);
-    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.get_vector_drift()[0], hb.get_vector_drift()[1], hb.get_vector_drift()[2]);
-    string drift = vector_buffer;
+    //sprintf(vector_buffer, "\t    %4d %4d %4d", hb.get_vector_jerk()[0]/10, hb.get_vector_jerk()[1]/10, hb.get_vector_jerk()[2]/10);
+    sprintf(vector_buffer, "\t    %4d %4d %4d", hb.get_vector_jerk()[0], hb.get_vector_jerk()[1], hb.get_vector_jerk()[2]);
+    string jerk = vector_buffer;
 
   
-    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<drift<<raw<<endl;
+    cout<<(int)hb.get_spin()<<"\t"<<(int)hb.magnitude(hb.vector(0))<<vec0<<jerk<<raw<<endl;
     //cout<<(int)hb.magnitude(hb.vector(0))<<endl;
     spinned += hb.get_spin();
     

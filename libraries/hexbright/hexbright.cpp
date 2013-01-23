@@ -617,7 +617,7 @@ void hexbright::read_button() {
 
 unsigned char tilt = 0;
 int bins[] = {0,0,0, 0,0,0, 0,0,0, 0,0,0};
-int vector_drift[] = {0,0,0};
+int vector_jerk[] = {0,0,0};
 unsigned int sample_counter[] = {0,0,0,0};  // number of samples the associated bin has
 int current_bin = 0;
 unsigned char num_bins = 4;
@@ -700,20 +700,20 @@ void hexbright::bin_vector() {
   int tmp_vector[3];
 
   // categorize read vector...
-  if(samples(0) == 1) { // changing or stable drift?
+  if(samples(0) == 1) { // changing or stable jerk?
     sub_vectors(tmp_vector, current_vector, last_vector);
     if(magnitude(tmp_vector)<20)
-      copy_vector(vector_drift, tmp_vector);
+      copy_vector(vector_jerk, tmp_vector);
   }
 
-  sub_vectors(tmp_vector, current_vector, vector_drift);
+  sub_vectors(tmp_vector, current_vector, vector_jerk);
   sub_vectors(tmp_vector, tmp_vector, last_vector);
   //print_vector(tmp_vector, "vsum");
 
   /*for(i=0; i<3; i++) {
     if((current_vector[i] == 145 && last_vector[i] == 145) || 
        (current_vector[i] == -140 && last_vector[i] == -140)) {
-      vector_drift[i] = 0;
+      vector_jerk[i] = 0;
     }
     }*/
   //print_vector(tmp_vector, "vsum");
@@ -727,7 +727,7 @@ void hexbright::bin_vector() {
     copy_vector(&bins[current_bin], current_vector);
     sample_counter[current_bin/3] = 1;
 
-    sub_vectors(vector_drift, current_vector, last_vector);
+    sub_vectors(vector_jerk, current_vector, last_vector);
   } else {
     sample_counter[current_bin/3]++;
     int significance = sample_counter[current_bin]<5 ? sample_counter[current_bin] : 4;
@@ -736,83 +736,55 @@ void hexbright::bin_vector() {
       bins[current_bin+i] = (bins[current_bin+i]*significance+current_vector[i])/(significance+1);
       //vectors[current_vector+i] = (vectors[current_vector+i]*3+current_vector[i])/4;
 
-      vector_drift[i] = (vector_drift[i]*2 + (current_vector[i] - last_vector[i]))/3;
+      vector_jerk[i] = (vector_jerk[i]*2 + (current_vector[i] - last_vector[i]))/3;
     }
   }
 }
 
 void hexbright::bin_vector2() {
   int i;
-  int tmp_vector[3];
+  int current_vector_jerk[3];
   BOOL changed = false;
-  static BOOL drifting = false;
+  static BOOL jerking = false;
 
+
+  sub_vectors(current_vector_jerk, current_vector, last_vector);
 
   // categorize read vector...
-  if(samples(0) == 1) { // changing or stable drift?
-    sub_vectors(tmp_vector, current_vector, last_vector);
-    if(magnitude(tmp_vector)<20) {
-      copy_vector(vector_drift, tmp_vector);
-      drifting = false;
+  if(samples(0) == 1) { // changing or stable jerk?
+    if(magnitude(current_vector_jerk)<20) {
+      copy_vector(vector_jerk, current_vector_jerk);
+      jerking = false;
+      Serial.println("not jerking");
+    } else {
+      jerking = true;
+      Serial.println("jerking");
+    }
+  } else { 
+    if(!jerking && magnitude(current_vector_jerk)>20) {
+      changed = true;
+      Serial.println(magnitude(current_vector_jerk));
+    }
+    if(jerking && 
+       (dot_product(vector_jerk, current_vector_jerk)*100) /
+       (magnitude(vector_jerk) * magnitude(current_vector_jerk)/100) < 80) {
+      Serial.println((dot_product(vector_jerk, current_vector_jerk)*100)/
+                     (magnitude(vector_jerk) * magnitude(current_vector_jerk)/100));
+      changed = true;
     }
   }
 
-  // get current vector drift
-  sub_vectors(tmp_vector, current_vector, last_vector);
-  /*Serial.print(magnitude(tmp_vector));
-  Serial.print("\t");
-  Serial.print(magnitude(vector_drift));
-  Serial.print("\t");
-  Serial.print(dot_product(vector_drift, tmp_vector));
-  Serial.print("\t");
-  Serial.println(dot_product(current_vector, last_vector));*/
-  //if((magnitude(tmp_vector) > 8 && magnitude(vector_drift) > 8) &&
-  /*  if(dot_product(tmp_vector, vector_drift)>20) {
-    
-      }*/
 
-
-  sub_vectors(tmp_vector, current_vector, vector_drift);
-  sub_vectors(tmp_vector, tmp_vector, last_vector);
-  //print_vector(tmp_vector, "vsum");
-
-  /*for(i=0; i<3; i++) {
-    if((current_vector[i] == 145 && last_vector[i] == 145) || 
-       (current_vector[i] == -140 && last_vector[i] == -140)) {
-      vector_drift[i] = 0;
-    }
-    }*/
-  //print_vector(tmp_vector, "vsum");
-
-  sub_vectors(tmp_vector, current_vector, last_vector);
-  if((drifting && magnitude(tmp_vector)<20) ||
-     (!drifting && magnitude(tmp_vector)>20)) {
-    //changed = true;
       
-
-  //Serial.println(magnitude(tmp_vector));
-  //if(dot_product(tmp_vector, vector_drift)>100) {
-  //if(magnitude(tmp_vector)>30) {
-    //print_vector(&bins[current_bin], "last bin");
-    //Serial.println(sample_counter[current_bin/3]);
+  if(changed) {
     // should we merge the bins, or leave them separate?
-    sub_vectors(tmp_vector, vector(0), vector(1));
+    //sub_vectors(tmp_vector, vector(0), vector(1));
   
-    Serial.println(magnitude(tmp_vector));
-    /*    if(magnitude(tmp_vector)<20) {
-      for(i=0; i<3; i++) {
-	vector(1)[i] = (vector(0)[i]+vector(1)[i])/2;
-      }
-      sample_counter[(current_bin/3+1)%num_bins] += samples(0);
-      print_vector(vector(1), "merged bin");
-    } else {
-      next_bin();
-      }*/
     next_bin();
     copy_vector(&bins[current_bin], current_vector);
     sample_counter[current_bin/3] = 1;
 
-    sub_vectors(vector_drift, current_vector, last_vector);
+    copy_vector(vector_jerk, current_vector_jerk);
   } else {
     sample_counter[current_bin/3]++;
     int significance = sample_counter[current_bin]<10 ? sample_counter[current_bin] : 10;
@@ -820,10 +792,7 @@ void hexbright::bin_vector2() {
       // basic low-pass filter
       bins[current_bin+i] = (bins[current_bin+i]*significance+current_vector[i])/(significance+1);
       //vectors[current_vector+i] = (vectors[current_vector+i]*3+current_vector[i])/4;
-
-
-      sub_vectors(vector_drift, current_vector, last_vector);
-      //vector_drift[i] = (vector_drift[i]*2 + (current_vector[i] - last_vector[i]))/3;
+      vector_jerk[i] = (vector_jerk[i]*2 + current_vector_jerk[i])/3;
     }
   }
 }
@@ -960,8 +929,8 @@ unsigned int hexbright::samples(unsigned char back) {
   return sample_counter[(current_bin/3+back)%num_bins];
 }
 
-int* hexbright::get_vector_drift() {
-  return vector_drift;
+int* hexbright::get_vector_jerk() {
+  return vector_jerk;
 }
 
 int* hexbright::down() {
