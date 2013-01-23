@@ -991,11 +991,11 @@ void hexbright::print_number(long number) {
   }
   _color = GLED;
   _number=1; // to guarantee printing when dealing with trailing zeros (100 can't be stored as 001, use 1001)
-  while(number>0) {
+  do {
     _number = _number * 10 + (number%10);
     number = number/10;
     _color = flip_color(_color);
-  }
+  }  while(number>0);
   if(negative) {
     set_led(flip_color(_color), 500);
     print_wait_time = 600/update_delay;
