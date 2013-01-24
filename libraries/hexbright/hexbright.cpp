@@ -126,6 +126,11 @@ void hexbright::update() {
   continue_time = continue_time+(1000*update_delay);
   unsigned long now;
 
+#if (DEBUG==DEBUG_LOOP)
+  unsigned long start_time=micros();
+#endif
+
+
 #ifdef STROBE  
   while (true) {
     do {
@@ -158,25 +163,25 @@ void hexbright::update() {
   // if we're in debug mode, let us know if our loops are too large
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   static int i=0;
-  static float avg_loop_time = 0;
-  static float last_time = 0;
-  avg_loop_time = (avg_loop_time*29 + continue_time-last_time)/30;
 #if (DEBUG==DEBUG_LOOP)
+  static unsigned long last_time = 0;
   if(!i) {
-    Serial.print("Average loop time: ");
-    Serial.println(avg_loop_time/1000);
+    Serial.print("Time used: ");
+    Serial.print(start_time-last_time);
+    Serial.println("/8333");
   }
+  last_time = now;
 #endif
-  if(avg_loop_time/1000>update_delay+1 && !i) {
-    // This may be caused by too much processing for our update_delay, or by too many print statements (each one takes a few ms)
-    Serial.print("WARNING: loop time: ");
-    Serial.println(avg_loop_time/1000);
+  if(((float)continue_time)-now<-5000 && !i) {
+    // This may be caused by too much processing for our update_delay, or by too many print statements)
+    //  If you're triggering this, your button and light will react more slowly, and some accelerometer
+    //  data is being missed.
+    Serial.println("WARNING: code is too slow");
   }
   if (!i)
     i=1000/update_delay; // display loop output every second
   else
     i--;
-  last_time = continue_time;
 #endif
   
   

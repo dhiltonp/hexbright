@@ -73,7 +73,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_PRINT 1 // initialize printing only
 #define DEBUG_ON 2 // initialize printing, print if certain things are obviously wrong
-#define DEBUG_LOOP 3 // main loop
+#define DEBUG_LOOP 3 // tells you how long your code is taking to execute (
 #define DEBUG_LIGHT 4 // Light control
 #define DEBUG_TEMP 5  // temperature safety
 #define DEBUG_BUTTON 6 // button presses - you may experience some flickering LEDs if enabled
