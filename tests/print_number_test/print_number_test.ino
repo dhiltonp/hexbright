@@ -37,14 +37,15 @@ void setup() {
   hb.init_hardware();
 }
 
-int numbers[] = {-101, -1, 3, 23, 100, 1000000};
+#define COUNT 7
+long numbers[COUNT] = {-101, -1, 0, 3, 23, 100, 1000000};
 int number = 0;
 
 void loop() {
   hb.update();
   if(!hb.printing_number()) {
     hb.print_number(numbers[number]);
-    number = (number+1)%5;
+    number = (number+1)%COUNT;
   }
 }
 
