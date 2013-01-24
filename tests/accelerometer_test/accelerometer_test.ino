@@ -11,6 +11,7 @@ void loop() {
   char tmp[10];
   hb.update();
   if(hb.samples(0)==1) {
+    hb.set_light(150,0, 20);
     sprintf(tmp, "%d", hb.samples(1));
     hb.print_vector(hb.vector(1), tmp);
   }

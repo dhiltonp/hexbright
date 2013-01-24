@@ -409,7 +409,9 @@ class hexbright {
   
   // runs the binning algorithm
   static void bin_vector();
-  static void bin_vector2();
+  // tries to classify acceleration vectors as stable or as jerking (changing acceleration),
+  //  which are binned together.  Jerk_threshold defines our sensitivity to changes in direction
+  static void bin_vector2(int jerk_threshold = 20);
 
   
 #ifndef __AVR

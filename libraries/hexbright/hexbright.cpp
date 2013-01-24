@@ -741,7 +741,7 @@ void hexbright::bin_vector() {
   }
 }
 
-void hexbright::bin_vector2() {
+void hexbright::bin_vector2(int jerk_threshold) {
   int i;
   int current_vector_jerk[3];
   BOOL changed = false;
@@ -752,7 +752,7 @@ void hexbright::bin_vector2() {
 
   // categorize read vector...
   if(samples(0) == 1) { // changing or stable jerk?
-    if(magnitude(current_vector_jerk)<20) {
+    if(magnitude(current_vector_jerk)<jerk_threshold) {
       copy_vector(vector_jerk, current_vector_jerk);
       jerking = false;
       Serial.println("not jerking");
@@ -761,11 +761,13 @@ void hexbright::bin_vector2() {
       Serial.println("jerking");
     }
   } else { 
-    if(!jerking && magnitude(current_vector_jerk)>20) {
+    if(!jerking && magnitude(current_vector_jerk)>jerk_threshold) {
       changed = true;
       Serial.println(magnitude(current_vector_jerk));
     }
     if(jerking && 
+       // the following formula will return 100 for identical vectors,
+       //-100 for exactly opposite vectors, and -large number if one of the vectors is 0
        (dot_product(vector_jerk, current_vector_jerk)*100) /
        (magnitude(vector_jerk) * magnitude(current_vector_jerk)/100) < 80) {
       Serial.println((dot_product(vector_jerk, current_vector_jerk)*100)/
@@ -777,7 +779,7 @@ void hexbright::bin_vector2() {
 
       
   if(changed) {
-    // should we merge the bins, or leave them separate?
+    // should we merge similar bins, or leave them separate?
     //sub_vectors(tmp_vector, vector(0), vector(1));
   
     next_bin();
