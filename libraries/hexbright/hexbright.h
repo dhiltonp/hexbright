@@ -90,11 +90,6 @@ either expressed or implied, of the FreeBSD Project.
 #define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
 #endif
 
-// uncomment the following line if you have found your LOW_BATTERY value
-//#define DETECT_LOW_BATTERY
-// if the avr drops below 3.3 volts, we are in a low battery state.
-// this value is quite sensitive.
-#define LOW_BATTERY 3200
 
 ///////////////////////////////////
 // key points on the light scale //
@@ -265,6 +260,11 @@ class hexbright {
   // returns the raw avr voltage.  
   //  This is not equivalent to the battery voltage, and will only drop if the battery is very low.
   static int get_avr_voltage();
+  // returns true if we are in a low voltage state (unable to go to max brightness)
+  //  This triggers based on irregular power, which should only occurr if we're
+  //  out of juice (due to voltage regulation)
+  static BOOL low_voltage_state();
+
 
   
   // A convenience function that will print the charge state over the led specified
