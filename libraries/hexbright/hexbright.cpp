@@ -203,18 +203,14 @@ void hexbright::update() {
 #endif
   
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
-#ifdef DETECT_LOW_BATTERY
   read_avr_voltage();
-#endif
 
 #ifdef ACCELEROMETER
   read_accelerometer();
   find_down();
 #endif
   detect_overheating();
-#ifdef DETECT_LOW_BATTERY
   detect_low_battery();
-#endif
   apply_max_light_level();
   
   // change light levels as requested
@@ -1105,13 +1101,20 @@ int hexbright::get_avr_voltage() {
   return ((long)1023*1100) / avr_voltage;
 }
 
-void hexbright::detect_low_battery() {
+BOOL hexbright::low_voltage_state() {
   static BOOL low = false;
-  
-  if ((low || avr_voltage>((long)1023*1100/LOW_BATTERY)) &&
-      max_light_level>500) {
-    max_light_level = 500;
+  static int highest_voltage = 0;
+  if(avr_voltage>highest_voltage) {
+    highest_voltage = avr_voltage;
+  } else if (avr_voltage < highest_voltage-3) {
     low = true;
+  }
+  return low;
+}
+
+void hexbright::detect_low_battery() {
+  if (low_voltage_state() == true && max_light_level>500) {
+    max_light_level = 500;
   }
 }
 
