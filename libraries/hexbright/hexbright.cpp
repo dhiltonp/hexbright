@@ -203,11 +203,19 @@ void hexbright::update() {
 #endif
   
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
+#ifdef DETECT_LOW_BATTERY
+  read_avr_voltage();
+#endif
+
 #ifdef ACCELEROMETER
   read_accelerometer();
   find_down();
 #endif
-  overheat_protection();
+  detect_overheating();
+#ifdef DETECT_LOW_BATTERY
+  detect_low_battery();
+#endif
+  apply_max_light_level();
   
   // change light levels as requested
   adjust_light();
@@ -286,7 +294,7 @@ int end_light_level = 0;
 int change_duration = 0;
 int change_done  = 0;
 
-int safe_light_level = MAX_LEVEL;
+int max_light_level = MAX_LEVEL;
 
 
 void hexbright::set_light(int start_level, int end_level, long time) {
@@ -323,11 +331,11 @@ int hexbright::get_light_level() {
     return (end_light_level-start_light_level)*((float)change_done/change_duration) +start_light_level;
 }
 
-int hexbright::get_safe_light_level() {
+int hexbright::get_max_light_level() {
   int light_level = get_light_level();
   
-  if(light_level>safe_light_level)
-    return safe_light_level;
+  if(light_level>max_light_level)
+    return max_light_level;
   return light_level;
 }
 
@@ -372,52 +380,21 @@ void hexbright::set_light_level(unsigned long level) {
 void hexbright::adjust_light() {
   // sets actual light level, altering value to be perceptually linear, based on steven's area brightness (cube root)
   if(change_done<=change_duration) {
-    int light_level = hexbright::get_safe_light_level();
+    int light_level = hexbright::get_max_light_level();
     set_light_level(light_level);
     
     change_done++;
   }
 }
 
-// If the starting temp is much higher than max_temp, it may be a long time before you can turn the light on.
-// this should only happen if: your ambient temperature is higher than max_temp, or you adjust max_temp while it's still hot.
-// Here's an example: ambient temperature is >
-void hexbright::overheat_protection() {
-  int temperature = get_thermal_sensor();
-  
-  safe_light_level = safe_light_level+(OVERHEAT_TEMPERATURE-temperature);
-  // min, max levels...
-  safe_light_level = safe_light_level > MAX_LEVEL ? MAX_LEVEL : safe_light_level;
-  safe_light_level = safe_light_level < MIN_OVERHEAT_LEVEL ? MIN_OVERHEAT_LEVEL : safe_light_level;
-#if (DEBUG==DEBUG_TEMP)
-  static float printed_temperature = 0;
-  static float average_temperature = -1;
-  if(average_temperature < 0) {
-    average_temperature = temperature;
-    Serial.println("Have you calibrated your thermometer?");
-    Serial.println("Instructions are in get_celsius.");
-  }
-  average_temperature = (average_temperature*4+temperature)/5;
-  if (abs(printed_temperature-average_temperature)>1) {
-    printed_temperature = average_temperature;
-    Serial.print(millis());
-    Serial.print(" ms, average reading: ");
-    Serial.print(printed_temperature);
-    Serial.print(" (celsius: ");
-    Serial.print(get_celsius());
-    Serial.print(") (fahrenheit: ");
-    Serial.print(get_fahrenheit());
-    Serial.println(")");
-  }
-#endif
-  
-  // if safe_light_level has changed, guarantee a light adjustment:
+void hexbright::apply_max_light_level() {
+  // if max_light_level has changed, guarantee a light adjustment:
   // the second test guarantees that we won't turn on if we are
   //  overheating and just shut down
-  if(safe_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
+  if(max_light_level < MAX_LEVEL && get_light_level()>MIN_OVERHEAT_LEVEL) {
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
-    Serial.print("Estimated safe light level: ");
-    Serial.println(safe_light_level);
+    Serial.print("Max light level: ");
+    Serial.println(max_light_level);
 #endif
     change_done  = change_done < change_duration ? change_done : change_duration;
   }
@@ -1064,6 +1041,78 @@ int hexbright::get_fahrenheit() {
   // algebraic form of (get_celsius' formula)*18/10+32
   // I was lazy and pasted (x*((40.05-0)/(275-153)) - 50)*18/10+32 into wolfram alpha
   return .590902*thermal_sensor_value-58;
+}
+
+// If the ambient temperature is above your max temp, your light is going to be pretty dim...
+
+void hexbright::detect_overheating() {
+  int temperature = get_thermal_sensor();
+  
+  max_light_level = max_light_level+(OVERHEAT_TEMPERATURE-temperature);
+  // min, max levels...
+  max_light_level = max_light_level > MAX_LEVEL ? MAX_LEVEL : max_light_level;
+  max_light_level = max_light_level < MIN_OVERHEAT_LEVEL ? MIN_OVERHEAT_LEVEL : max_light_level;
+#if (DEBUG==DEBUG_TEMP)
+  static float printed_temperature = 0;
+  static float average_temperature = -1;
+  if(average_temperature < 0) {
+    average_temperature = temperature;
+    Serial.println("Have you calibrated your thermometer?");
+    Serial.println("Instructions are in get_celsius.");
+  }
+  average_temperature = (average_temperature*4+temperature)/5;
+  if (abs(printed_temperature-average_temperature)>1) {
+    printed_temperature = average_temperature;
+    Serial.print(millis());
+    Serial.print(" ms, average reading: ");
+    Serial.print(printed_temperature);
+    Serial.print(" (celsius: ");
+    Serial.print(get_celsius());
+    Serial.print(") (fahrenheit: ");
+    Serial.print(get_fahrenheit());
+    Serial.println(")");
+  }
+#endif
+}
+
+
+
+///////////////////////////////////////////////
+////////////////AVR VOLTAGE////////////////////
+///////////////////////////////////////////////
+
+int avr_voltage = 0;
+void hexbright::read_avr_voltage() {
+  // modified from here: http://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+   
+  delayMicroseconds(200); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Start analog to digital conversion
+  while (bit_is_set(ADCSRA,ADSC)); // measuring
+ 
+  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
+  uint8_t high = ADCH; // unlocks both
+ 
+  avr_voltage = (high<<8) | low;
+}
+
+int hexbright::get_avr_voltage() {
+  // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
+  // yes, we could put this formula once at the end of read_avr_voltage.
+  //  however, the compiler pre-calculates this value in detect_low_battery
+  //  because all variables are constants.  Unless get_avr_voltage is called
+  //  by the user code, this saves space.
+  return ((long)1023*1100) / avr_voltage;
+}
+
+void hexbright::detect_low_battery() {
+  static BOOL low = false;
+  
+  if ((low || avr_voltage>((long)1023*1100/LOW_BATTERY)) &&
+      max_light_level>500) {
+    max_light_level = 500;
+    low = true;
+  }
 }
 
 

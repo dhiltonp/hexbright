@@ -90,6 +90,11 @@ either expressed or implied, of the FreeBSD Project.
 #define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
 #endif
 
+// uncomment the following line if you have found your LOW_BATTERY value
+//#define DETECT_LOW_BATTERY
+// if the avr drops below 3.3 volts, we are in a low battery state.
+// this value is quite sensitive.
+#define LOW_BATTERY 3400
 
 ///////////////////////////////////
 // key points on the light scale //
@@ -171,7 +176,7 @@ class hexbright {
   // get light level (before overheat protection adjustment)
   static int get_light_level();
   // get light level (after overheat protection adjustment)
-  static int get_safe_light_level();
+  static int get_max_light_level();
   // return how long it will be until the light stops changing (in milliseconds).
   // this allows time to be used as a countdown of sorts, between setting lights:
   //  if(hb.light_change_remaining()==0)
@@ -256,6 +261,11 @@ class hexbright {
   // Get the degrees in fahrenheit. After calibrating your sensor, you'll need to
   //  modify this as well. Takes up 60 bytes
   static int get_fahrenheit();
+
+  // returns the raw avr voltage.  
+  //  This is not equivalent to the battery voltage, and will only drop if the battery is very low.
+  static int get_avr_voltage();
+
   
   // A convenience function that will print the charge state over the led specified
   //  CHARGING = 350 ms on, 350 ms off.
@@ -423,7 +433,9 @@ class hexbright {
  private:
   static void adjust_light();
   static void set_light_level(unsigned long level);
-  static void overheat_protection();
+  static void apply_max_light_level();
+  static void detect_overheating();
+  static void detect_low_battery();
   
   static void update_number();
   
@@ -435,6 +447,7 @@ class hexbright {
   static void adjust_leds();
   
   static void read_thermal_sensor();
+  static void read_avr_voltage();
 
   static void read_button();
   
