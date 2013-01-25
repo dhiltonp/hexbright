@@ -498,7 +498,7 @@ inline void hexbright::adjust_leds() {
   }
 #endif
   int i=0;
-  for(int i=0; i<2; i++) {
+  for(i=0; i<2; i++) {
     if(led_on_time[i]>0) {
       _led_on(i);
       led_on_time[i]--;
