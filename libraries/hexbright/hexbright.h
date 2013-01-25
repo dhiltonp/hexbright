@@ -94,7 +94,7 @@ either expressed or implied, of the FreeBSD Project.
 //#define DETECT_LOW_BATTERY
 // if the avr drops below 3.3 volts, we are in a low battery state.
 // this value is quite sensitive.
-#define LOW_BATTERY 3400
+#define LOW_BATTERY 3200
 
 ///////////////////////////////////
 // key points on the light scale //
