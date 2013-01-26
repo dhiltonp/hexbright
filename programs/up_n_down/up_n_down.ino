@@ -21,7 +21,7 @@ static const int short_click = 350; // maximum time for a "short" click
 
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const int nightlight_red_brightness = 255; // brightness of red led for nightlight
-static const int nightlight_sensitivity = 20; // measured in 100's of a G.
+static const int nightlight_sensitivity = 15; // measured in 100's of a G.
 
 // State
 static bool glow_mode = false;
@@ -83,7 +83,7 @@ void loop() {
     // click counting
     if(hb.button_just_released()) {
       glow_mode_set = false;
-      if(hb.button_pressed_time()<=9) {
+      if(hb.button_pressed_time()<=8) {
 	// ignore, could be a bounce
 	Serial.println("Bounce!");
       } else if(hb.button_pressed_time() <= short_click) {
