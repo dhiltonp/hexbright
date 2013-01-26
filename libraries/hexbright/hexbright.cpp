@@ -172,7 +172,7 @@ void hexbright::update() {
   }
   last_time = now;
 #endif
-  if(((float)continue_time)-now<-5000 && !i) {
+  if(now-continue_time>5000 && !i) {
     // This may be caused by too much processing for our update_delay, or by too many print statements)
     //  If you're triggering this, your button and light will react more slowly, and some accelerometer
     //  data is being missed.
