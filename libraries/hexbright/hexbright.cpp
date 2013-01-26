@@ -50,7 +50,7 @@ either expressed or implied, of the FreeBSD Project.
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
 
-const unsigned int update_delay = 8333; // in microseconds lock-step with the accelerometer
+const float update_delay = 8.3333333; // in lock-step with the accelerometer
 unsigned long continue_time;
 
 #ifdef STROBE
@@ -94,12 +94,12 @@ void hexbright::init_hardware() {
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   if(DEBUG==DEBUG_LIGHT) {
     // do a full light range sweep, (printing all light intensity info)
-    set_light(0,1000,update_delay);
+    set_light(0,1000,update_delay*1002);
   } else if (DEBUG==DEBUG_TEMP) {
     set_light(0, MAX_LEVEL, NOW);
   } else if (DEBUG==DEBUG_LOOP) {
-    // note the use of TIME_US/update_delay.
-    set_light(0, MAX_LEVEL, 2500000/update_delay);
+    // note the use of TIME_MS/update_delay.
+    set_light(0, MAX_LEVEL, 2500/update_delay);
   }
   
 #ifdef FREE_RAM
@@ -123,7 +123,7 @@ void hexbright::init_hardware() {
 
 void hexbright::update() {
   // advance time at the same rate as values are changed in the accelerometer.
-  continue_time = continue_time+update_delay;
+  continue_time = continue_time+(1000*update_delay);
   unsigned long now;
 
 #if (DEBUG==DEBUG_LOOP)
@@ -179,7 +179,7 @@ void hexbright::update() {
     Serial.println("WARNING: code is too slow");
   }
   if (!i)
-    i=1000000/update_delay; // display loop output every second
+    i=1000/update_delay; // display loop output every second
   else
     i--;
 #endif
@@ -308,7 +308,7 @@ void hexbright::set_light(int start_level, int end_level, long time) {
     end_light_level = end_level;
   }
   
-  change_duration = 1000L*time/update_delay;
+  change_duration = ((float)time)/update_delay;
   change_done = 0;
 #if (DEBUG==DEBUG_LIGHT)
   Serial.print("Light adjust requested, start level: ");
@@ -338,10 +338,10 @@ int hexbright::get_max_light_level() {
 int hexbright::light_change_remaining() {
   // change_done ends up at -1, add one to counter
   //  return (change_duration-change_done+1)*update_delay;
-  long tmp = change_duration-change_done;
+  int tmp = change_duration-change_done;
   if(tmp<=0)
     return 0;
-  return tmp*update_delay/1000;
+  return tmp*update_delay;
 }
 
 
@@ -440,8 +440,8 @@ void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned 
 #if (DEBUG==DEBUG_LED)
   Serial.println("activate led");
 #endif
-  led_on_time[led] = 1000L*on_time/update_delay;
-  led_wait_time[led] = 1000L*wait_time/update_delay;
+  led_on_time[led] = on_time/update_delay;
+  led_wait_time[led] = wait_time/update_delay;
   led_brightness[led] = brightness;
 }
 
@@ -480,17 +480,17 @@ inline void hexbright::adjust_leds() {
 #if (DEBUG==DEBUG_LED)
   if(led_on_time[GLED]>=0) {
     Serial.print("green on countdown: ");
-    Serial.println(led_on_time[GLED]*update_delay/1000);
+    Serial.println(led_on_time[GLED]*update_delay);
   } else if (led_on_time[GLED]<0 && led_wait_time[GLED]>=0) {
     Serial.print("green wait countdown: ");
-    Serial.println((led_wait_time[GLED])*update_delay/1000);
+    Serial.println((led_wait_time[GLED])*update_delay);
   }
   if(led_on_time[RLED]>=0) {
     Serial.print("red on countdown: ");
-    Serial.println(led_on_time[RLED]*update_delay/1000);
+    Serial.println(led_on_time[RLED]*update_delay);
   } else if (led_on_time[RLED]<0 && led_wait_time[RLED]>=0) {
     Serial.print("red wait countdown: ");
-    Serial.println((led_wait_time[RLED])*update_delay/1000);
+    Serial.println((led_wait_time[RLED])*update_delay);
   }
 #endif
   int i=0;
@@ -926,11 +926,11 @@ void hexbright::update_number() {
 #endif
     if(!print_wait_time) {
       if(_number==1) { // minimum delay between printing numbers
-        print_wait_time = 1000L*2500/update_delay;
+        print_wait_time = 2500/update_delay;
         _number = 0;
         return;
       } else {
-        print_wait_time = 1000L*300/update_delay;
+        print_wait_time = 300/update_delay;
       }
       if(_number/10*10==_number) {
 #if (DEBUG==DEBUG_NUMBER)
@@ -943,7 +943,7 @@ void hexbright::update_number() {
         _number--;
       }
       if(_number && !(_number%10)) { // next digit?
-        print_wait_time = 1000L*600/update_delay;
+        print_wait_time = 600/update_delay;
         _color = flip_color(_color);
         _number = _number/10;
       }
@@ -976,7 +976,7 @@ void hexbright::print_number(long number) {
   }  while(number>0);
   if(negative) {
     set_led(flip_color(_color), 500);
-    print_wait_time = 1000L*600/update_delay;
+    print_wait_time = 600/update_delay;
   }
 }
 
