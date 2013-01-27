@@ -1078,6 +1078,8 @@ void hexbright::detect_overheating() {
 ///////////////////////////////////////////////
 
 int avr_voltage = 0;
+int highest_avr_voltage = 0;
+
 void hexbright::read_avr_voltage() {
   // modified from here: http://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
@@ -1090,6 +1092,7 @@ void hexbright::read_avr_voltage() {
   uint8_t high = ADCH; // unlocks both
  
   avr_voltage = (high<<8) | low;
+  highest_avr_voltage = avr_voltage > highest_avr_voltage ? avr_voltage : highest_avr_voltage;
 }
 
 int hexbright::get_avr_voltage() {
@@ -1103,10 +1106,7 @@ int hexbright::get_avr_voltage() {
 
 BOOL hexbright::low_voltage_state() {
   static BOOL low = false;
-  static int highest_voltage = 0;
-  if(avr_voltage>highest_voltage) {
-    highest_voltage = avr_voltage;
-  } else if (avr_voltage < highest_voltage-3) {
+  if (avr_voltage <= highest_avr_voltage-4) {
     low = true;
   }
   return low;
