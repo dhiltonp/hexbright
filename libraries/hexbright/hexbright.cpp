@@ -1088,10 +1088,7 @@ void hexbright::read_avr_voltage() {
   ADCSRA |= _BV(ADSC); // Start analog to digital conversion
   while (bit_is_set(ADCSRA,ADSC)); // measuring
  
-  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
-  uint8_t high = ADCH; // unlocks both
- 
-  band_gap_reading = (high<<8) | low;
+  band_gap_reading = ADC;
   // lower band gap value (which is what we are reading), corresponds to a higher voltage.
   lowest_band_gap_reading = band_gap_reading < lowest_band_gap_reading ? band_gap_reading : lowest_band_gap_reading;
 }
