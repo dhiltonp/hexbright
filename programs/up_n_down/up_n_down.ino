@@ -16,29 +16,29 @@
 #define EEPROM_LAST_ON_MODE 0
 
  // Defaults
-static const int glow_mode_time = 5000;
+static const int glow_mode_time = 3000;
 static const int short_click = 350; // maximum time for a "short" click
 
-static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
-static const int nightlight_red_brightness = 255; // brightness of red led for nightlight
-static const int nightlight_sensitivity = 20; // measured in 100's of a G.
+static const int nightlight_timeout = 3000; // timeout before nightlight powers down after any movement
+static const unsigned char nightlight_red_brightness = 255; // brightness of red led for nightlight
+static const unsigned char nightlight_sensitivity = 15; // measured in 100's of a G.
 
 // State
-static bool glow_mode = false;
-static bool glow_mode_set = false;
+static boolean glow_mode = false;
+static boolean glow_mode_set = false;
 
-static int mode = MODE_OFF;
-static int new_mode = MODE_OFF;  
-static int click_count = 0;
-static int block_turning_off = false;
-static unsigned int submode_lockout=0;
+static char mode = MODE_OFF;
+static char new_mode = MODE_OFF;  
+static char click_count = 0;
+static boolean block_turning_off = false;
+static unsigned long submode_lockout=0;
 
 static unsigned long nightlight_move_time;
 
-static boolean blink_random = true;
-static int dazzle_odds = 4; // odds of being on are 1:N
-static int blink_frequency = 4;
-static int blink_count = 0;
+static boolean dazzle = false;
+static char dazzle_odds = 4; // odds of being on are 1:N
+static char blink_frequency = 70; // in ms
+static unsigned long blink_time = millis();
 
 
 hexbright hb;
@@ -60,20 +60,34 @@ void setup() {
 
 void loop() {
   const unsigned long time = millis();
-  double d;
   int i;
 
   hb.update();
 
   // Charging
 #ifdef PRINTING_NUMBER:
-  if(!hb.printing_number() && !glow_mode)
-    hb.print_charge(GLED);
+  if(!hb.printing_number()) {
+    if(!glow_mode) {
+      hb.print_charge(GLED);
+    }
+
+    if(hb.low_voltage_state())
+      if(hb.get_led_state(RLED)==LED_OFF) 
+	hb.set_led(RLED,500,2000);
+  }
 #else
-  if(!glow_mode)
+  if(!glow_mode) {
     hb.print_charge(GLED);
+  }
+
+  if(hb.low_voltage_state())
+    if(hb.get_led_state(RLED)==LED_OFF) 
+      hb.set_led(RLED,500,2000);
 #endif
-  // Check for mode and do in-mode activities
+
+  
+ 
+ // Check for mode and do in-mode activities
   switch(mode) {
   case MODE_OFF:
     // glow mode
@@ -83,7 +97,7 @@ void loop() {
     // click counting
     if(hb.button_just_released()) {
       glow_mode_set = false;
-      if(hb.button_pressed_time()<=9) {
+      if(hb.button_pressed_time()<=7) {
 	// ignore, could be a bounce
 	Serial.println("Bounce!");
       } else if(hb.button_pressed_time() <= short_click) {
@@ -101,26 +115,38 @@ void loop() {
       click_count=0;
     }
     
-    // toggle glow mode
-    if(hb.button_pressed() && hb.button_pressed_time() >= glow_mode_time && !glow_mode_set) {
-      glow_mode = !glow_mode;
-      glow_mode_set = true;
-      if(glow_mode)
-	Serial.println("Glow mode");
-      else
-	Serial.println("Glow mode off");	
+    // holding the button
+    if(hb.button_pressed()) {
+      if(!glow_mode_set) {
+	double d = hb.difference_from_down();
+	if(hb.button_pressed_time() >= glow_mode_time && d <= 0.1) {
+	  glow_mode = !glow_mode;
+	  glow_mode_set = true;
+	  if(glow_mode)
+	    Serial.println("Glow mode");
+	  else
+	    Serial.println("Glow mode off");	
+	} else if(hb.button_pressed_time() > short_click && d > 0.10) {
+	  if(blink_time+blink_frequency < time) { 
+	    blink_time = time; 
+	    hb.set_light(MAX_LEVEL, 0, 20); 
+	  }
+	}
+      }
     }
     break;
   case MODE_LEVEL:
     if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
-      d = hb.difference_from_down();
+      double d = hb.difference_from_down();
       if(d>=0.01 && d<=1.0) {
-	hb.set_light(CURRENT_LEVEL, (int)(d * 1000.0), NOW);
+	i = (int)(d * 2000.0);
+	hb.set_light(CURRENT_LEVEL, i>1000?1000:i, 20);
 	block_turning_off = true;
       }
     }
     break;
   case MODE_NIGHTLIGHT:
+    hb.set_led(RLED, 100, 0, nightlight_red_brightness);
     if(hb.moved(nightlight_sensitivity)) {
       nightlight_move_time = time;
       hb.set_light(CURRENT_LEVEL, 1000, 1000);
@@ -129,15 +155,14 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
     }
     break;
   case MODE_BLINK:
     if(hb.button_pressed()) {
 	if( hb.button_pressed_time()>short_click) {
-	  d = hb.difference_from_down();
+	  double d = hb.difference_from_down();
 	  if(d>=0 && d<=0.99) {
-	    if(blink_random) {
+	    if(dazzle) {
 	      int new_odds = (int)(d*10.0)+2;
 	      if(new_odds != dazzle_odds) {
 		dazzle_odds = new_odds;
@@ -146,38 +171,28 @@ void loop() {
 		submode_lockout = time + short_click;
 	      }
 	    } else {
-	      int new_freq = (int)(d*100.0)-4;
-	      if(new_freq<=0)
-		new_freq=1;
-	      if(new_freq != blink_frequency) {
-		blink_frequency = new_freq;
-		Serial.print("Blink Freq: "); Serial.println(blink_frequency);
-		block_turning_off = true;
-		submode_lockout = time + short_click;
-	      }
+	      blink_frequency = (d*100.0)+20;
+	      Serial.print("Blink Freq: "); Serial.println(blink_frequency);
+	      block_turning_off = true;
+	      submode_lockout = time + short_click;
 	    }
 	  }
 	}
       } else {
 	if(hb.tapped() and time > submode_lockout) {
 	  Serial.println("Tapped");
-	  blink_random = !blink_random;
+	  dazzle = !dazzle;
 	  submode_lockout = time + short_click;
 	}
       }
-      if(blink_random) {
+      if(dazzle) {
 	if(random(dazzle_odds)<1)
-	  hb.set_light(CURRENT_LEVEL, 1000, NOW);
-	else
-	  hb.set_light(CURRENT_LEVEL, 0, NOW);      
+	  hb.set_light(MAX_LEVEL, 0, 20);
       } else {
-	if(blink_count>=blink_frequency) {
-	  i = hb.get_light_level()==0 ? 1000 : 0;
-	  hb.set_light(CURRENT_LEVEL, i, NOW);
-	  blink_count=0;
-	} else {
-	  blink_count++;
-	}
+	  if(blink_time+blink_frequency < time) { 
+	    blink_time = time;
+	    hb.set_light(MAX_LEVEL, 0, 20); 
+	  }
       }
       break;
   }  
@@ -192,6 +207,7 @@ void loop() {
 
   // Do the actual mode change
   if(new_mode!=mode) {
+    double d;
     // we're changing mode
     switch(new_mode) {
     case MODE_OFF:
@@ -203,12 +219,12 @@ void loop() {
     case MODE_LEVEL:
       Serial.println("Mode = level");
       d = hb.difference_from_down();
-      i = 1000;
+      i = MAX_LEVEL;
       if(d <= 0.40) {
 	if(d <= 0.10)
 	  i = 1;
 	else
-	  i = 500;
+	  i = MAX_LOW_LEVEL;
       }
       hb.set_light(CURRENT_LEVEL, i, NOW); 
       break;
@@ -218,11 +234,11 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 100, 0, nightlight_red_brightness);
+	hb.set_led(RLED, 1000, 0, nightlight_red_brightness);
       break;
     case MODE_BLINK:
       Serial.println("Mode = blink");
-      hb.set_light(CURRENT_LEVEL, 1000, NOW);
+      hb.set_light(MAX_LEVEL, 0, 20);
       break;
     }
     mode=new_mode;
