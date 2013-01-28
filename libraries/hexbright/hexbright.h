@@ -261,7 +261,7 @@ class hexbright {
   //  This is not equivalent to the battery voltage, and will only drop if the battery is very low.
   static int get_avr_voltage();
   // returns true if we are in a low voltage state (unable to go to max brightness)
-  //  This triggers based on irregular power, which should only occurr if we're
+  //  This triggers based on irregular power, which should only occur if we're
   //  out of juice (due to voltage regulation)
   static BOOL low_voltage_state();
 
