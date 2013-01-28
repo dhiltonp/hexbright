@@ -258,7 +258,8 @@ class hexbright {
   static int get_fahrenheit();
 
   // returns the raw avr voltage.  
-  //  This is not equivalent to the battery voltage, and will only drop if the battery is very low.
+  //  This is not equivalent to the battery voltage, and should be stable unless the 
+  //  battery is very low or the voltage regulator is having problems.
   static int get_avr_voltage();
   // returns true if we are in a low voltage state (unable to go to max brightness)
   //  This triggers based on irregular power, which should only occur if we're
