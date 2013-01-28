@@ -285,7 +285,6 @@ int safe_light_level = MAX_LEVEL;
 
 
 void hexbright::set_light(int led, int start_level, int end_level, long time) {
-  // duration ranges from 1-MAXINT
   // light_level can be from 0-1000
   int current_level = get_light_level(led);
   if(start_level == CURRENT_LEVEL) {
@@ -444,6 +443,7 @@ void hexbright::set_strobe_duration(int duration) {
 }
 
 void hexbright::set_strobe_fpm(unsigned int fpm) {
+  // 60,000,000 microseconds
   set_strobe_delay(60000000/fpm);
 }
 
@@ -480,7 +480,6 @@ void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned 
 
 
 unsigned char hexbright::get_led_state(unsigned char led) {
-  //returns true if the LED is on
   if(led_on_time[led]>=0) {
     return LED_ON;
   } else if(led_wait_time[led]>0) {
