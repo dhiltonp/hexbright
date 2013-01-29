@@ -264,6 +264,7 @@ class hexbright {
   // returns true if we are in a low voltage state (unable to go to max brightness)
   //  This triggers based on irregular power, which should only occur if we're
   //  out of juice (due to voltage regulation)
+  //  This may be useful if you want your light to flash when running low on power
   static BOOL low_voltage_state();
 
 
