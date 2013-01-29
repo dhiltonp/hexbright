@@ -73,7 +73,6 @@ void loop() {
 
   //// Actions over time for a given mode
   if(mode == BLINKY_MODE) { // just blink
-    Serial.println("blinking?");
     static int i = 0;
     if(!i) {
       hb.set_light(MAX_LOW_LEVEL,0,30); // fade from 500 to 0 over 30 milliseconds
