@@ -1078,7 +1078,7 @@ void hexbright::detect_overheating() {
 ///////////////////////////////////////////////
 
 int band_gap_reading = 0;
-int lowest_band_gap_reading = 0;
+int lowest_band_gap_reading = 1000;
 
 void hexbright::read_avr_voltage() {
   // modified from here: http://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
