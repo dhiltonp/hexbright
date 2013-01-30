@@ -6,13 +6,13 @@ This is the easiest way to get started with programming your hexbright.
 Key Features
 ------------
 
-*   Automatic overheat protection (globally adjustable in hexbright.h OVERHEAT_TEMPERATURE)
+*   Automatic overheat protection (adjustable in [hexbright.h OVERHEAT_TEMPERATURE](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L90))
 
 *   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn)
 
 *   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
 
-*   Multiple debug modes to help diagnose problems (see DEBUG in hexbright.h)
+*   Multiple debug modes to help diagnose problems ([DEBUG in hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71))
 
 
 Video Instructions
@@ -56,19 +56,19 @@ Text Instructions
 Overview
 -----------------
 
-*   'temperature_calibration' is one of the simplest programs you could write.
+*   ['temperature_calibration'](https://github.com/dhiltonp/hexbright/tree/master/programs/temperature_calibration) is one of the simplest programs you could write.
 
-*   'functional' is a basic example of how a program might have multiple modes.
+*   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
 
-*   'down_light' contains an example of using the accelerometer.
+*   ['down_light'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) contains an example of using the accelerometer.
 
-*   libraries/hexbright/hexbright.h has a list of all available methods in the api, and is fairly well commented.
+*   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
 
 
 I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
 
 ---
 
-Be aware that this library is a work in progress.  In particular, the accelerometer api will change, and it is not yet optimized.
+Be aware that this library is a work in progress.  In particular, the accelerometer api will change, and power consumption has not been optimized.
 
 Enjoy!
