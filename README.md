@@ -41,6 +41,18 @@ Text instructions
 
 9.  Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open a program).  Click on it, go to 'programs', and select a program.
 
+Key Features
+------------
+
+*   Automatic overheat protection (globally adjustable in hexbright.h OVERHEAT_TEMPERATURE)
+
+*   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn)
+
+*   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
+
+*   Multiple debug modes to help diagnose problems (see DEBUG in hexbright.h)
+
+
 Overview
 -----------------
 
@@ -57,6 +69,6 @@ I have translated most of the original sample programs to the library here: http
 
 ---
 
-Be aware that this library is a work in progress.  In particular, the accelerometer api may change, and it is not yet optimized.
+Be aware that this library is a work in progress.  In particular, the accelerometer api will change, and it is not yet optimized.
 
 Enjoy!
