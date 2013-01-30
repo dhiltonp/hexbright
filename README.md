@@ -3,6 +3,18 @@ hexbright
 
 This is the easiest way to get started with programming your hexbright.
 
+Key Features
+------------
+
+*   Automatic overheat protection (globally adjustable in hexbright.h OVERHEAT_TEMPERATURE)
+
+*   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn)
+
+*   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
+
+*   Multiple debug modes to help diagnose problems (see DEBUG in hexbright.h)
+
+
 Video Instructions
 ------------------
 
@@ -12,7 +24,7 @@ Video Instructions
 
 [Writing a program](http://www.youtube.com/watch?v=Q7eRACjCixE).
 
-Text instructions
+Text Instructions
 -----------------
 
 1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).  Most linux kernels come with the driver pre-built.
@@ -40,18 +52,6 @@ Text instructions
 8.  Now plug in your hexbright and go to 'Tools'->'Serial Port'.  Select the new option.  (On linux, there may be a delay of over a minute before the device appears.)
 
 9.  Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open a program).  Click on it, go to 'programs', and select a program.
-
-Key Features
-------------
-
-*   Automatic overheat protection (globally adjustable in hexbright.h OVERHEAT_TEMPERATURE)
-
-*   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn)
-
-*   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
-
-*   Multiple debug modes to help diagnose problems (see DEBUG in hexbright.h)
-
 
 Overview
 -----------------
