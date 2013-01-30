@@ -38,7 +38,7 @@ either expressed or implied, of the FreeBSD Project.
 
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
- //#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
+#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 #define FLASH_CHECKSUM // comment out to save 56 bytes when in debug mode
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
@@ -258,11 +258,13 @@ class hexbright {
   static int get_fahrenheit();
 
   // returns the raw avr voltage.  
-  //  This is not equivalent to the battery voltage, and will only drop if the battery is very low.
+  //  This is not equivalent to the battery voltage, and should be stable unless the 
+  //  battery is very low or the voltage regulator is having problems.
   static int get_avr_voltage();
   // returns true if we are in a low voltage state (unable to go to max brightness)
-  //  This triggers based on irregular power, which should only occurr if we're
+  //  This triggers based on irregular power, which should only occur if we're
   //  out of juice (due to voltage regulation)
+  //  This may be useful if you want your light to flash when running low on power
   static BOOL low_voltage_state();
 
 
