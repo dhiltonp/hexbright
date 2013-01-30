@@ -10,10 +10,15 @@
 #define MODE_BLINK 2
 #define MODE_NIGHTLIGHT 3
 
+#define MAX_QUICKACCESS_MODE 1
+
+#define QUICKACCESS_BLINK 0
+#define QUICKACCESS_LIGHT 1
+
 #define MODE_LOCKED -1
 
-// EEPROM
-#define EEPROM_LAST_ON_MODE 0
+// EEPROM 
+#define EEPROM_QUICKACCESS_MODE 0
 
  // Defaults
 static const int glow_mode_time = 3000;
@@ -24,6 +29,8 @@ static const unsigned char nightlight_red_brightness = 255; // brightness of red
 static const unsigned char nightlight_sensitivity = 15; // measured in 100's of a G.
 
 // State
+static char quickaccess_mode;
+
 static boolean glow_mode = false;
 static boolean glow_mode_set = false;
 
@@ -40,7 +47,6 @@ static char dazzle_odds = 4; // odds of being on are 1:N
 static char blink_frequency = 70; // in ms
 static unsigned long blink_time = millis();
 
-
 hexbright hb;
 
 void setup() {
@@ -49,12 +55,12 @@ void setup() {
   hb = hexbright();
   hb.init_hardware();
 
-  /*
-  lastOnMode = EEPROM.read(EEPROM_LAST_ON_MODE);
-  if (lastOnMode < MODE_LOW || lastOnMode > MODE_HIGH) {
-    lastOnMode = MODE_MED;
-  }
-  */
+  // read current quickaccess mode from EEPROM
+  quickaccess_mode = EEPROM.read(EEPROM_QUICKACCESS_MODE);
+  if(quickaccess_mode<0 || quickaccess_mode>MAX_QUICKACCESS_MODE)
+    quickaccess_mode=QUICKACCESS_BLINK;
+
+  Serial.print("Quickaccess mode defaulted to: "); Serial.println(quickaccess_mode,DEC);
   Serial.println("Powered up!");
 } 
 
@@ -127,9 +133,23 @@ void loop() {
 	  else
 	    Serial.println("Glow mode off");	
 	} else if(hb.button_pressed_time() > short_click && d > 0.10) {
-	  if(blink_time+blink_frequency < time) { 
-	    blink_time = time; 
-	    hb.set_light(MAX_LEVEL, 0, 20); 
+	  // quickaccess mode
+	  if(hb.tapped() && time > submode_lockout) {
+	    quickaccess_mode = !quickaccess_mode;
+	    EEPROM.write(EEPROM_QUICKACCESS_MODE, quickaccess_mode);
+	    submode_lockout = time + short_click;
+	  }
+
+	  switch(quickaccess_mode) {
+	  case QUICKACCESS_BLINK:
+	    if(blink_time+blink_frequency < time) { 
+	      blink_time = time; 
+	      hb.set_light(MAX_LEVEL, 0, 20); 
+	    }
+	    break;
+	  case QUICKACCESS_LIGHT:
+	    hb.set_light(MAX_LEVEL, 0, 50); 
+	    break;
 	  }
 	}
       }
