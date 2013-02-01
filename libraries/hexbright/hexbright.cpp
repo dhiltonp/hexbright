@@ -358,12 +358,17 @@ void hexbright::set_light_level(unsigned long level) {
 #endif
   pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, HIGH);
-  if(level == 0) {
+  if(level == OFF_LEVEL) {
     // lowest possible power, but still running (DPIN_PWR still high)
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
-  }
-  else if(level<=500) {
+  } else if(level == SHUTDOWN_LEVEL) {
+    // shutdown (DPIN_PWR LOW)
+    pinModeFast(DPIN_PWR, OUTPUT);
+    digitalWriteFast(DPIN_PWR, LOW);
+    digitalWriteFast(DPIN_DRV_MODE, LOW);
+    analogWrite(DPIN_DRV_EN, 0);
+  } else if(level<=500) {
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
   } else {
@@ -1165,13 +1170,7 @@ void hexbright::print_charge(unsigned char led) {
 ///////////////////////////////////////////////
 
 void hexbright::shutdown() {
-  pinModeFast(DPIN_PWR, OUTPUT);
-  digitalWriteFast(DPIN_PWR, LOW);
-  digitalWriteFast(DPIN_DRV_MODE, LOW);
-  analogWrite(DPIN_DRV_EN, 0);
-  // make sure we don't try to turn back on
-  change_done = change_duration+1;
-  end_light_level = 0;
+  set_light(CURRENT_LEVEL, SHUTDOWN_LEVEL, NOW);
 }
 
 ///////////////////////////////////////////////

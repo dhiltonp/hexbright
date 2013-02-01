@@ -35,7 +35,7 @@ hexbright hb;
 #define HOLD_TIME 250 // milliseconds before going to strobe
 
 #define BRIGHTNESS_COUNT 4
-int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, 0};
+int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, SHUTDOWN_LEVEL};
 int current_brightness = BRIGHTNESS_COUNT-1; // start on the last mode (off)
 
 void setup() {
@@ -48,7 +48,7 @@ void loop() {
   if(hb.button_just_released() && hb.button_pressed_time()<HOLD_TIME) { 
     // if held for less than 200 ms before release, change regular modes
     current_brightness = (current_brightness+1)%BRIGHTNESS_COUNT;
-    set_light();
+    hb.set_light(CURRENT_LEVEL, brightness[current_brightness], 50);
   } else if (hb.button_pressed_time()>HOLD_TIME) {
     if(hb.button_pressed()) {
       // held for over HOLD_TIME ms, go to strobe
@@ -61,19 +61,9 @@ void loop() {
       }
     } else { // we have been doing strobe, but the light is now released
       // after strobe, go to previous light level:
-      set_light();
-      // or shutdown:
-      //current_brightness = 0;
-      //hb.shutdown();
+      hb.set_light(CURRENT_LEVEL, brightness[current_brightness], 50);
     }
   }
   hb.print_charge(GLED);
 }
 
-void set_light() {
-  if(brightness[current_brightness] == 0) {
-    hb.shutdown();
-  } else {
-    hb.set_light(CURRENT_LEVEL, brightness[current_brightness], 50);
-  }
-}
