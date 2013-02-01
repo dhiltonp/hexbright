@@ -27,7 +27,7 @@ void loop() {
     // turn off?
     if (hb.button_pressed_time()>200) {
       hb.set_strobe_delay(STROBE_OFF);
-      hb.shutdown();
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       mode = OFF_MODE;
       return;
     }

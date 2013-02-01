@@ -50,7 +50,7 @@ void loop() {
     hb.set_light(CURRENT_LEVEL, brightness_level, NOW);
     mode = SPIN_LEVEL_MODE; 
   } else if (hb.button_pressed_time()>300) {
-    hb.shutdown(); 
+    hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     mode = OFF_MODE; 
   }
   

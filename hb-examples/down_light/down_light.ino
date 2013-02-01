@@ -50,7 +50,7 @@ void loop() {
     mode = USE_MODE; 
   } else if (hb.button_pressed_time()>300) {
     mode = OFF_MODE; 
-    hb.shutdown();
+    hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
   }
    
    

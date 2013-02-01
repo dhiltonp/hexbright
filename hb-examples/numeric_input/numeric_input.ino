@@ -22,7 +22,7 @@ void loop() {
     hb.set_light(CURRENT_LEVEL, value<1 ? 1 : value, 300);
     value = 0;
   } else if (hb.button_just_pressed() && hb.button_released_time()<500) {
-    hb.shutdown();
+    hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     value = 0; 
   }
   hb.input_digit(value*10, value*10+10);

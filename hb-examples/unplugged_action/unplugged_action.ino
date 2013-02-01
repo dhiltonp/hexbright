@@ -24,7 +24,7 @@ void loop() {
     // turn off light
     hb.set_light(CURRENT_LEVEL,0,NOW);
     if(charge_state==BATTERY) { // battery power or real off?
-      hb.shutdown();
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       mode=OFF_MODE;
     } else { // plugged in, set CHARGE_MODE (pseudo off)
       mode=CHARGE_MODE;
@@ -43,7 +43,7 @@ void loop() {
   } else if (mode==AUTO_OFF_MODE) {
     auto_off_timer--;
     if(auto_off_timer==0) {
-      hb.shutdown();
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     }
   }
 }

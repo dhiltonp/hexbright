@@ -234,7 +234,7 @@ void loop() {
       Serial.println("Mode = off");
       hb.set_light(CURRENT_LEVEL, 0, NOW);
       if(!glow_mode)
-	hb.shutdown();
+	hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       break;
     case MODE_LEVEL:
       Serial.println("Mode = level");

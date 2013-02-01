@@ -363,7 +363,7 @@ void hexbright::set_light_level(unsigned long level) {
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
   } else if(level == OFF_LEVEL) {
-    // shutdown (DPIN_PWR LOW)
+    // power off (DPIN_PWR LOW)
     pinModeFast(DPIN_PWR, OUTPUT);
     digitalWriteFast(DPIN_PWR, LOW);
     digitalWriteFast(DPIN_DRV_MODE, LOW);

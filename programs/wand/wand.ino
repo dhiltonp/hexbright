@@ -22,8 +22,8 @@ void loop() {
     mode = WAND_MODE; 
   } else if (hb.button_pressed_time()>1000) {
     level = 0;
-    mode = OFF_MODE; 
-    hb.shutdown(); 
+    mode = OFF_MODE;
+    hb.set_light_level(CURRENT_LEVEL, OFF_LEVEL, NOW);
   }
   
   if(mode==WAND_MODE) {
