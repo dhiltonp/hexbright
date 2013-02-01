@@ -1170,6 +1170,9 @@ void hexbright::print_charge(unsigned char led) {
 ///////////////////////////////////////////////
 
 void hexbright::shutdown() {
+#if (DEBUG!=DEBUG_OFF)
+  Serial.println("don't use shutdown, use set_light(,SHUTDOWN_LEVEL,)");
+#endif
   set_light(CURRENT_LEVEL, SHUTDOWN_LEVEL, NOW);
 }
 
