@@ -96,8 +96,7 @@ either expressed or implied, of the FreeBSD Project.
 ///////////////////////////////////
 #define MAX_LEVEL 1000
 #define MAX_LOW_LEVEL 500
-#define OFF_LEVEL 0
-#define SHUTDOWN_LEVEL -1
+#define OFF_LEVEL -1
 #define CURRENT_LEVEL -2
 // We will not go below MIN_OVERHEAT_LEVEL even when overheating.  This
 //  should only matter when ambient temperature is extremely close to
@@ -146,7 +145,7 @@ class hexbright {
   // less than .5 seconds.
 
   // WARNING: deprecated, do not use
-  //   use set_light(,SHUTDOWN_LEVEL,);
+  //   use set_light(,OFF_LEVEL,);
   static void shutdown();
   
   
@@ -170,8 +169,8 @@ class hexbright {
   // go from start_level to end_level over time (in milliseconds)
   // level is from -2 to 1000.
   // -2 = CURRENT_LEVEL (whatever the light is currently at), can be used as start_level or end_level
-  // -1 = SHUTDOWN_LEVEL, no light, turn off (if on battery)
-  // 0 = OFF_LEVEL, no light 
+  // -1 = OFF_LEVEL, no light, turn off (if on battery power)
+  // 0 = no light
   // 500 = MAX_LOW_LEVEL, max low power mode
   // 1000 = MAX_LEVEL, max high power mode
   // max change time is about 4.5 minutes ((2^15-1)*8.333 milliseconds).

@@ -358,11 +358,11 @@ void hexbright::set_light_level(unsigned long level) {
 #endif
   pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, HIGH);
-  if(level == OFF_LEVEL) {
-    // lowest possible power, but still running (DPIN_PWR still high)
+  if(level == 0) {
+    // lowest possible power, but cpu still running (DPIN_PWR still high)
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
-  } else if(level == SHUTDOWN_LEVEL) {
+  } else if(level == OFF_LEVEL) {
     // shutdown (DPIN_PWR LOW)
     pinModeFast(DPIN_PWR, OUTPUT);
     digitalWriteFast(DPIN_PWR, LOW);
@@ -1171,9 +1171,9 @@ void hexbright::print_charge(unsigned char led) {
 
 void hexbright::shutdown() {
 #if (DEBUG!=DEBUG_OFF)
-  Serial.println("don't use shutdown, use set_light(,SHUTDOWN_LEVEL,)");
+  Serial.println("don't use shutdown, use set_light(,OFF_LEVEL,)");
 #endif
-  set_light(CURRENT_LEVEL, SHUTDOWN_LEVEL, NOW);
+  set_light(MAX_LOW_LEVEL, OFF_LEVEL, NOW);
 }
 
 ///////////////////////////////////////////////

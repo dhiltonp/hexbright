@@ -35,7 +35,7 @@ hexbright hb;
 #define HOLD_TIME 250 // milliseconds before going to strobe
 
 #define BRIGHTNESS_COUNT 4
-int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, SHUTDOWN_LEVEL};
+int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, OFF_LEVEL};
 int current_brightness = BRIGHTNESS_COUNT-1; // start on the last mode (off)
 
 void setup() {
