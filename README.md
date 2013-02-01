@@ -52,6 +52,11 @@ Text Instructions
 8.  Now plug in your hexbright and go to 'Tools'->'Serial Port'.  Select the new option.  (On linux, there may be a delay of over a minute before the device appears.)
 
 9.  Underneath the 'Sketch' and 'Tools' menu options, there is an up arrow (to open a program).  Click on it, go to 'programs', and select a program.
+    *  I recommend tactical as your first program, as it is very straightforward.
+    *  All firmwares in the programs directory have a readme describing their operation.  Arduino doesn't have an integrated method of viewing associated files, so you will need to open README.md in the corresponding folder for notes on operation.
+
+10. Under 'Edit', there is a right arrow.  Click it to upload the program.
+
 
 Overview
 -----------------
