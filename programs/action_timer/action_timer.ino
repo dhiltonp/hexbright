@@ -67,7 +67,7 @@ void loop() {
     // handle action_mode
     if(action_mode == OFF_MODE && hb.light_change_remaining() == 0 && hb.get_light_level() == 0 && !hb.button_pressed()) {
       // nothing's happening, turn off
-      hb.set_level(CURRENT_LEVEL, OFF_LEVEL, NOW);
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       // or print charge state if we're plugged in
       if(!hb.printing_number()) {
         hb.print_charge(GLED);
