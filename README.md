@@ -27,7 +27,8 @@ Video Instructions
 Text Instructions
 -----------------
 
-1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).  Most linux kernels come with the driver pre-built.
+1.  Download and install [arduino](http://arduino.cc/en/Main/Software) and the CP210x driver (Use a VCP Driver Kit from [here](http://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx)).
+    *   For linux: Most kernels come with the driver pre-built (it's been in the kernel since 2005 or so).  **However**, many repositories do not yet have arduino 1.0.1 or higher, which is (currently) required.  The tarballs available at arduino.cc are very easy to work with; I've been able to just extract the files and run arduino.  You will probably have to fiddle with user groups, which vary by distro.
 
 2.  Download this folder/repository using one of the following methods, accessible at the top of the [project page](https://github.com/dhiltonp/hexbright).
     1. Read-Only (no integrated sharing mechanism)
