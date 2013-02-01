@@ -919,14 +919,12 @@ void hexbright::reset_print_number() {
 
 void hexbright::update_number() {
   if(_number>0) { // we have something to do...
-#ifdef DEBUG
-    if(DEBUG==DEBUG_NUMBER) {
-      static int last_printed = 0;
-      if(last_printed != _number) {
-        last_printed = _number;
-        Serial.print("number remaining (read from right to left): ");
-        Serial.println(_number);
-      }
+#if (DEBUG==DEBUG_NUMBER)
+    static int last_printed = 0;
+    if(last_printed != _number) {
+      last_printed = _number;
+      Serial.print("number remaining (read from right to left): ");
+      Serial.println(_number);
     }
 #endif
     if(!print_wait_time) {
