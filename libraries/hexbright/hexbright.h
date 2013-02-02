@@ -457,6 +457,7 @@ class hexbright {
   static void adjust_leds();
   
   static void read_thermal_sensor();
+  static void read_charge_state();
   static void read_avr_voltage();
 
   static void read_button();

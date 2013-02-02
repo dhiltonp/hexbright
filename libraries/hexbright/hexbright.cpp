@@ -1085,17 +1085,6 @@ int band_gap_reading = 0;
 int lowest_band_gap_reading = 1000;
 
 void hexbright::read_avr_voltage() {
-  /*
-  // modified from here: http://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
-  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-   
-  delayMicroseconds(200); // Wait for Vref to settle
-  ADCSRA |= _BV(ADSC); // Start analog to digital conversion
-  while (bit_is_set(ADCSRA,ADSC)); // measuring
- 
-  // ADC register from source: http://www.sourcecodebrowser.com/avr-libc/1.8.0/iomx8_8h_source.html
-  //  it seems that this may be incompatible with assembly code; ADCW should work if that becomes an issue.
-  */
   band_gap_reading = read_adc(APIN_BAND_GAP);
   lowest_band_gap_reading = band_gap_reading < lowest_band_gap_reading ? band_gap_reading : lowest_band_gap_reading;
 }
