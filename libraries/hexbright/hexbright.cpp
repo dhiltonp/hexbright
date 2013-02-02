@@ -34,6 +34,7 @@ either expressed or implied, of the FreeBSD Project.
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
 #include "NotArduino.h"
 #else
+#include "pin_interface.h"
 #include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
@@ -45,7 +46,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DPIN_DRV_EN 10
 #define APIN_TEMP 0
 #define APIN_CHARGE 3
-
+#define APIN_BAND_GAP 14
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
@@ -1017,7 +1018,7 @@ void hexbright::read_thermal_sensor() {
   // read temperature setting
   // device data sheet: http://ww1.microchip.com/downloads/en/devicedoc/21942a.pdf
   
-  thermal_sensor_value = analogRead(APIN_TEMP);
+  thermal_sensor_value = read_adc(APIN_TEMP);
 }
 
 int hexbright::get_thermal_sensor() {
@@ -1045,7 +1046,7 @@ int hexbright::get_fahrenheit() {
 // If the ambient temperature is above your max temp, your light is going to be pretty dim...
 
 void hexbright::detect_overheating() {
-  int temperature = get_thermal_sensor();
+  unsigned int temperature = get_thermal_sensor();
   
   max_light_level = max_light_level+(OVERHEAT_TEMPERATURE-temperature);
   // min, max levels...
@@ -1084,6 +1085,7 @@ int band_gap_reading = 0;
 int lowest_band_gap_reading = 1000;
 
 void hexbright::read_avr_voltage() {
+  /*
   // modified from here: http://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
    
@@ -1093,7 +1095,8 @@ void hexbright::read_avr_voltage() {
  
   // ADC register from source: http://www.sourcecodebrowser.com/avr-libc/1.8.0/iomx8_8h_source.html
   //  it seems that this may be incompatible with assembly code; ADCW should work if that becomes an issue.
-  band_gap_reading = ADC;
+  */
+  band_gap_reading = read_adc(APIN_BAND_GAP);
   lowest_band_gap_reading = band_gap_reading < lowest_band_gap_reading ? band_gap_reading : lowest_band_gap_reading;
 }
 
@@ -1125,7 +1128,7 @@ void hexbright::detect_low_battery() {
 ///////////////////////////////////////////////
 
 unsigned char hexbright::get_charge_state() {
-  int charge_value = analogRead(APIN_CHARGE);
+  unsigned int charge_value = read_adc(APIN_CHARGE);
 #if (DEBUG==DEBUG_CHARGE)
   Serial.print("Current charge reading: ");
   Serial.println(charge_value);
