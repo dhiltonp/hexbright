@@ -37,8 +37,16 @@ void setup() {
   hb.init_hardware();
 }
 
+int brightness = 1000;
+
 void loop() {
   hb.update();
+
+  if(hb.button_just_released()) { 
+    brightness = brightness==0 ? 1000 : 0;
+    hb.set_light(CURRENT_LEVEL, brightness, 50);
+  }
+  
   if(!hb.printing_number()) {
     hb.print_number(hb.get_thermal_sensor());
 //    hb.print_number(hb.get_fahrenheit());
