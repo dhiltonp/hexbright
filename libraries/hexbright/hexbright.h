@@ -289,18 +289,11 @@ class hexbright {
   //  ...end of loop...
   static void print_charge(unsigned char led);
   // returns CHARGING, CHARGED, or BATTERY
-  // This reads the charge state twice with a small delay, then returns
-  //  the actual charge state.  BATTERY will never be returned if we are
-  //  plugged in.
-  // Use this if you take actions based on the charge state (example: you
-  //  turn on when you stop charging).  Takes up 56 bytes (34+22).
-  static unsigned char get_definite_charge_state();
-  // returns CHARGING, CHARGED, or BATTERY
   // This reads and returns the charge state, without any verification.
   //  As a result, it may report BATTERY when switching between CHARGED
   //  and CHARGING.
   // Use this if you don't care if the value is sometimes wrong (charging
-  //  notification).  Takes up 34 bytes.
+  //  notification).  Takes up 14 bytes.
   static unsigned char get_charge_state();
   
   

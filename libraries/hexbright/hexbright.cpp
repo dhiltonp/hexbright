@@ -204,6 +204,7 @@ void hexbright::update() {
 #endif
   
   read_thermal_sensor(); // takes about .2 ms to execute (fairly long, relative to the other steps)
+  read_charge_state();
   read_avr_voltage();
 
 #ifdef ACCELEROMETER
@@ -1116,33 +1117,35 @@ void hexbright::detect_low_battery() {
 //////////////////CHARGING/////////////////////
 ///////////////////////////////////////////////
 
-unsigned char hexbright::get_charge_state() {
+// we store the last two charge readings in charge_state, and due to the specific
+//  values chosen for the #defines, we greatly decrease the possibility of returning
+//  BATTERY when we are still connected over USB.  This costs 14 bytes.
+
+// BATTERY is the median value, which is only returned if /both/ halves are BATTERY.
+//  If one of the two values is CHARGING, we return CHARGING
+//  If one of the two values is CHARGED (and neither CHARGING), we return CHARGED
+//  Otherwise, BATTERY is both values and is returned
+unsigned char charge_state = BATTERY;
+
+void hexbright::read_charge_state() {
   unsigned int charge_value = read_adc(APIN_CHARGE);
 #if (DEBUG==DEBUG_CHARGE)
   Serial.print("Current charge reading: ");
   Serial.println(charge_value);
 #endif
   // <128 charging, >768 charged, battery
+  charge_state <<= 4;
   if(charge_value<128)
-    return CHARGING;
+    charge_state += CHARGING;
   else if (charge_value>768)
-    return CHARGED;
-  return BATTERY;
+    charge_state += CHARGED;
+  else
+    charge_state += BATTERY;
 }
 
-// reading twice costs us 28 bytes, but improves reliability.
-// The root problem is when the charge value goes from <128 to >768 (or the
-//  reverse, from topping off), it passes through the middle range.  If we
-//  read at the wrong time, we can get a BATTERY value while we are still
-//  plugged in.
-// Reading twice with a sufficient delay, we can guarantee that our state is correct.
-unsigned char hexbright::get_definite_charge_state() {
-  unsigned char val1 = get_charge_state();
-  delayMicroseconds(50); // wait a little in case the value was changing
-  unsigned char val2 = get_charge_state();
-  // BATTERY & CHARGING = CHARGING, BATTERY & CHARGED = CHARGED, CHARGED & CHARGING = CHARGING
-  // In essence, only return the middle value (BATTERY) if two reads report the same thing.
-  return val1 & val2;
+unsigned char hexbright::get_charge_state() {
+  // see more details on how this works at the top of this section
+  return charge_state & (charge_state>>4);
 }
 
 void hexbright::print_charge(unsigned char led) {
@@ -1152,7 +1155,7 @@ void hexbright::print_charge(unsigned char led) {
   } else if (charge_state == CHARGED) {
     set_led(led,50);
   }
-} 
+}
 
 
 ///////////////////////////////////////////////
