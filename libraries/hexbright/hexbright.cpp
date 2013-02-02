@@ -1100,7 +1100,9 @@ BOOL hexbright::low_voltage_state() {
   static BOOL low = false;
   // lower band gap value corresponds to a higher voltage, trigger 
   //  low voltage state if band gap value goes too high.
-  if (band_gap_reading > lowest_band_gap_reading+4) {
+  // I need have a value of 5 for this to work (with a 150 ms delay in read_adc).
+  //  I'm increasing that for some room for error.
+  if (band_gap_reading > lowest_band_gap_reading+8) {
     low = true;
   }
   return low;

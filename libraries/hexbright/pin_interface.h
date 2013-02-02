@@ -8,7 +8,7 @@ unsigned int read_adc(unsigned char pin) {
   ADMUX = _BV(REFS0) | pin;
 
   // Wait for Vref to settle - this costs 2 bytes, and is crucial for APIN_BAND_GAP
-  delayMicroseconds(100);
+  delayMicroseconds(150);
 
   // Start analog to digital conversion (used to be the sbi macro)
   ADCSRA |= _BV(ADSC);
