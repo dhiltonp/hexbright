@@ -524,25 +524,37 @@ inline void hexbright::adjust_leds() {
 /////////////////////BUTTON////////////////////
 ///////////////////////////////////////////////
 
-BOOL button_on = false;
-BOOL last_button_on = false;
+#define BUTTON_FILTER 7 // 00000111 (this is applied at read time)
+#define BUTTON_JUST_OFF(state) (state==4)  // 100 = just off
+#define BUTTON_JUST_ON(state) (state==1)   // 001 = just on
+#define BUTTON_STILL_OFF(state) (state==0) // 000 = still off
+// 010, 011, 101, 110, 111 = still on
+#define BUTTON_STILL_ON(state) !(BUTTON_JUST_OFF(state) | BUTTON_JUST_ON(state) | BUTTON_STILL_OFF(state))
+#define BUTTON_ON(state) (state & 3) // either of right most bits is on: 00000011 (not 100 or 000)
+#define BUTTON_OFF(state) !BUTTON_ON(state)
+
+// button state could hold a history of the last 8 switch values, 1 == on, 0 == off.
+// for debouncing, we only need the most recent 3, so BUTTON_FILTER=7, 00000111
+// This is applied during the read process.
+unsigned char button_state = 0;
+
 unsigned long time_last_pressed = 0; // the time that button was last pressed
 unsigned long time_last_released = 0; // the time that the button was last released
 
 BOOL hexbright::button_pressed() {
-  return (BOOL)button_on;
+  return BUTTON_ON(button_state);
 }
 
 BOOL hexbright::button_just_pressed() {
-  return button_on and !last_button_on;
+  return BUTTON_JUST_ON(button_state);
 }
 
 BOOL hexbright::button_just_released() {
-  return !button_on and last_button_on;
+  return BUTTON_JUST_OFF(button_state);
 }
 
 int hexbright::button_pressed_time() {
-  if(button_on) {
+  if(BUTTON_ON(button_state)) {
     return millis()-time_last_pressed;
   } else {
     return time_last_released - time_last_pressed;
@@ -550,7 +562,7 @@ int hexbright::button_pressed_time() {
 }
 
 int hexbright::button_released_time() {
-  if(button_on) {
+  if(BUTTON_ON(button_state)) {
     return time_last_pressed-time_last_released;
   } else {
     return millis()-time_last_released;
@@ -558,26 +570,26 @@ int hexbright::button_released_time() {
 }
 
 void hexbright::read_button() {
-  last_button_on = button_on;
-  button_on = digitalReadFast(DPIN_RLED_SW);
-  if(button_on) {
-    if(!last_button_on) {
-      time_last_pressed=millis();
+  /*button_state = button_state << 1;                            // make space for the new value
+    button_state = button_state | digitalReadFast(DPIN_RLED_SW); // add the new value
+    button_state = button_state & BUTTON_FILTER;                 // remove excess values */
+  // Doing the three commands above on one line saves 2 bytes.  We'll take it!
+  button_state = ((button_state<<1) | digitalReadFast(DPIN_RLED_SW)) & BUTTON_FILTER;
+  
+  if(BUTTON_JUST_ON(button_state)) {
+    time_last_pressed=millis();
 #if (DEBUG==DEBUG_BUTTON)
-      Serial.println("Button just pressed");
-      Serial.print("Time spent released (ms): ");
-      Serial.println(time_last_pressed-time_last_released);
+    Serial.println("Button just pressed");
+    Serial.print("Time spent released (ms): ");
+    Serial.println(time_last_pressed-time_last_released);
 #endif
-    }
-  } else { // button is off
-    if(last_button_on) {
-      time_last_released=millis();
+  } else if(BUTTON_JUST_OFF(button_state)) {
+    time_last_released=millis();
 #if (DEBUG==DEBUG_BUTTON)
-      Serial.println("Button just released");
-      Serial.print("Time spent pressed (ms): ");
-      Serial.println(time_last_released-time_last_pressed);
+    Serial.println("Button just released");
+    Serial.print("Time spent pressed (ms): ");
+    Serial.println(time_last_released-time_last_pressed);
 #endif
-    }
   }
 }
 
