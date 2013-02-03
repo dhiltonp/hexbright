@@ -65,7 +65,7 @@ void loop() {
   switch (primary_mode) {
   case WAIT_MODE:
     // handle action_mode
-    if(action_mode == OFF_MODE && hb.light_change_remaining() == 0 && hb.get_light_level() == 0 && !hb.button_pressed()) {
+    if(action_mode == OFF_MODE && hb.light_change_remaining() == 0 && hb.get_light_level() <= 0 && !hb.button_pressed()) {
       // nothing's happening, turn off
       hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       // or print charge state if we're plugged in
@@ -88,7 +88,8 @@ void loop() {
     
     // change mode?
     if(hb.button_just_released() && hb.button_pressed_time() < 300) {
-      if(hb.get_light_level() == 0) {
+      Serial.println(hb.get_light_level());
+      if(hb.get_light_level() <= 0) {
         // make sure we don't turn off.  This should be modified in the api to be cleaner.
         hb.set_light(0,0,NOW); 
       }
