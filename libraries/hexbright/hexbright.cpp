@@ -123,8 +123,6 @@ void hexbright::init_hardware() {
 }
 
 void hexbright::update() {
-  // advance time at the same rate as values are changed in the accelerometer.
-  continue_time = continue_time+(1000*update_delay);
   unsigned long now;
 
 #if (DEBUG==DEBUG_LOOP)
@@ -217,6 +215,12 @@ void hexbright::update() {
   
   // change light levels as requested
   adjust_light();
+
+
+  // advance time at the same rate as values are changed in the accelerometer.
+  //  advance continue_time here, so the first run through short-circuits, 
+  //  meaning we will read hardware immediately after power on.
+  continue_time = continue_time+(1000*update_delay);
 }
 
 #ifdef FREE_RAM
