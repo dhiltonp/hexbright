@@ -26,7 +26,7 @@ int address = EEPROM_SIZE;
 
 void setup() {
   hb.init_hardware();
-  if(hb.get_definite_charge_state()!=BATTERY) {
+  if(hb.get_charge_state()!=BATTERY) {
     // we're plugged in, print
     Serial.println("magnitude: x/y/z");
     mode = PRINT_MODE;
