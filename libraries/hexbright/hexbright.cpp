@@ -1117,8 +1117,11 @@ BOOL hexbright::low_voltage_state() {
   // lower band gap value corresponds to a higher voltage, trigger 
   //  low voltage state if band gap value goes too high.
   // I need have a value of 5 for this to work (with a 150 ms delay in read_adc).
-  //  I'm increasing that for some room for error.
-  if (band_gap_reading > lowest_band_gap_reading+8) {
+  //  I'm increasing that for some room for error (8).
+  // NEW CHANGE:
+  // 40 is enough to account for the drop from usb to regular power.
+  //  This approach is imperfect: if you hit a low battery mark, then run it down for 15 minutes and turn it off, you will be unable to turn it back on again until it is recharged
+  if (band_gap_reading > lowest_band_gap_reading+40) {
     low = true;
   }
   return low;
