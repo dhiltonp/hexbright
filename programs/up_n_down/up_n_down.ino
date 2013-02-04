@@ -77,7 +77,7 @@ void loop() {
       hb.print_charge(GLED);
     }
 
-    if(hb.low_voltage_state())
+    if(mode != MODE_OFF && hb.low_voltage_state())
       if(hb.get_led_state(RLED)==LED_OFF) 
 	hb.set_led(RLED,500,2000);
   }
@@ -86,7 +86,7 @@ void loop() {
     hb.print_charge(GLED);
   }
 
-  if(hb.low_voltage_state())
+  if(mode != MODE_OFF && hb.low_voltage_state())
     if(hb.get_led_state(RLED)==LED_OFF) 
       hb.set_led(RLED,500,2000);
 #endif
