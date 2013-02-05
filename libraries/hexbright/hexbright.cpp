@@ -1131,9 +1131,13 @@ BOOL hexbright::low_voltage_state() {
 }
 
 void hexbright::detect_low_battery() {
-  if (get_light_level()<0 || get_avr_voltage()>3400)
+  static BOOL low_trigger = false;
+  if (!low_trigger && (get_light_level()<0 || get_avr_voltage()>3400)) {
     return;
-  max_light_level = 500;
+  } else {
+    low_trigger = true;
+  }
+  //max_light_level = 500;
 
   if (low_voltage_counter<=150 && low_voltage_counter>0) {
     if(low_voltage_counter%60==0)
@@ -1156,6 +1160,8 @@ void hexbright::detect_low_battery() {
     Serial.println(get_avr_voltage());
   } else if (low_voltage_counter<150) {
     Serial.println(get_avr_voltage());
+  } else {
+	max_light_level = 500;
   }
   low_voltage_counter--;
   
