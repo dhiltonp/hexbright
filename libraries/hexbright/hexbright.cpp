@@ -1099,12 +1099,15 @@ void hexbright::detect_overheating() {
 ////////////////AVR VOLTAGE////////////////////
 ///////////////////////////////////////////////
 
-int band_gap_reading = 0;
-int lowest_band_gap_reading = 1000;
+unsigned int band_gap_reading = 0;
+unsigned int lowest_band_gap_reading = 1000;
+unsigned int low_voltage_counter = 140;
 
 void hexbright::read_avr_voltage() {
   band_gap_reading = read_adc(APIN_BAND_GAP);
-  lowest_band_gap_reading = band_gap_reading < lowest_band_gap_reading ? band_gap_reading : lowest_band_gap_reading;
+  /*  if(band_gap_reading<lowest_band_gap_reading) {
+    lowest_band_gap_reading = band_gap_reading;
+  }*/
 }
 
 int hexbright::get_avr_voltage() {
@@ -1114,24 +1117,51 @@ int hexbright::get_avr_voltage() {
 }
 
 BOOL hexbright::low_voltage_state() {
-  static BOOL low = false;
   // lower band gap value corresponds to a higher voltage, trigger 
   //  low voltage state if band gap value goes too high.
   // I need have a value of 5 for this to work (with a 150 ms delay in read_adc).
   //  I'm increasing that for some room for error (8).
-  // NEW CHANGE:
-  // 40 is enough to account for the drop from usb to regular power.
-  //  This approach is imperfect: if you hit a low battery mark, then run it down for 15 minutes and turn it off, you will be unable to turn it back on again until it is recharged
-  if (band_gap_reading > lowest_band_gap_reading+40) {
-    low = true;
+  /*  if (low_voltage_counter>0) {
+    return low_voltage;
   }
-  return low;
+  if (band_gap_reading > lowest_band_gap_reading+8) {
+    low_voltage = true;
+  }
+  return low_voltage;*/
 }
 
 void hexbright::detect_low_battery() {
-  if (low_voltage_state() == true && max_light_level>500) {
-    max_light_level = 500;
+  if (get_light_level()<0 || get_avr_voltage()>3400)
+    return;
+  max_light_level = 500;
+
+  if (low_voltage_counter<=150 && low_voltage_counter>0) {
+    if(low_voltage_counter%60==0)
+      Serial.println("OFF");
+    else if (low_voltage_counter%30==0)
+      Serial.println("ON");
   }
+  if(low_voltage_counter==0) {
+    Serial.println("Resetting counter");
+    low_voltage_counter = 120*15;
+  } else if(low_voltage_counter<30) {
+    Serial.println(get_avr_voltage());
+  } else if(low_voltage_counter<60) {
+    max_light_level = 0;
+    Serial.println(get_avr_voltage());
+  } else if (low_voltage_counter<90) {
+    Serial.println(get_avr_voltage());
+  } else if (low_voltage_counter<120) {
+    max_light_level = 0;
+    Serial.println(get_avr_voltage());
+  } else if (low_voltage_counter<150) {
+    Serial.println(get_avr_voltage());
+  }
+  low_voltage_counter--;
+  
+  /*  if (low_voltage_state() == true && max_light_level>500) {
+    max_light_level = 500;
+    }*/
 }
 
 

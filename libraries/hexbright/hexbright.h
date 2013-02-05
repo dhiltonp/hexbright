@@ -69,7 +69,7 @@ either expressed or implied, of the FreeBSD Project.
 #endif
 
 // debugging related definitions
-#define DEBUG 0
+#define DEBUG 1
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_PRINT 1 // initialize printing only
