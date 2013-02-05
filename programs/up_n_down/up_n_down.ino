@@ -23,10 +23,9 @@
  // Defaults
 static const int glow_mode_time = 3000;
 static const int short_click = 350; // maximum time for a "short" click
-
 static const int nightlight_timeout = 3000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_red_brightness = 255; // brightness of red led for nightlight
-static const unsigned char nightlight_sensitivity = 15; // measured in 100's of a G.
+static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
 
 // State
 static char quickaccess_mode;
@@ -77,7 +76,7 @@ void loop() {
       hb.print_charge(GLED);
     }
 
-    if(hb.low_voltage_state())
+    if(mode != MODE_OFF && hb.low_voltage_state())
       if(hb.get_led_state(RLED)==LED_OFF) 
 	hb.set_led(RLED,500,2000);
   }
@@ -86,7 +85,7 @@ void loop() {
     hb.print_charge(GLED);
   }
 
-  if(hb.low_voltage_state())
+  if(mode != MODE_OFF && hb.low_voltage_state())
     if(hb.get_led_state(RLED)==LED_OFF) 
       hb.set_led(RLED,500,2000);
 #endif
