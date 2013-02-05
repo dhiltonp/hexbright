@@ -48,49 +48,6 @@ either expressed or implied, of the FreeBSD Project.
 #define APIN_CHARGE 3
 #define APIN_BAND_GAP 14
 
-///////////////////////////////////////////////
-//////////////////CHARGING/////////////////////
-///////////////////////////////////////////////
-
-// we store the last two charge readings in charge_state, and due to the specific
-//  values chosen for the #defines, we greatly decrease the possibility of returning
-//  BATTERY when we are still connected over USB.  This costs 14 bytes.
-
-// BATTERY is the median value, which is only returned if /both/ halves are BATTERY.
-//  If one of the two values is CHARGING, we return CHARGING
-//  If one of the two values is CHARGED (and neither CHARGING), we return CHARGED
-//  Otherwise, BATTERY is both values and is returned
-unsigned char charge_state = BATTERY;
-
-void hexbright::read_charge_state() {
-  unsigned int charge_value = read_adc(APIN_CHARGE);
-#if (DEBUG==DEBUG_CHARGE)
-  Serial.print("Current charge reading: ");
-  Serial.println(charge_value);
-#endif
-  // <128 charging, >768 charged, battery
-  charge_state <<= 4;
-  if(charge_value<128)
-    charge_state += CHARGING;
-  else if (charge_value>768)
-    charge_state += CHARGED;
-  else
-    charge_state += BATTERY;
-}
-
-unsigned char hexbright::get_charge_state() {
-  // see more details on how this works at the top of this section
-  return charge_state & (charge_state>>4);
-}
-
-void hexbright::print_charge(unsigned char led) {
-  unsigned char charge_state = get_charge_state();
-  if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
-    set_led(led, 350, 350);
-  } else if (charge_state == CHARGED) {
-    set_led(led,50);
-  }
-}
 
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
@@ -265,13 +222,6 @@ void hexbright::update() {
   //  advance continue_time here, so the first run through short-circuits, 
   //  meaning we will read hardware immediately after power on.
   continue_time = continue_time+(1000*update_delay);
-
-#ifdef POWER_OFF_AT_UNPLUG
-  // poweroff if we just unplugged
-  if(charge_state==(BATTERY | (CHARGING<<4)) || charge_state==(BATTERY | (CHARGED<<4)))
-    set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
-#endif
-
 }
 
 #ifdef FREE_RAM
@@ -282,6 +232,7 @@ int hexbright::freeRam () {
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 #endif
+
 
 ///////////////////////////////////////////////
 ///////////////////Filters/////////////////////
@@ -331,6 +282,7 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
     probability = 70;
   return (probability*last_estimate + (100-probability)*current_reading)/100;
 }
+
 
 ///////////////////////////////////////////////
 ////////////////LIGHT CONTROL//////////////////
@@ -400,7 +352,6 @@ int hexbright::light_change_remaining() {
     return 0;
   return tmp*update_delay;
 }
-
 
 void hexbright::set_light_level(unsigned long level) {
   // LOW 255 approximately equals HIGH 48/49.  There is a color change.
@@ -570,6 +521,7 @@ inline void hexbright::adjust_leds() {
 }
 
 #endif
+
 
 ///////////////////////////////////////////////
 /////////////////////BUTTON////////////////////
@@ -963,10 +915,8 @@ void hexbright::print_vector(int* vector, const char* label) {
 #endif
 }
 
-
-
-
 #endif
+
 
 ///////////////////////////////////////////////
 //////////////////UTILITIES////////////////////
@@ -1076,6 +1026,7 @@ void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
 }
 #endif
 
+
 ///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////
 ///////////////////////////////////////////////
@@ -1144,7 +1095,6 @@ void hexbright::detect_overheating() {
 }
 
 
-
 ///////////////////////////////////////////////
 ////////////////AVR VOLTAGE////////////////////
 ///////////////////////////////////////////////
@@ -1184,6 +1134,52 @@ void hexbright::detect_low_battery() {
   }
 }
 
+
+///////////////////////////////////////////////
+//////////////////CHARGING/////////////////////
+///////////////////////////////////////////////
+
+// we store the last two charge readings in charge_state, and due to the specific
+//  values chosen for the #defines, we greatly decrease the possibility of returning
+//  BATTERY when we are still connected over USB.  This costs 14 bytes.
+
+// BATTERY is the median value, which is only returned if /both/ halves are BATTERY.
+//  If one of the two values is CHARGING, we return CHARGING
+//  If one of the two values is CHARGED (and neither CHARGING), we return CHARGED
+//  Otherwise, BATTERY is both values and is returned
+unsigned char charge_state = BATTERY;
+
+void hexbright::read_charge_state() {
+  unsigned int charge_value = read_adc(APIN_CHARGE);
+#if (DEBUG==DEBUG_CHARGE)
+  Serial.print("Current charge reading: ");
+  Serial.println(charge_value);
+#endif
+  // <128 charging, >768 charged, battery
+  charge_state <<= 4;
+  if(charge_value<128)
+    charge_state += CHARGING;
+  else if (charge_value>768)
+    charge_state += CHARGED;
+  else
+    charge_state += BATTERY;
+}
+
+unsigned char hexbright::get_charge_state() {
+  // see more details on how this works at the top of this section
+  return charge_state & (charge_state>>4);
+}
+
+void hexbright::print_charge(unsigned char led) {
+  unsigned char charge_state = get_charge_state();
+  if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
+    set_led(led, 350, 350);
+  } else if (charge_state == CHARGED) {
+    set_led(led,50);
+  }
+}
+
+
 ///////////////////////////////////////////////
 //////////////////SHUTDOWN/////////////////////
 ///////////////////////////////////////////////
@@ -1194,6 +1190,7 @@ void hexbright::shutdown() {
 #endif
   set_light(MAX_LOW_LEVEL, OFF_LEVEL, NOW);
 }
+
 
 ///////////////////////////////////////////////
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
