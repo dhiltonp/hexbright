@@ -8,7 +8,9 @@ Key Features
 
 *   Automatic overheat protection (adjustable in [hexbright.h OVERHEAT_TEMPERATURE](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L90))
 
-*   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn)
+*   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn) 
+
+    Due to issues with a voltage drop when being unplugged from usb, it's not as polished as it should be.  I need some hardware to improve the algorithm to handle this, which should be arriving next week (mid February)
 
 *   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
 
