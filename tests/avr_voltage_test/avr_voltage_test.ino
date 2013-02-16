@@ -79,7 +79,7 @@ void loop() {
       i=400/8.3333; // every fifty times through; currently the library is locked at 8.333 milliseconds
     }
     i--;
-  } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
+  } else if (mode == CYCLE_MODE) { // print the current avr voltage
     if(!hb.printing_number()) {
       hb.print_number(hb.get_avr_voltage());
     }
