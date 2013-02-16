@@ -48,6 +48,7 @@ either expressed or implied, of the FreeBSD Project.
 #define APIN_CHARGE 3
 #define APIN_BAND_GAP 14
 
+#define DPIN_MOSI 11 /* PB3 */
 
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
@@ -94,6 +95,12 @@ void hexbright::init_hardware() {
   Wire.begin();
   Serial.println("DEBUG MODE ON");
 #endif
+
+  pinMode (DPIN_MOSI, OUTPUT);
+  digitalWriteFast(DPIN_MOSI, HIGH);
+
+
+
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   if(DEBUG==DEBUG_LIGHT) {
     // do a full light range sweep, (printing all light intensity info)
@@ -122,6 +129,7 @@ void hexbright::init_hardware() {
 #endif
   
   continue_time = micros();
+
 }
 
 void hexbright::update() {
@@ -1103,6 +1111,10 @@ unsigned int band_gap_reading = 0;
 unsigned int lowest_band_gap_reading = 1000;
 unsigned int low_voltage_counter = 140;
 
+// whb: 126 drop
+// me: 91 drop
+// jkent: 71 drop
+
 void hexbright::read_avr_voltage() {
   band_gap_reading = read_adc(APIN_BAND_GAP);
   /*  if(band_gap_reading<lowest_band_gap_reading) {
@@ -1130,9 +1142,59 @@ BOOL hexbright::low_voltage_state() {
   return low_voltage;*/
 }
 
+#define MY_BAUD (14400)
+#define F_BAUD_PERIODS (F_CPU/64.0/MY_BAUD)
+#define TIM_PER_INT (uint8_t)(F_BAUD_PERIODS + 0.5)
+
+void localSioSend( uint8_t c ) {
+  static uint8_t nextT;
+  uint8_t i, bit;
+  uint8_t oldSREG = SREG;
+  cli();
+
+/*
+    If we are within the last character's stop bit time, then wait for it.
+    If not, then just sync to the next timer tick.
+*/
+
+  if ((uint8_t)(nextT - TCNT0) > TIM_PER_INT) {
+    /* We are way past it, or at some random place, so resync to next timer count */
+    nextT = TCNT0;
+  }
+  
+  // Send a 10-bit ASYNC character out to the MOSI port pin.
+  for( i=10; i; i-- ) {
+    bit = LOW; /* Start bit, default */
+    if (i <= 9) {
+      bit = (c & 1) ? HIGH : LOW;
+      c = (c >> 1) | 0x80; /* Shift to next bit, put in stop */
+    }
+
+    /* Wait for bit start time */
+    while ((uint8_t)(nextT - TCNT0) <= TIM_PER_INT) {}
+    
+    digitalWriteFast(DPIN_MOSI, bit);
+    nextT += TIM_PER_INT;
+  }
+
+  SREG = oldSREG;
+}
+
+void send_int(int val) {
+  char buf[10] = "";
+  sprintf(buf, "%d", val);
+
+  for(int i=0; buf[i]!=0; i++){
+    localSioSend(buf[i]);
+  }
+  localSioSend('\n');
+//  localSioSend(val>>8);
+//  localSioSend((val<<8)>>8);
+}
+
 void hexbright::detect_low_battery() {
   static BOOL low_trigger = false;
-  if (!low_trigger && (get_light_level()<0 || get_avr_voltage()>3400)) {
+  if (!low_trigger && (get_light_level()<0 || get_avr_voltage()>=3319)) {
     return;
   } else {
     low_trigger = true;
@@ -1140,28 +1202,35 @@ void hexbright::detect_low_battery() {
   //max_light_level = 500;
 
   if (low_voltage_counter<=150 && low_voltage_counter>0) {
-    if(low_voltage_counter%60==0)
-      Serial.println("OFF");
-    else if (low_voltage_counter%30==0)
-      Serial.println("ON");
+    if(low_voltage_counter%60==0) {
+      localSioSend('F');
+      localSioSend('\n');
+    } else if (low_voltage_counter%30==0) {
+      localSioSend('N');
+      localSioSend('\n');
+    }
   }
   if(low_voltage_counter==0) {
-    Serial.println("Resetting counter");
+    localSioSend('R');
+    localSioSend('\n');
     low_voltage_counter = 120*15;
   } else if(low_voltage_counter<30) {
-    Serial.println(get_avr_voltage());
+    max_light_level = 500;
+    send_int(get_avr_voltage());
   } else if(low_voltage_counter<60) {
     max_light_level = 0;
-    Serial.println(get_avr_voltage());
+    send_int(get_avr_voltage());
   } else if (low_voltage_counter<90) {
-    Serial.println(get_avr_voltage());
+    max_light_level = 1;
+    send_int(get_avr_voltage());
   } else if (low_voltage_counter<120) {
     max_light_level = 0;
-    Serial.println(get_avr_voltage());
+    send_int(get_avr_voltage());
   } else if (low_voltage_counter<150) {
-    Serial.println(get_avr_voltage());
+    max_light_level = 500;
+    send_int(get_avr_voltage());
   } else {
-	max_light_level = 500;
+    max_light_level = 500;
   }
   low_voltage_counter--;
   
