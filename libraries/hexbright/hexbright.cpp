@@ -1117,9 +1117,8 @@ unsigned int low_voltage_counter = 140;
 
 void hexbright::read_avr_voltage() {
   band_gap_reading = read_adc(APIN_BAND_GAP);
-  /*  if(band_gap_reading<lowest_band_gap_reading) {
-    lowest_band_gap_reading = band_gap_reading;
-  }*/
+  if(get_charge_state()==BATTERY)
+    lowest_band_gap_reading = band_gap_reading < lowest_band_gap_reading ? band_gap_reading : lowest_band_gap_reading;
 }
 
 int hexbright::get_avr_voltage() {
@@ -1131,15 +1130,14 @@ int hexbright::get_avr_voltage() {
 BOOL hexbright::low_voltage_state() {
   // lower band gap value corresponds to a higher voltage, trigger 
   //  low voltage state if band gap value goes too high.
-  // I need have a value of 5 for this to work (with a 150 ms delay in read_adc).
-  //  I'm increasing that for some room for error (8).
-  /*  if (low_voltage_counter>0) {
-    return low_voltage;
-  }
-  if (band_gap_reading > lowest_band_gap_reading+8) {
+  // With a delay of 250 ms in read_adc, I get two neighbouring values;
+  //  allow for up to three neighbouring values before setting 
+  //  low_voltage, just in case.
+
+  if (band_gap_reading > lowest_band_gap_reading+2) {
     low_voltage = true;
   }
-  return low_voltage;*/
+  return low_voltage;
 }
 
 #define MY_BAUD (14400)
@@ -1194,7 +1192,7 @@ void send_int(int val) {
 
 void hexbright::detect_low_battery() {
   static BOOL low_trigger = false;
-  if (!low_trigger && (get_light_level()<0 || get_avr_voltage()>=3319)) {
+  if (!low_trigger && (get_light_level()<0 || band_gap_reading > lowest_band_gap_reading+2)) {
     return;
   } else {
     low_trigger = true;
