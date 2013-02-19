@@ -5,7 +5,7 @@
 #include <vector>
 #include <cstdlib>
 
-#include "../../libraries/hexbright/hexbright.h"
+#include "../../../libraries/hexbright/hexbright.h"
 
 using namespace std;
 
