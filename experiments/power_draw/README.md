@@ -1,7 +1,7 @@
 Recorded with a Fluke 287
 
 brightness level, milliamps<br>
-500, 283<br>
+500, 283 (~175 lumens, ~8 hours)<br>
 450, 223.8<br>
 400, 175.1<br>
 350, 132.5<br>
