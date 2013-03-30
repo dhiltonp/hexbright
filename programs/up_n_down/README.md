@@ -31,8 +31,5 @@ Basic Operation
 Extras
 ----------------
 *   Holding the button for longer than 350 ms will cause the light to blink at about 15 hz while the button is held unless you are pointing at the ground.
-    *    While blinking you can tap the light to change to a solid beam.
-    *    This setting is saved so the next time you hold the button it will use your last setting (beam or blink).
 
-
-*    If pointing at the ground, holding the light for 3 seconds or more will cause the button to glow green even when the button is released. 
+*   If pointing at the ground, holding the light for 3 seconds or more will cause the button to glow green even when the button is released. 
