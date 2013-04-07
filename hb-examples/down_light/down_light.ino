@@ -73,5 +73,5 @@ void loop() {
        hb.set_light(CURRENT_LEVEL, 200, 50);
     } 
   }
-  hb.print_charge(GLED);
+  hb.print_power();
 }

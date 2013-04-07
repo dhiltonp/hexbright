@@ -62,7 +62,6 @@ void loop() {
       brightness_level = brightness_level<1 ? 1 : brightness_level;
       hb.set_light(CURRENT_LEVEL, brightness_level, 100);
     }
-  } else if (mode==OFF_MODE) {
-    hb.print_charge(GLED);
-  }   
+  }
+  hb.print_power();
 }

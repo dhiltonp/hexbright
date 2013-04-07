@@ -1026,6 +1026,13 @@ void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
 }
 #endif
 
+void hexbright::print_power() {
+  print_charge(GLED);
+  if (low_voltage_state() && get_led_state(RLED) == LED_OFF) {
+    set_led(RLED,50,1000);
+  }
+}
+
 
 ///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////

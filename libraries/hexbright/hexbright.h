@@ -288,6 +288,7 @@ class hexbright {
   //  if(!printing_number())
   //    print_charge(GLED);
   //  ...end of loop...
+  // See also: print_power
   static void print_charge(unsigned char led);
   // returns CHARGING, CHARGED, or BATTERY
   static unsigned char get_charge_state();
@@ -313,7 +314,19 @@ class hexbright {
   static void input_digit(unsigned int min_digit, unsigned int max_digit);
   // grab the value that is currently selected (based on twist orientation)
   static unsigned int get_input_digit();
-  
+
+  // prints charge state (using print_charge).
+  //  if in a low battery state, flashes red for 50 ms, followed by a 1 second delay
+  // If you are using print_number, call it before this function if possible.
+  // I recommend the following (if using print_number()):
+  //  ...code that may call print number...
+  //  if(!printing_number())
+  //    print_charge(GLED);
+  //  ...end of loop...
+  // see also print_charge for usage
+  static void print_power();
+
+
 #ifdef ACCELEROMETER
   // accepts things like ACC_REG_TILT
   // TILT is now read by default in the private method, at the cost of 12 bytes.
