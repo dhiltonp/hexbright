@@ -64,7 +64,7 @@ void loop() {
 
     if(mode != MODE_OFF && hb.low_voltage_state())
       if(hb.get_led_state(RLED)==LED_OFF) 
-	hb.set_led(RLED,500,2000);
+	hb.set_led(RLED,50,1000);
   }
  
  // Check for mode and do in-mode activities
@@ -127,7 +127,8 @@ void loop() {
     }
     break;
   case MODE_NIGHTLIGHT:
-    hb.set_led(RLED, 100, 0);
+    if(!hb.low_voltage_state())
+      hb.set_led(RLED, 100, 0);
     if(hb.moved(nightlight_sensitivity)) {
       treg1 = time;
       hb.set_light(CURRENT_LEVEL, 1000, 1000);
