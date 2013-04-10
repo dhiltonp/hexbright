@@ -36,7 +36,7 @@ bool digitalReadFast(unsigned char pin) {
   return true;
 }
 
-// analogRead and analogWrite still use the arduino code.  These amy be optimized
+// analogRead and analogWrite still use the arduino code.  These may be optimized
 void analogWrite(unsigned char pin, unsigned char lh) {
   return;
 }
