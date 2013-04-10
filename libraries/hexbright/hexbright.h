@@ -373,7 +373,7 @@ class hexbright {
   static char get_spin();
   //returns the angle between straight down and our current vector
   // returns a value from 0 to 1. 0 == down, 1 == straight up.
-  // Multiply by 1.8 to get degrees.  Expect noise of about .1.
+  // Multiply by 180 to get degrees.  Expect noise of about .1 (15-20 degrees).
   static double difference_from_down();
   // lots of noise < 5 degrees.  Most noise is < 10 degrees
   // noise varies partially based on sample rate, which is not currently configurable
