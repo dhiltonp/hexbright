@@ -27,6 +27,9 @@ Basic Operation
 *   3 Clicks-Nightlight mode
     *   When sitting still, the tailcap glows red.  When picked up, the light turns on to the brightest setting.  If not moved for 10 seconds it dims and the tailcap glows red again.
 
+*   4 Clicks-SOS mode
+    *   Light blinks SOS repeatededly in morse code
+
 Extras
 ----------------
 *   Holding the button for longer than 350 ms will cause the light to blink at about 15 hz while the button is held unless you are pointing at the ground.
