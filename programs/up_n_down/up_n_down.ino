@@ -2,8 +2,10 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+#define EEPROM_LOCKED 0
+
 // Modes
-#define MAX_MODE 4
+#define MAX_MODE 5
 
 #define MODE_OFF 0
 #define MODE_LEVEL 1
@@ -21,7 +23,7 @@ static const unsigned char nightlight_sensitivity = 20; // measured in 100's of 
 // State
 static unsigned long treg1=0; 
 
-static unsigned int bitreg=0;
+static word bitreg=0;
 const unsigned BLOCK_TURNING_OFF=0;
 const unsigned GLOW_MODE=1;
 const unsigned GLOW_MODE_SET=2;
@@ -35,6 +37,7 @@ static unsigned long submode_lockout=0;
 const word blink_freq_map[] = {70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
+static char locked;
 hexbright hb;
 
 void setup() {
@@ -42,6 +45,8 @@ void setup() {
   // into USB, or the user is pressing the power button.
   hb = hexbright();
   hb.init_hardware();
+
+  locked = EEPROM.read(EEPROM_LOCKED);
 
   Serial.println("Powered up!");
 } 
@@ -65,7 +70,7 @@ void loop() {
       if(hb.get_led_state(RLED)==LED_OFF) 
 	hb.set_led(RLED,50,1000);
   }
- 
+
  // Check for mode and do in-mode activities
   switch(mode) {
   case MODE_OFF:
@@ -95,7 +100,7 @@ void loop() {
     }
     
     // holding the button
-    if(hb.button_pressed()) {
+    if(hb.button_pressed() && !locked) {
       if(!(bitreg & (1<<GLOW_MODE_SET))) {
 	double d = hb.difference_from_down();
 	if(hb.button_pressed_time() >= glow_mode_time && d <= 0.1) {
@@ -276,6 +281,10 @@ void loop() {
       new_mode=MODE_OFF;
   }
 
+  // if we're locked, we prevent all other modes except MODE_LOCKED
+  if(locked && new_mode!=MODE_LOCKED)
+    new_mode=MODE_OFF;
+
   // Do the actual mode change
   if(new_mode!=mode) {
     double d;
@@ -317,6 +326,11 @@ void loop() {
 	  blink_frequency = blink_freq_map[1];
       }
       hb.set_light(MAX_LEVEL, 0, 20);
+      break;
+    case MODE_LOCKED:
+      locked=!locked;
+      EEPROM.write(EEPROM_LOCKED,locked);
+      new_mode=MODE_OFF;
       break;
     }
     mode=new_mode;

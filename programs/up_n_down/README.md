@@ -30,6 +30,9 @@ Basic Operation
 *   4 Clicks-SOS mode
     *   Light blinks SOS repeatededly in morse code
 
+*   5 Clicks-Lock mode
+    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light.
+
 Extras
 ----------------
 *   Holding the button for longer than 350 ms will cause the light to blink at about 15 hz while the button is held unless you are pointing at the ground.
