@@ -9,8 +9,8 @@
 #define MODE_LEVEL 1
 #define MODE_BLINK 2
 #define MODE_NIGHTLIGHT 3
-
-#define MODE_LOCKED -1
+#define MODE_SOS 4
+#define MODE_LOCKED 5
 
  // Defaults
 static const int glow_mode_time = 3000;
@@ -25,7 +25,6 @@ static unsigned int bitreg=0;
 const unsigned BLOCK_TURNING_OFF=0;
 const unsigned GLOW_MODE=1;
 const unsigned GLOW_MODE_SET=2;
-const unsigned DAZZLE=3;
 
 static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
@@ -33,8 +32,8 @@ static char click_count = 0;
 
 static unsigned long submode_lockout=0;
 
-static char dazzle_odds = 4; // odds of being on are 1:N
-static char blink_frequency = 70; // in ms
+const word blink_freq_map[] = {70, 650, 10000}; // in ms
+static word blink_frequency; // in ms;
 
 hexbright hb;
 
@@ -108,7 +107,7 @@ void loop() {
 	    Serial.println("Glow mode off");	
 	} else if(hb.button_pressed_time() > short_click && d > 0.10) {
 	  // quickstrobe
-	  if(treg1+blink_frequency < time) { 
+	  if(treg1+blink_freq_map[0] < time) { 
 	      treg1 = time; 
 	      hb.set_light(MAX_LEVEL, 0, 20); 
 	    }
@@ -141,42 +140,26 @@ void loop() {
     break;
   case MODE_BLINK:
     if(hb.button_pressed()) {
-	if( hb.button_pressed_time()>short_click) {
-	  double d = hb.difference_from_down();
-	  if(d>=0 && d<=0.99) {
-	    if(bitreg & (1<<DAZZLE)) {
-	      int new_odds = (int)(d*10.0)+2;
-	      if(new_odds != dazzle_odds) {
-		dazzle_odds = new_odds;
-		Serial.print("Dazzle Odds: "); Serial.println(dazzle_odds);
-		bitreg |= (1<<BLOCK_TURNING_OFF);
-		submode_lockout = time + short_click;
-	      }
-	    } else {
-	      blink_frequency = (d*100.0)+20;
-	      Serial.print("Blink Freq: "); Serial.println(blink_frequency);
-	      bitreg |= (1<<BLOCK_TURNING_OFF);
-	      submode_lockout = time + short_click;
-	    }
+      if( hb.button_pressed_time()>short_click) {
+	double d = hb.difference_from_down();
+	if(d>=0 && d<=0.99) {
+	  if(d>=0.25) {
+	    d = d>0.5 ? 0.5 : d;
+	    blink_frequency = blink_freq_map[0] + (word)((blink_freq_map[1] - blink_freq_map[0]) * 4 * (0.5-d));
+	  } else {
+	    blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
 	  }
-	}
-      } else {
-	if(hb.tapped() and time > submode_lockout) {
-	  Serial.println("Tapped");
-	  bitreg ^= (1<<DAZZLE);
+	  Serial.print("Blink Freq: "); Serial.println(blink_frequency);
+	  bitreg |= (1<<BLOCK_TURNING_OFF);
 	  submode_lockout = time + short_click;
 	}
       }
-      if(bitreg & (1<<DAZZLE)) {
-	if(random(dazzle_odds)<1)
-	  hb.set_light(MAX_LEVEL, 0, 20);
-      } else {
-	  if(treg1+blink_frequency < time) { 
-	    treg1 = time;
-	    hb.set_light(MAX_LEVEL, 0, 20); 
-	  }
-      }
-      break;
+    }
+    if(treg1+blink_frequency < time) { 
+      treg1 = time;
+      hb.set_light(MAX_LEVEL, 0, 20); 
+    }
+    break;
   }  
 
   // we turn off on button release unless a submode change was made and we're blocked
@@ -212,7 +195,6 @@ void loop() {
       break;
     case MODE_NIGHTLIGHT:
       Serial.println("Mode = nightlight");
-      //hb.set_light(CURRENT_LEVEL, 1, NOW);
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
@@ -220,6 +202,14 @@ void loop() {
       break;
     case MODE_BLINK:
       Serial.println("Mode = blink");
+      d = hb.difference_from_down();
+      blink_frequency = blink_freq_map[0];
+      if(d <= 0.40) {
+	if(d <= 0.10)
+	  blink_frequency = blink_freq_map[2];
+	else
+	  blink_frequency = blink_freq_map[1];
+      }
       hb.set_light(MAX_LEVEL, 0, 20);
       break;
     }
