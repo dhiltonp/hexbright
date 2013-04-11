@@ -2,15 +2,17 @@
 #include <Wire.h>
 #include <EEPROM.h>
 
+#define EEPROM_LOCKED 0
+
 // Modes
-#define MAX_MODE 3
+#define MAX_MODE 5
 
 #define MODE_OFF 0
 #define MODE_LEVEL 1
 #define MODE_BLINK 2
 #define MODE_NIGHTLIGHT 3
-
-#define MODE_LOCKED -1
+#define MODE_SOS 4
+#define MODE_LOCKED 5
 
  // Defaults
 static const int glow_mode_time = 3000;
@@ -21,11 +23,10 @@ static const unsigned char nightlight_sensitivity = 20; // measured in 100's of 
 // State
 static unsigned long treg1=0; 
 
-static unsigned int bitreg=0;
+static word bitreg=0;
 const unsigned BLOCK_TURNING_OFF=0;
 const unsigned GLOW_MODE=1;
 const unsigned GLOW_MODE_SET=2;
-const unsigned DAZZLE=3;
 
 static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
@@ -33,9 +34,10 @@ static char click_count = 0;
 
 static unsigned long submode_lockout=0;
 
-static char dazzle_odds = 4; // odds of being on are 1:N
-static char blink_frequency = 70; // in ms
+const word blink_freq_map[] = {70, 650, 10000}; // in ms
+static word blink_frequency; // in ms;
 
+static char locked;
 hexbright hb;
 
 void setup() {
@@ -43,6 +45,8 @@ void setup() {
   // into USB, or the user is pressing the power button.
   hb = hexbright();
   hb.init_hardware();
+
+  locked = EEPROM.read(EEPROM_LOCKED);
 
   Serial.println("Powered up!");
 } 
@@ -66,7 +70,7 @@ void loop() {
       if(hb.get_led_state(RLED)==LED_OFF) 
 	hb.set_led(RLED,50,1000);
   }
- 
+
  // Check for mode and do in-mode activities
   switch(mode) {
   case MODE_OFF:
@@ -96,7 +100,7 @@ void loop() {
     }
     
     // holding the button
-    if(hb.button_pressed()) {
+    if(hb.button_pressed() && !locked) {
       if(!(bitreg & (1<<GLOW_MODE_SET))) {
 	double d = hb.difference_from_down();
 	if(hb.button_pressed_time() >= glow_mode_time && d <= 0.1) {
@@ -108,7 +112,7 @@ void loop() {
 	    Serial.println("Glow mode off");	
 	} else if(hb.button_pressed_time() > short_click && d > 0.10) {
 	  // quickstrobe
-	  if(treg1+blink_frequency < time) { 
+	  if(treg1+blink_freq_map[0] < time) { 
 	      treg1 = time; 
 	      hb.set_light(MAX_LEVEL, 0, 20); 
 	    }
@@ -141,42 +145,132 @@ void loop() {
     break;
   case MODE_BLINK:
     if(hb.button_pressed()) {
-	if( hb.button_pressed_time()>short_click) {
-	  double d = hb.difference_from_down();
-	  if(d>=0 && d<=0.99) {
-	    if(bitreg & (1<<DAZZLE)) {
-	      int new_odds = (int)(d*10.0)+2;
-	      if(new_odds != dazzle_odds) {
-		dazzle_odds = new_odds;
-		Serial.print("Dazzle Odds: "); Serial.println(dazzle_odds);
-		bitreg |= (1<<BLOCK_TURNING_OFF);
-		submode_lockout = time + short_click;
-	      }
-	    } else {
-	      blink_frequency = (d*100.0)+20;
-	      Serial.print("Blink Freq: "); Serial.println(blink_frequency);
-	      bitreg |= (1<<BLOCK_TURNING_OFF);
-	      submode_lockout = time + short_click;
-	    }
+      if( hb.button_pressed_time()>short_click) {
+	double d = hb.difference_from_down();
+	if(d>=0 && d<=0.99) {
+	  if(d>=0.25) {
+	    d = d>0.5 ? 0.5 : d;
+	    blink_frequency = blink_freq_map[0] + (word)((blink_freq_map[1] - blink_freq_map[0]) * 4 * (0.5-d));
+	  } else {
+	    blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
 	  }
-	}
-      } else {
-	if(hb.tapped() and time > submode_lockout) {
-	  Serial.println("Tapped");
-	  bitreg ^= (1<<DAZZLE);
+	  Serial.print("Blink Freq: "); Serial.println(blink_frequency);
+	  bitreg |= (1<<BLOCK_TURNING_OFF);
 	  submode_lockout = time + short_click;
 	}
       }
-      if(bitreg & (1<<DAZZLE)) {
-	if(random(dazzle_odds)<1)
-	  hb.set_light(MAX_LEVEL, 0, 20);
-      } else {
-	  if(treg1+blink_frequency < time) { 
-	    treg1 = time;
-	    hb.set_light(MAX_LEVEL, 0, 20); 
-	  }
+    }
+    if(treg1+blink_frequency < time) { 
+      treg1 = time;
+      hb.set_light(MAX_LEVEL, 0, 20); 
+    }
+    break;
+  case MODE_SOS:
+    if(!hb.light_change_remaining())
+    { // we're not currently doing anything, start the next step
+      static int current_character = 0;
+      static char symbols_remaining = 0;
+      static byte pattern = 0;
+      const char message[] = "SOS";
+      const int millisPerBeat = 150;
+
+      // High byte = length
+      // Low byte  = morse code, LSB first, 0=dot 1=dash
+      const word morse[] = {
+	0x0202, // A .-
+	0x0401, // B -...
+	0x0405, // C -.-.
+	0x0301, // D -..
+	0x0100, // E .
+	0x0404, // F ..-.
+	0x0303, // G --.
+	0x0400, // H ....
+	0x0200, // I ..
+	0x040E, // J .---
+	0x0305, // K -.-
+	0x0402, // L .-..
+	0x0203, // M --
+	0x0201, // N -.
+	0x0307, // O ---
+	0x0406, // P .--.
+	0x040B, // Q --.-
+	0x0302, // R .-.
+	0x0300, // S ...
+	0x0101, // T -
+	0x0304, // U ..-
+	0x0408, // V ...-
+	0x0306, // W .--
+	0x0409, // X -..-
+	0x040D, // Y -.--
+	0x0403, // Z --..
+	0x051F, // 0 -----
+	0x051E, // 1 .----
+	0x051C, // 2 ..---
+	0x0518, // 3 ...--
+	0x0510, // 4 ....-
+	0x0500, // 5 .....
+	0x0501, // 6 -....
+	0x0503, // 7 --...
+	0x0507, // 8 ---..
+	0x050F, // 9 ----.
+      };
+      
+      if(current_character>=sizeof(message))
+      { // we've hit the end of message, turn off.
+        mode = MODE_OFF;
+        // reset the current_character, so if we're connected to USB, next printing will still work.
+        current_character = 0;
+        // return now to skip the following code.
+        return;
       }
-      break;
+            
+      if(symbols_remaining <= 0) // we're done printing our last character, get the next!
+      {
+        char ch = message[current_character];
+        // Remap ASCII to the morse table
+        if      (ch >= 'A' && ch <= 'Z') ch -= 'A';
+        else if (ch >= 'a' && ch <= 'z') ch -= 'a';
+        else if (ch >= '0' && ch <= '9') ch -= '0' - 26;
+        else ch = -1; // character not in table
+      
+        if(ch>=0)
+        {
+          // Extract the symbols and length
+          pattern = morse[ch] & 0x00FF;
+          symbols_remaining = morse[ch] >> 8;
+          // we count space (between dots/dashes) as a symbol to be printed;
+          symbols_remaining *= 2;
+        }
+        current_character++;
+      }
+      
+      if (symbols_remaining<=0)
+      { // character was unrecognized, treat it as a space
+        // 7 beats between words, but 3 have already passed
+        // at the end of the last character
+        hb.set_light(0,0, millisPerBeat * 4);
+      }
+      else if (symbols_remaining==1) 
+      { // last symbol in character, long pause
+        hb.set_light(0, 0, millisPerBeat * 3);
+      }
+      else if(symbols_remaining%2==1) 
+      { // even symbol, print space!
+        hb.set_light(0,0, millisPerBeat);
+      }
+      else if (pattern & 1)
+      { // dash, 3 beats
+        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat * 3);
+        pattern >>= 1;
+      }
+      else 
+      { // dot, by elimination
+        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat);
+        pattern >>= 1;
+      }
+      symbols_remaining--;
+    }
+    break;
   }  
 
   // we turn off on button release unless a submode change was made and we're blocked
@@ -186,6 +280,10 @@ void loop() {
     else
       new_mode=MODE_OFF;
   }
+
+  // if we're locked, we prevent all other modes except MODE_LOCKED
+  if(locked && new_mode!=MODE_LOCKED)
+    new_mode=MODE_OFF;
 
   // Do the actual mode change
   if(new_mode!=mode) {
@@ -212,7 +310,6 @@ void loop() {
       break;
     case MODE_NIGHTLIGHT:
       Serial.println("Mode = nightlight");
-      //hb.set_light(CURRENT_LEVEL, 1, NOW);
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
@@ -220,7 +317,20 @@ void loop() {
       break;
     case MODE_BLINK:
       Serial.println("Mode = blink");
+      d = hb.difference_from_down();
+      blink_frequency = blink_freq_map[0];
+      if(d <= 0.40) {
+	if(d <= 0.10)
+	  blink_frequency = blink_freq_map[2];
+	else
+	  blink_frequency = blink_freq_map[1];
+      }
       hb.set_light(MAX_LEVEL, 0, 20);
+      break;
+    case MODE_LOCKED:
+      locked=!locked;
+      EEPROM.write(EEPROM_LOCKED,locked);
+      new_mode=MODE_OFF;
       break;
     }
     mode=new_mode;
