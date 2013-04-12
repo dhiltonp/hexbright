@@ -51,9 +51,7 @@ void loop() {
 
   //// Button actions to recognize, one-time actions to take as a result
   if(hb.button_just_released()) {
-    if(hb.button_pressed_time()<=9) {
-      // ignore, could be a bounce
-    } else if(hb.button_pressed_time()<300) { //<300 milliseconds
+    if(hb.button_pressed_time()<300) { //<300 milliseconds
       mode = CYCLE_MODE;
       int levels[] = {1,250,500,750,1000};
       brightness_level = (brightness_level+1)%5;

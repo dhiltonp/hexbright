@@ -229,15 +229,20 @@ class hexbright {
   unsigned int get_strobe_error();
 #endif // STROBE
 
-  // Returns true if the button is being pressed
+  // Button debouncing is handled inside the library.
+  // Returns true if the button is being pressed.
   static BOOL button_pressed();
   // button has just been pressed
   static BOOL button_just_pressed();
   // button has just been released
   static BOOL button_just_released();
-  // returns the amount of time (in ms) that the button was last (or is currently being) pressed
+  // If the button is currently pressed, returns the amount of time the button has been pressed.
+  // If the button is currently released, returns the duration of the last button press.
+  //  The time is in milliseconds.
   static int button_pressed_time();
-  // returns the amount of time (in ms) that the button was last (or is currently being) released
+  // If the button is currently pressed, returns the duration between the last two button presses.
+  // If the button is currently released, returns the amount of time since the button was released.
+  //  The time is in milliseconds.
   static int button_released_time();
   
   // led = GLED or RLED,

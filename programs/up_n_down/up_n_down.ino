@@ -81,10 +81,7 @@ void loop() {
     // click counting
     if(hb.button_just_released()) {
       bitreg &= ~(1<<GLOW_MODE_SET);
-      if(hb.button_pressed_time()<=7) {
-	// ignore, could be a bounce
-	Serial.println("Bounce!");
-      } else if(hb.button_pressed_time() <= short_click) {
+      if(hb.button_pressed_time() <= short_click) {
 	click_count++;
       } 
     } 
