@@ -7,6 +7,11 @@
 *.core
 *.stackdump
 
+# Other hexbright project forked from github #
+##############################################
+hexbright-sample
+hexbrightJC*
+
 # OS generated files #
 ######################
 .DS_Store
