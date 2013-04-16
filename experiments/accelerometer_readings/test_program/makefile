@@ -4,7 +4,7 @@ all: test.o hexbright.o
 test.o: test.cpp ../../../libraries/hexbright/hexbright.h
 	g++ -c test.cpp 
 
-hexbright.o: ../../../libraries/hexbright/hexbright.cpp ../../../libraries/hexbright/hexbright.h ../../../libraries/hexbright/NotArduino.h
+hexbright.o: ../../../libraries/hexbright/hexbright.cpp ../../../libraries/hexbright/hexbright.h ../../../libraries/hexbright/includes/NotArduino.h
 	g++ -c ../../../libraries/hexbright/hexbright.cpp
 
 ../../../libraries/hexbright/hexbright.h:
