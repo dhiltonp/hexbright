@@ -1,8 +1,34 @@
+/*
+Copyright (c) 2013, "Whitney Battestilli" <whitney@battestilli.net>
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <hexbright.h>
 #include <Wire.h>
 #include <EEPROM.h>
 
 #define EEPROM_LOCKED 0
+#define EEPROM_NIGHTLIGHT_BRIGHTNESS 1
 
 // Modes
 #define MAX_MODE 5
@@ -32,13 +58,38 @@ static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
 static char click_count = 0;
 
-static unsigned long submode_lockout=0;
+static word nightlight_brightness;
 
 const word blink_freq_map[] = {70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
-static char locked;
+static byte locked;
 hexbright hb;
+
+int adjustLED() {
+  if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
+    double d = hb.difference_from_down();
+    if(d>=0 && d<=1.0) {
+      int i = (int)(d * 2000.0);
+      i = i>1000 ? 1000 : i;
+      i = i<=0 ? 1 : i;
+      hb.set_light(CURRENT_LEVEL, i, 0);
+      bitreg |= (1<<BLOCK_TURNING_OFF);
+      return i;
+    }
+  }
+  return -1;
+}
+
+byte updateEEPROM(word location, byte value) {
+  byte c = EEPROM.read(location);
+  Serial.print("Read "); Serial.print(c); Serial.print(" from EEPROM location: "); Serial.println(location); 
+  if(c!=value) {
+    Serial.print("Writing new value: "); Serial.println(value);
+    EEPROM.write(location, value);
+  }
+  return value;
+}
 
 void setup() {
   // We just powered on!  That means either we got plugged
@@ -46,8 +97,13 @@ void setup() {
   hb = hexbright();
   hb.init_hardware();
 
+  Serial.println("Reading defaults from EEPROM");
   locked = EEPROM.read(EEPROM_LOCKED);
-
+  Serial.print("Locked: "); Serial.println(locked);
+  nightlight_brightness = EEPROM.read(EEPROM_NIGHTLIGHT_BRIGHTNESS)*4;
+  nightlight_brightness = nightlight_brightness==0 ? 1000 : nightlight_brightness;
+  Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness);  
+  
   Serial.println("Powered up!");
 } 
 
@@ -118,28 +174,28 @@ void loop() {
     }
     break;
   case MODE_LEVEL:
-    if(hb.button_pressed() && hb.button_pressed_time()>short_click) {
-      double d = hb.difference_from_down();
-      if(d>=0.01 && d<=1.0) {
-	i = (int)(d * 2000.0);
-	hb.set_light(CURRENT_LEVEL, i>1000?1000:i, 20);
-	bitreg |= (1<<BLOCK_TURNING_OFF);
-      }
-    }
+    adjustLED();
     break;
-  case MODE_NIGHTLIGHT:
+  case MODE_NIGHTLIGHT: {
     if(!hb.low_voltage_state())
       hb.set_led(RLED, 100, 0);
     if(hb.moved(nightlight_sensitivity)) {
+      //Serial.println("Nightlight Moved");
       treg1 = time;
-      hb.set_light(CURRENT_LEVEL, 1000, 1000);
+      hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
     } else if(time > treg1 + nightlight_timeout) {
       hb.set_light(CURRENT_LEVEL, 0, 1000);
-#ifdef PRINTING_NUMBER:
-      if(!hb.printing_number())
-#endif
+   }
+    int i = adjustLED();
+    if(i>0) {
+      Serial.print("Nightlight Brightness: "); Serial.println(i);
+      nightlight_brightness = i;
     }
-    break;
+    if(hb.button_just_released()) {
+      Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness);
+      updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
+    }
+    break; }
   case MODE_BLINK:
     if(hb.button_pressed()) {
       if( hb.button_pressed_time()>short_click) {
@@ -153,7 +209,6 @@ void loop() {
 	  }
 	  Serial.print("Blink Freq: "); Serial.println(blink_frequency);
 	  bitreg |= (1<<BLOCK_TURNING_OFF);
-	  submode_lockout = time + short_click;
 	}
       }
     }
@@ -307,6 +362,7 @@ void loop() {
       break;
     case MODE_NIGHTLIGHT:
       Serial.println("Mode = nightlight");
+      Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness);  
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
@@ -326,11 +382,11 @@ void loop() {
       break;
     case MODE_LOCKED:
       locked=!locked;
-      EEPROM.write(EEPROM_LOCKED,locked);
+      updateEEPROM(EEPROM_LOCKED,locked);
       new_mode=MODE_OFF;
       break;
     }
     mode=new_mode;
   }
-}
+ }
   
