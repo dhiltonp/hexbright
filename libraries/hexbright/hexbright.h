@@ -82,6 +82,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_ACCEL 8 // accelerometer
 #define DEBUG_NUMBER 9 // number printing utility
 #define DEBUG_CHARGE 10 // charge state
+#define DEBUG_CLICK 11 // click counting
 
 
 
@@ -122,6 +123,12 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGING 1
 #define BATTERY 7
 #define CHARGED 3
+
+// Bit manipulation macros
+#define BIT_CHECK(reg,bit) (reg & (1<<bit))
+#define BIT_SET(reg,bit) reg |= (1<<bit)
+#define BIT_CLEAR(reg,bit) reg &= ~(1<<bit)
+#define BIT_TOGGLE(reg,bit) reg ^= (1<<bit)
 
 class hexbright {
  public:
@@ -245,6 +252,9 @@ class hexbright {
   //  The time is in milliseconds.
   static int button_released_time();
   
+  static void config_click_count(word click_time);
+  static char click_count();
+
   // led = GLED or RLED,
   // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
   // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
