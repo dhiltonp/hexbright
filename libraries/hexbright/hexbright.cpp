@@ -639,7 +639,7 @@ char hexbright::click_count() {
       clickState = CLICK_OFF;
       //Serial.print("Click finished: "); Serial.println((int)clickCount);
       return clickCount;
-    } else if(button_just_pressed()) {
+    } else if(button_pressed()) {
       // move back to active state
       clickState = CLICK_ACTIVE;
       //Serial.println("Click active");
