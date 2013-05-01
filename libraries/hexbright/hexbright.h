@@ -82,8 +82,6 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_ACCEL 8 // accelerometer
 #define DEBUG_NUMBER 9 // number printing utility
 #define DEBUG_CHARGE 10 // charge state
-#define DEBUG_CLICK 11 // click counting
-
 
 
 #if (DEBUG==DEBUG_TEMP)

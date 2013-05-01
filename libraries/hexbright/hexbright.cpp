@@ -623,17 +623,13 @@ char hexbright::click_count() {
     if(button_just_released()) {
       if(button_pressed_time() > max_click_time) {
 	// button held to long
-#if (DEBUG==DEBUG_CLICK)
-	Serial.println("Click held too long");
-#endif
+	//Serial.println("Click held too long");
 	clickState = CLICK_OFF;
       } else {
 	// click is counted
 	clickState = CLICK_WAIT;
 	clickCount++;
-#if (DEBUG==DEBUG_CLICK)
-	Serial.println("Click counted");
-#endif
+	//Serial.println("Click counted");
       }
     }
     break;
@@ -641,9 +637,7 @@ char hexbright::click_count() {
     // button is released for long enough, we're done clicking
     if(button_released_time() > max_click_time) {
       clickState = CLICK_OFF;
-#if (DEBUG==DEBUG_CLICK)
-      Serial.print("Click finished: "); Serial.println(clickCount);
-#endif
+      //Serial.print("Click finished: "); Serial.println((int)clickCount);
       return clickCount;
     } else if(button_just_pressed()) {
       // move back to active state
