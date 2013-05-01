@@ -250,7 +250,12 @@ class hexbright {
   //  The time is in milliseconds.
   static int button_released_time();
   
+  // Call in setup loop if you want to use the click counter
+  // click_time is the maximum time a click can take before the counter resets
   static void config_click_count(word click_time);
+
+  // The number of clicks <= click_time.  Will not return a count  until click_time ms after the button release.
+  // Will return -127 unless returning a valid count.
   static char click_count();
 
   // led = GLED or RLED,
