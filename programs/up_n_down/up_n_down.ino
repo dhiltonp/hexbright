@@ -142,7 +142,7 @@ void loop() {
   case MODE_OFF:
     // glow mode
     if(BIT_CHECK(bitreg,GLOW_MODE))
-      hb.set_led(GLED, 100);
+      hb.set_led(GLED, 100, 100, 64);
     
     // holding the button
     if(hb.button_pressed() && !locked) {
@@ -158,10 +158,12 @@ void loop() {
 	   !BIT_CHECK(bitreg,GLOW_MODE_SET) && !BIT_CHECK(bitreg,QUICKSTROBE) ) {
 	  BIT_TOGGLE(bitreg,GLOW_MODE);
 	  BIT_SET(bitreg,GLOW_MODE_SET);
-	  if(BIT_CHECK(bitreg,GLOW_MODE))
-	    Serial.println("Glow mode");
-	  else
+	  if(!BIT_CHECK(bitreg,GLOW_MODE)) {
 	    Serial.println("Glow mode off");	
+	    hb.set_led(GLED, 100); // work around a bug that keeps the light from shutting off
+	  } else {
+	    Serial.println("Glow mode");
+	  }
 	} 
     }
     if(hb.button_just_released()) {
@@ -174,7 +176,7 @@ void loop() {
     break;
   case MODE_NIGHTLIGHT: {
     if(!hb.low_voltage_state())
-      hb.set_led(RLED, 100, 0);
+      hb.set_led(RLED, 100, 100, 128);
     if(hb.moved(nightlight_sensitivity)) {
       //Serial.println("Nightlight Moved");
       treg1 = time;
@@ -308,7 +310,7 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 1000, 0);
+	hb.set_led(RLED, 1000, 100, 128);
       break;
     case MODE_BLINK:
       Serial.println("Mode = blink");
