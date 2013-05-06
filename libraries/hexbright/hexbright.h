@@ -82,7 +82,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_ACCEL 8 // accelerometer
 #define DEBUG_NUMBER 9 // number printing utility
 #define DEBUG_CHARGE 10 // charge state
-
+#define DEBUG_PROGRAM 11 // use this to enable/disable print statements in the program rather than the library
 
 #if (DEBUG==DEBUG_TEMP)
 #define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
