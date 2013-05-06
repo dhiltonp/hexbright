@@ -600,7 +600,6 @@ byte clickState;
 #define CLICK_OFF 0
 #define CLICK_ACTIVE 1
 #define CLICK_WAIT 2
-#define CLICK_DONE 3
 
 byte clickCount;
 word max_click_time;
