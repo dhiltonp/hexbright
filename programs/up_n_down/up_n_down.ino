@@ -72,6 +72,9 @@ static word blink_frequency; // in ms;
 static byte locked;
 hexbright hb;
 
+#define DIRECTION_DOWN 1
+#define DIRECTION_UP 2
+#define DIRECTION_UNCHANGED 3
 int adjustLED() {
   if(hb.button_pressed() && hb.button_pressed_time()>click) {
     double d = hb.difference_from_down();
@@ -79,8 +82,10 @@ int adjustLED() {
       int i = (int)(d * 2000.0);
       i = i>1000 ? 1000 : i;
       i = i<=0 ? 1 : i;
+      
       hb.set_light(CURRENT_LEVEL, i, 0);
       BIT_SET(bitreg,BLOCK_TURNING_OFF);
+
       return i;
     }
   }
@@ -131,7 +136,7 @@ void loop() {
     // Low battery
     if(mode != MODE_OFF && hb.low_voltage_state())
       if(hb.get_led_state(RLED)==LED_OFF) 
-	hb.set_led(RLED,50,1000);
+	hb.set_led(RLED,50,1000,1);
   }
 
   // Get the click count
@@ -175,7 +180,7 @@ void loop() {
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 1000, 100, 128);
+	hb.set_led(RLED, 100, 0, 1);
       break;
     case MODE_BLINK:
       DBG(Serial.println("Mode = blink"));
@@ -237,7 +242,7 @@ void loop() {
     break;
   case MODE_NIGHTLIGHT: {
     if(!hb.low_voltage_state())
-      hb.set_led(RLED, 100, 100, 128);
+      hb.set_led(RLED, 100, 0, 1);
     if(hb.moved(nightlight_sensitivity)) {
       //Serial.println("Nightlight Moved");
       treg1 = time;
