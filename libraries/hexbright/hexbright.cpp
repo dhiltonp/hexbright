@@ -124,8 +124,10 @@ void hexbright::init_hardware() {
   continue_time = micros();
 }
 
+word loopCount;
 void hexbright::update() {
   unsigned long now;
+  loopCount++;
 
 #if (DEBUG==DEBUG_LOOP)
   unsigned long start_time=micros();
@@ -376,13 +378,17 @@ void hexbright::set_light_level(unsigned long level) {
     digitalWriteFast(DPIN_PWR, LOW);
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
-  } else if(level<=500) {
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
-  } else {
-    level -= 500;
-    digitalWriteFast(DPIN_DRV_MODE, HIGH);
-    analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+  } else { 
+    byte value;
+    if(level<=500) {
+      digitalWriteFast(DPIN_DRV_MODE, LOW);
+      value = (byte)(.000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
+    } else {
+      level -= 500;
+      digitalWriteFast(DPIN_DRV_MODE, HIGH);
+      value = (byte)(.00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+    }
+    analogWrite(DPIN_DRV_EN, value);
   }
 }
 
@@ -448,7 +454,6 @@ unsigned int hexbright::get_strobe_error() {
 int led_wait_time[2] = {-1, -1};
 int led_on_time[2] = {-1, -1};
 unsigned char led_brightness[2] = {0, 0};
-byte rledCount;
 byte rledMap[4] = {0b0001, 0b0101, 0b0111, 0b1111};
 
 void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned char brightness) {
@@ -477,7 +482,7 @@ inline void hexbright::_led_on(unsigned char led) {
     pinModeFast(DPIN_RLED_SW, OUTPUT);
 
     byte l = rledMap[led_brightness[RLED]>>6];
-    byte r = 1<<rledCount;
+    byte r = 1<<(loopCount && 0b11);
     if(l & r) {
       digitalWriteFast(DPIN_RLED_SW, HIGH);
     } else {
@@ -516,7 +521,6 @@ inline void hexbright::adjust_leds() {
   }
 #endif
 
-  rledCount++; rledCount%=4;
   int i=0;
   for(i=0; i<2; i++) {
     if(led_on_time[i]>0) {
