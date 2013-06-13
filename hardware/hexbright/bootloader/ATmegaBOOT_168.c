@@ -238,40 +238,38 @@
 
 
 /* function prototypes */
-void putch(char);
-char getch(void);
-void getNch(uint8_t);
-void byte_response(uint8_t);
-void nothing_response(void);
-char gethex(void);
-void puthex(char);
-void flash_led(uint8_t);
+static void putch(char);
+static char getch(void);
+static void getNch(uint8_t);
+static void byte_response(uint8_t);
+static void nothing_response(void);
+static char gethex(void);
+static void puthex(char);
+static void flash_led(uint8_t);
 
 /* some variables */
-union address_union {
+static union address_union {
 	uint16_t word;
 	uint8_t  byte[2];
 } address;
 
-union length_union {
+static union length_union {
 	uint16_t word;
 	uint8_t  byte[2];
 } length;
 
-struct flags_struct {
+static struct flags_struct {
 	unsigned eeprom : 1;
 	unsigned rampz  : 1;
 } flags;
 
-uint8_t buff[256];
-uint8_t address_high;
+static uint8_t buff[256];
+static uint8_t address_high;
 
-uint8_t pagesz=0x80;
-
-uint8_t i;
+static uint8_t pagesz=0x80;
 
 #if defined(__AVR_ATmega128__)
-uint8_t bootuart = 0;
+static uint8_t bootuart = 0;
 
 #elif defined __AVR_ATmega1280__
 /* the mega1280 chip has four serial ports ...
@@ -285,9 +283,9 @@ uint8_t bootuart = 0;
 # define bootuart 0
 #endif
 
-uint8_t error_count = 0;
+static uint8_t error_count = 0;
 
-void (*app_start)(void) = 0x0000;
+static void (*app_start)(void) = 0x0000;
 
 
 /* main program starts here */
@@ -759,6 +757,7 @@ int main(void)
 
 	/* check for three times exclamation mark pressed */
 	else if(ch=='!') {
+		int i;
 		ch = getch();
 		if(ch=='!') {
 		ch = getch();
@@ -873,7 +872,7 @@ int main(void)
 }
 
 
-char gethexnib(void) {
+static char gethexnib(void) {
 	char a;
 	a = getch(); putch(a);
 	if(a >= 'a') {
@@ -885,12 +884,12 @@ char gethexnib(void) {
 }
 
 
-char gethex(void) {
+static char gethex(void) {
 	return (gethexnib() << 4) + gethexnib();
 }
 
 
-void puthex(char ch) {
+static void puthex(char ch) {
 	char ah;
 
 	ah = ch >> 4;
@@ -912,7 +911,7 @@ void puthex(char ch) {
 }
 
 
-void putch(char ch)
+static void putch(char ch)
 {
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 	if(bootuart == 1) {
@@ -934,7 +933,7 @@ void putch(char ch)
 }
 
 
-char getch(void)
+static char getch(void)
 {
 	uint32_t count = 0;
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
@@ -984,7 +983,7 @@ char getch(void)
 }
 
 
-void getNch(uint8_t count)
+static void getNch(uint8_t count)
 {
 	while(count--) {
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
@@ -1009,7 +1008,7 @@ void getNch(uint8_t count)
 }
 
 
-void byte_response(uint8_t val)
+static void byte_response(uint8_t val)
 {
 	if (getch() == ' ') {
 		putch(0x14);
@@ -1022,7 +1021,7 @@ void byte_response(uint8_t val)
 }
 
 
-void nothing_response(void)
+static void nothing_response(void)
 {
 	if (getch() == ' ') {
 		putch(0x14);
@@ -1033,7 +1032,7 @@ void nothing_response(void)
 	}
 }
 
-void flash_led(uint8_t count)
+static void flash_led(uint8_t count)
 {
 	while (count--) {
 		LED_PORT |= _BV(LED);
