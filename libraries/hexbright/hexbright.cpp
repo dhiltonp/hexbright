@@ -482,7 +482,7 @@ inline void hexbright::_led_on(unsigned char led) {
     pinModeFast(DPIN_RLED_SW, OUTPUT);
 
     byte l = rledMap[led_brightness[RLED]>>6];
-    byte r = 1<<(loopCount && 0b11);
+    byte r = 1<<(loopCount & 0b11);
     if(l & r) {
       digitalWriteFast(DPIN_RLED_SW, HIGH);
     } else {
