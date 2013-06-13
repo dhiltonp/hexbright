@@ -124,7 +124,16 @@
 
 /* flashing onboard LED is used to indicate that the bootloader was entered */
 /* if monitor functions are included, LED goes on after monitor was entered */
-#if defined __AVR_ATmega128__ || defined __AVR_ATmega1280__
+#if defined HEXBRIGHT
+/* The Hexbright doesn't have an "onboard" LED, but green LED in the back
+ * switch is connected to pin PD5.
+ */
+#define LED_DDR  DDRD
+#define LED_PORT PORTD
+#define LED_PIN  PIND
+#define LED      PIND5
+
+#elif defined __AVR_ATmega128__ || defined __AVR_ATmega1280__
 /* Onboard LED is connected to pin PB7 (e.g. Crumb128, PROBOmega128, Savvy128, Arduino Mega) */
 #define LED_DDR  DDRB
 #define LED_PORT PORTB

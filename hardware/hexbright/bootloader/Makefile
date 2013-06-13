@@ -141,7 +141,7 @@ diecimila_isp: EFUSE = 00
 diecimila_isp: isp
 
 hexbright: TARGET = hexbright
-hexbright: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=0' '-DWATCHDOG_MODS'
+hexbright: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=1' '-DWATCHDOG_MODS' '-DHEXBRIGHT'
 hexbright: AVR_FREQ = 8000000L 
 hexbright: $(PROGRAM)_hexbright.hex
 
