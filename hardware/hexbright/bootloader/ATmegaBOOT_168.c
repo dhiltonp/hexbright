@@ -62,8 +62,29 @@
 /* Tested with m168                                       */
 /**********************************************************/
 
-/* $Id$ */
+/* Preprocessor defines that can be tweaked from the Makefile:
+ *
+ * F_CPU            [Hz] CPU clock frequency. 
+ *                  Default: NO DEFAULT!!!
+ * MAX_ERROR_COUNT  Maximum errors before giving up.
+ *                  Default: 5
+ * BAUD_RATE        Serial interface baud rate.
+ *                  Default: 19200
+ */
 
+#ifndef F_CPU
+# error "F_CPU must be set in the Makefile!"
+#endif
+
+/* Number of tolerated errors before giving up and launching application */
+#ifndef MAX_ERROR_COUNT
+# define MAX_ERROR_COUNT 5
+#endif
+
+/* set the UART baud rate */
+#ifndef BAUD_RATE
+# define BAUD_RATE   19200
+#endif
 
 /* some includes */
 #include <inttypes.h>
@@ -79,27 +100,10 @@
 #include <avr/eeprom.h>
 #endif
 
-/* Use the F_CPU defined in Makefile */
-
-/* 20060803: hacked by DojoCorp */
-/* 20070626: hacked by David A. Mellis to decrease waiting time for auto-reset */
-/* set the waiting time for the bootloader */
-/* get this from the Makefile instead */
-/* #define MAX_TIME_COUNT (F_CPU>>4) */
-
-/* 20070707: hacked by David A. Mellis - after this many errors give up and launch application */
-#define MAX_ERROR_COUNT 5
-
-/* set the UART baud rate */
-/* 20060803: hacked by DojoCorp */
-//#define BAUD_RATE   115200
-#ifndef BAUD_RATE
-#define BAUD_RATE   19200
-#endif
-
-
-/* SW_MAJOR and MINOR needs to be updated from time to time to avoid warning message from AVR Studio */
-/* never allow AVR Studio to do an update !!!! */
+/* SW_MAJOR and MINOR needs to be updated from time to time to avoid
+ * warning message from AVR Studio.
+ * never allow AVR Studio to do an update !!!!
+ */
 #define HW_VER	 0x02
 #define SW_MAJOR 0x01
 #define SW_MINOR 0x10
@@ -115,18 +119,10 @@
 #define BL_PIN  PINF
 #define BL0     PINF7
 #define BL1     PINF6
-#elif defined __AVR_ATmega1280__ 
-/* we just don't do anything for the MEGA and enter bootloader on reset anyway*/
-#else
-/* other ATmegas have only one UART, so only one pin is defined to enter bootloader */
-#define BL_DDR  DDRD
-#define BL_PORT PORTD
-#define BL_PIN  PIND
-#define BL      PIND6
 #endif
 
 
-/* onboard LED is used to indicate, that the bootloader was entered (3x flashing) */
+/* flashing onboard LED is used to indicate that the bootloader was entered */
 /* if monitor functions are included, LED goes on after monitor was entered */
 #if defined __AVR_ATmega128__ || defined __AVR_ATmega1280__
 /* Onboard LED is connected to pin PB7 (e.g. Crumb128, PROBOmega128, Savvy128, Arduino Mega) */
@@ -134,6 +130,7 @@
 #define LED_PORT PORTB
 #define LED_PIN  PINB
 #define LED      PINB7
+
 #else
 /* Onboard LED is connected to pin PB5 in Arduino NG, Diecimila, and Duomilanuove */ 
 /* other boards like e.g. Crumb8, Crumb168 are using PB2 */
@@ -148,7 +145,6 @@
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 #define MONITOR 1
 #endif
-
 
 /* define various device id's */
 /* manufacturer byte is always the same */
@@ -228,6 +224,7 @@
 #define SIG2	0x93
 #define SIG3	0x08
 #define PAGE_SIZE	0x20U	//32 words
+
 #endif
 
 
@@ -263,7 +260,21 @@ uint8_t address_high;
 uint8_t pagesz=0x80;
 
 uint8_t i;
+
+#if defined(__AVR_ATmega128__)
 uint8_t bootuart = 0;
+
+#elif defined __AVR_ATmega1280__
+/* the mega1280 chip has four serial ports ...
+ * we could eventually use any of them, or not?
+ * however, we don't wanna confuse people, to avoid making a mess,
+ * we will stick to RXD0, TXD0
+ */
+# define bootuart 1
+
+#else
+# define bootuart 0
+#endif
 
 uint8_t error_count = 0;
 
@@ -283,8 +294,9 @@ int main(void)
 	WDTCSR |= _BV(WDCE) | _BV(WDE);
 	WDTCSR = 0;
 
-	// Check if the WDT was used to reset, in which case we dont bootload and skip straight to the code. woot.
-	if (! (ch &  _BV(EXTRF))) // if its a not an external reset...
+	// Check if the WDT was used to reset, in which case we dont bootload
+	// and skip straight to the code. woot.
+	if (! (ch &  _BV(EXTRF))) // if it's a not an external reset...
 		app_start();  // skip bootloader
 #else
 	asm volatile("nop\n\t");
@@ -297,17 +309,9 @@ int main(void)
 	BL_DDR &= ~_BV(BL1);
 	BL_PORT |= _BV(BL0);
 	BL_PORT |= _BV(BL1);
-#else
-	/* We run the bootloader regardless of the state of this pin.  Thus, don't
-	put it in a different state than the other pins.  --DAM, 070709
-	This also applies to Arduino Mega -- DC, 080930
-	BL_DDR &= ~_BV(BL);
-	BL_PORT |= _BV(BL);
-	*/
 #endif
 
-
-#ifdef __AVR_ATmega128__
+#if defined __AVR_ATmega128__
 	/* check which UART should be used for booting */
 	if(bit_is_clear(BL_PIN, BL0)) {
 		bootuart = 1;
@@ -315,12 +319,6 @@ int main(void)
 	else if(bit_is_clear(BL_PIN, BL1)) {
 		bootuart = 2;
 	}
-#endif
-
-#if defined __AVR_ATmega1280__
-	/* the mega1280 chip has four serial ports ... we could eventually use any of them, or not? */
-	/* however, we don't wanna confuse people, to avoid making a mess, we will stick to RXD0, TXD0 */
-	bootuart = 1;
 #endif
 
 	/* check if flash is programmed already, if not start bootloader anyway */
@@ -331,20 +329,13 @@ int main(void)
 	if(!bootuart) {
 		app_start();
 	}
-#else
-	/* check if bootloader pin is set low */
-	/* we don't start this part neither for the m8, nor m168 */
-	//if(bit_is_set(BL_PIN, BL)) {
-	//      app_start();
-	//    }
 #endif
 	}
 
-#ifdef __AVR_ATmega128__    
+#ifdef __AVR_ATmega128__
 	/* no bootuart was selected, default to uart 0 */
-	if(!bootuart) {
+	if(!bootuart)
 		bootuart = 1;
-	}
 #endif
 
 
@@ -418,12 +409,7 @@ int main(void)
 
 
 	/* flash onboard LED to signal entering of bootloader */
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
-	// 4x for UART0, 5x for UART1
 	flash_led(NUM_LED_FLASHES + bootuart);
-#else
-	flash_led(NUM_LED_FLASHES);
-#endif
 
 	/* 20050803: by DojoCorp, this is one of the parts provoking the
 		 system to stop listening, cancelled from the original */
@@ -941,8 +927,8 @@ void putch(char ch)
 
 char getch(void)
 {
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 	uint32_t count = 0;
+#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 	if(bootuart == 1) {
 		while(!(UCSR0A & _BV(RXC0))) {
 			/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
@@ -967,7 +953,6 @@ char getch(void)
 	}
 	return 0;
 #elif defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
-	uint32_t count = 0;
 	while(!(UCSR0A & _BV(RXC0))){
 		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 		/* HACKME:: here is a good place to count times*/
@@ -978,7 +963,6 @@ char getch(void)
 	return UDR0;
 #else
 	/* m8,16,32,169,8515,8535,163 */
-	uint32_t count = 0;
 	while(!(UCSRA & _BV(RXC))){
 		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 		/* HACKME:: here is a good place to count times*/
