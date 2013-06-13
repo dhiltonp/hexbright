@@ -72,22 +72,20 @@ static word blink_frequency; // in ms;
 static byte locked;
 hexbright hb;
 
-#define DIRECTION_DOWN 1
-#define DIRECTION_UP 2
-#define DIRECTION_UNCHANGED 3
 int adjustLED() {
   if(hb.button_pressed() && hb.button_pressed_time()>click) {
-    double d = hb.difference_from_down();
-    if(d>=0 && d<=1.0) {
-      int i = (int)(d * 2000.0);
-      i = i>1000 ? 1000 : i;
-      i = i<=0 ? 1 : i;
-      
-      hb.set_light(CURRENT_LEVEL, i, 0);
-      BIT_SET(bitreg,BLOCK_TURNING_OFF);
+    double d = hb.difference_from_down(); // (0,1)
+    int di = (int)(d*400.0); // (0,400)
+    int i = (di)/10; // (0,40)
+    i *= 50; // (0,2000)
+    i = i>1000 ? 1000 : i;
+    i = i<=0 ? 1 : i;
 
-      return i;
-    }
+    hb.set_light(CURRENT_LEVEL, i, 100);
+    BIT_SET(bitreg,BLOCK_TURNING_OFF);
+
+
+    return i;
   }
   return -1;
 }
