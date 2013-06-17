@@ -273,8 +273,6 @@ static struct flags_struct {
 static uint8_t buff[256];
 static uint8_t address_high;
 
-static uint8_t pagesz=0x80;
-
 #if defined(__AVR_ATmega128__)
 static uint8_t bootuart = 0;
 
