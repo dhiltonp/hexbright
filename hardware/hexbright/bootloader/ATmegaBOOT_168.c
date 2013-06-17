@@ -236,6 +236,9 @@
 
 #endif
 
+/* Response begin/end markers */
+#define RESPBEG	0x14
+#define RESPEND	0x10
 
 /* function prototypes */
 static void error(void);
@@ -440,7 +443,7 @@ int main(void)
 	/* Would need to selectively manipulate RAMPZ, and it's only 9 characters anyway so who cares.  */
 	else if(ch=='1') {
 		if (getch() == ' ') {
-			putch(0x14);
+			putch(RESPBEG);
 			putch('A');
 			putch('V');
 			putch('R');
@@ -448,7 +451,7 @@ int main(void)
 			putch('I');
 			putch('S');
 			putch('P');
-			putch(0x10);
+			putch(RESPEND);
 		} else
 			error();
 	}
@@ -678,8 +681,8 @@ int main(void)
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
-			putch(0x14);
-			putch(0x10);
+			putch(RESPBEG);
+			putch(RESPEND);
 		} else
 			error();
 	}
@@ -697,7 +700,7 @@ int main(void)
 		if (getch() == 'E') flags.eeprom = 1;
 		else flags.eeprom = 0;
 		if (getch() == ' ') {		                // Command terminator
-			putch(0x14);
+			putch(RESPBEG);
 			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
 				if (flags.eeprom) {	                        // Byte access EEPROM read
 #if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
@@ -720,7 +723,7 @@ int main(void)
 					address.word++;
 				}
 			}
-			putch(0x10);
+			putch(RESPEND);
 		}
 	}
 
@@ -728,11 +731,11 @@ int main(void)
 	/* Get device signature bytes  */
 	else if(ch=='u') {
 		if (getch() == ' ') {
-			putch(0x14);
+			putch(RESPBEG);
 			putch(SIG1);
 			putch(SIG2);
 			putch(SIG3);
-			putch(0x10);
+			putch(RESPEND);
 		} else
 			error();
 	}
@@ -1011,9 +1014,9 @@ static void getNch(uint8_t count)
 static void byte_response(uint8_t val)
 {
 	if (getch() == ' ') {
-		putch(0x14);
+		putch(RESPBEG);
 		putch(val);
-		putch(0x10);
+		putch(RESPEND);
 	} else
 		error();
 }
@@ -1022,8 +1025,8 @@ static void byte_response(uint8_t val)
 static void nothing_response(void)
 {
 	if (getch() == ' ') {
-		putch(0x14);
-		putch(0x10);
+		putch(RESPBEG);
+		putch(RESPEND);
 	} else
 		error();
 }
