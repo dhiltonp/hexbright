@@ -764,6 +764,8 @@ int main(void)
 			welcome = "ATmegaBOOT / PROBOmega128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined SAVVY128
 			welcome = "ATmegaBOOT / Savvy128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+#elif defined HEXBRIGHT
+			welcome = "ATmegaBOOT / Hexbright - (C) ptesarik - 130617\n\r";
 #elif defined __AVR_ATmega1280__ 
 			welcome = "ATmegaBOOT / Arduino Mega - (C) Arduino LLC - 090930\n\r";
 #endif
