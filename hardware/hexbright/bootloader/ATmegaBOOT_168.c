@@ -238,6 +238,7 @@
 
 
 /* function prototypes */
+static void error(void);
 static void putch(char);
 static char getch(void);
 static void getNch(uint8_t);
@@ -282,8 +283,6 @@ static uint8_t bootuart = 0;
 #else
 # define bootuart 0
 #endif
-
-static uint8_t error_count = 0;
 
 static void (*app_start)(void) = 0x0000;
 
@@ -450,10 +449,8 @@ int main(void)
 			putch('S');
 			putch('P');
 			putch(0x10);
-		} else {
-			if (++error_count == MAX_ERROR_COUNT)
-				app_start();
-		}
+		} else
+			error();
 	}
 
 
@@ -683,10 +680,8 @@ int main(void)
 			}
 			putch(0x14);
 			putch(0x10);
-		} else {
-			if (++error_count == MAX_ERROR_COUNT)
-				app_start();
-		}		
+		} else
+			error();
 	}
 
 
@@ -738,10 +733,8 @@ int main(void)
 			putch(SIG2);
 			putch(SIG3);
 			putch(0x10);
-		} else {
-			if (++error_count == MAX_ERROR_COUNT)
-				app_start();
-		}
+		} else
+			error();
 	}
 
 
@@ -864,13 +857,20 @@ int main(void)
 	}
 	/* end of monitor */
 #endif
-	else if (++error_count == MAX_ERROR_COUNT) {
-		app_start();
-	}
+	else 
+		error();
+
 	} /* end of forever loop */
 
 }
 
+
+static void error(void) {
+	static uint8_t error_count;
+
+	if (++error_count == MAX_ERROR_COUNT)
+		app_start();
+}
 
 static char gethexnib(void) {
 	char a;
@@ -1014,10 +1014,8 @@ static void byte_response(uint8_t val)
 		putch(0x14);
 		putch(val);
 		putch(0x10);
-	} else {
-		if (++error_count == MAX_ERROR_COUNT)
-			app_start();
-	}
+	} else
+		error();
 }
 
 
@@ -1026,10 +1024,8 @@ static void nothing_response(void)
 	if (getch() == ' ') {
 		putch(0x14);
 		putch(0x10);
-	} else {
-		if (++error_count == MAX_ERROR_COUNT)
-			app_start();
-	}
+	} else
+		error();
 }
 
 static void flash_led(uint8_t count)
