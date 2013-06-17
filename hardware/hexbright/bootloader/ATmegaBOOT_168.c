@@ -745,27 +745,27 @@ int main(void)
 
 	/* check for three times exclamation mark pressed */
 	else if(ch=='!') {
-		int i;
 		ch = getch();
 		if(ch=='!') {
 		ch = getch();
 		if(ch=='!') {
-			PGM_P welcome = "";
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 			uint16_t extaddr;
 #endif
 			uint8_t addrl, addrh;
 
 #ifdef CRUMB128
-			welcome = "ATmegaBOOT / Crumb128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static const char welcome[] = "ATmegaBOOT / Crumb128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined PROBOMEGA128
-			welcome = "ATmegaBOOT / PROBOmega128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static const char welcome[] = "ATmegaBOOT / PROBOmega128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined SAVVY128
-			welcome = "ATmegaBOOT / Savvy128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static const char welcome[] = "ATmegaBOOT / Savvy128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined HEXBRIGHT
-			welcome = "ATmegaBOOT / Hexbright - (C) ptesarik - 130617\n\r";
+			static const char welcome[] = "ATmegaBOOT / Hexbright - (C) ptesarik - 130617\n\r";
 #elif defined __AVR_ATmega1280__ 
-			welcome = "ATmegaBOOT / Arduino Mega - (C) Arduino LLC - 090930\n\r";
+			static const char welcome[] = "ATmegaBOOT / Arduino Mega - (C) Arduino LLC - 090930\n\r";
+#else
+			static const char welcome[] = "ATmegaBOOT / UNKNOWN\n\r";
 #endif
 
 			/* turn on LED */
@@ -773,9 +773,7 @@ int main(void)
 			LED_PORT &= ~_BV(LED);
 
 			/* print a welcome message and command overview */
-			for(i=0; welcome[i] != '\0'; ++i) {
-				putch(welcome[i]);
-			}
+			putstr(welcome);
 
 			/* test for valid commands */
 			for(;;) {
