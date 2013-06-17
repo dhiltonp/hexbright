@@ -238,11 +238,14 @@
 
 /* Response begin/end markers */
 #define RESPBEG	0x14
+#define STRBEG	"\x14"
 #define RESPEND	0x10
+#define STREND	"\x10"
 
 /* function prototypes */
 static void error(void);
 static void putch(char);
+static void putstr(const char*);
 static char getch(void);
 static void getNch(uint8_t);
 static void byte_response(uint8_t);
@@ -443,15 +446,8 @@ int main(void)
 	/* Would need to selectively manipulate RAMPZ, and it's only 9 characters anyway so who cares.  */
 	else if(ch=='1') {
 		if (getch() == ' ') {
-			putch(RESPBEG);
-			putch('A');
-			putch('V');
-			putch('R');
-			putch(' ');
-			putch('I');
-			putch('S');
-			putch('P');
-			putch(RESPEND);
+			static const char id[] = STRBEG "AVR ISP" STREND;
+			putstr(id);
 		} else
 			error();
 	}
@@ -731,11 +727,9 @@ int main(void)
 	/* Get device signature bytes  */
 	else if(ch=='u') {
 		if (getch() == ' ') {
-			putch(RESPBEG);
-			putch(SIG1);
-			putch(SIG2);
-			putch(SIG3);
-			putch(RESPEND);
+			static const char sig[] =
+				{ RESPBEG, SIG1, SIG2, SIG3, RESPEND, 0};
+			putstr(sig);
 		} else
 			error();
 	}
@@ -1008,6 +1002,13 @@ static void getNch(uint8_t count)
 		getch(); // need to handle time out
 #endif		
 	}
+}
+
+
+static void putstr(const char *s)
+{
+	while (*s)
+		putch(*s++);
 }
 
 
