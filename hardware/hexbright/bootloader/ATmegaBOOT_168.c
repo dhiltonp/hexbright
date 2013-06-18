@@ -777,10 +777,8 @@ int main(void)
 
 			/* test for valid commands */
 			for(;;) {
-				putch('\n');
-				putch('\r');
-				putch(':');
-				putch(' ');
+				static const char prompt[] = "\n\r: ";
+				putstr(prompt);
 
 				ch = getch();
 				putch(ch);
@@ -825,9 +823,8 @@ int main(void)
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 				/* external bus loop  */
 				else if(ch == 'b') {
-					putch('b');
-					putch('u');
-					putch('s');
+					static const char bus[] = "bus";
+					putstr(bus);
 					MCUCR = 0x80;
 					XMCRA = 0;
 					XMCRB = 0;
