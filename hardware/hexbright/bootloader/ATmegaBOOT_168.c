@@ -245,6 +245,7 @@
 /* function prototypes */
 static void error(void);
 static void putch(char);
+static char echogetch(void);
 static void putstr(const char*);
 static char getch(void);
 static void getNch(uint8_t);
@@ -780,8 +781,7 @@ int main(void)
 				static const char prompt[] = "\n\r: ";
 				putstr(prompt);
 
-				ch = getch();
-				putch(ch);
+				ch = echogetch();
 
 				/* toggle LED */
 				if(ch == 't') {
@@ -796,7 +796,7 @@ int main(void)
 
 				/* read byte from address */
 				else if(ch == 'r') {
-					ch = getch(); putch(ch);
+					ch = echogetch();
 					addrh = gethex();
 					addrl = gethex();
 					putch('=');
@@ -806,10 +806,10 @@ int main(void)
 
 				/* write a byte to address  */
 				else if(ch == 'w') {
-					ch = getch(); putch(ch);
+					ch = echogetch();
 					addrh = gethex();
 					addrl = gethex();
-					ch = getch(); putch(ch);
+					ch = echogetch();
 					ch = gethex();
 					*(uint8_t *)((addrh << 8) + addrl) = ch;
 				}
@@ -866,7 +866,7 @@ static void error(void) {
 
 static char gethexnib(void) {
 	char a;
-	a = getch(); putch(a);
+	a = echogetch();
 	if(a >= 'a') {
 		return (a - 'a' + 0x0a);
 	} else if(a >= '0') {
@@ -997,6 +997,14 @@ static void getNch(uint8_t count)
 		getch(); // need to handle time out
 #endif		
 	}
+}
+
+
+static char echogetch(void)
+{
+	char ch = getch();
+	putch(ch);
+	return ch;
 }
 
 
