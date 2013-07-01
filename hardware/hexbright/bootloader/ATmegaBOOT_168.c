@@ -340,6 +340,8 @@ static uint8_t bootuart = 0;
 # define bootuart 0
 #endif
 
+static uint8_t timeout_on_getch = 1;
+
 static void (*app_start)(void) = 0x0000;
 
 static inline void led_on(void)
@@ -845,6 +847,9 @@ int main(void)
 			static prog_char welcome[] = "ATmegaBOOT / UNKNOWN\n\r";
 #endif
 
+			/* No timeout - use 'j' to leave monitor */
+			timeout_on_getch = 0;
+
 			/* turn on LED */
 			led_on();
 
@@ -891,6 +896,8 @@ int main(void)
 
 				/* read from uart and echo back */
 				else if(ch == 'u') {
+					/* re-enable timeout */
+					timeout_on_getch = 1;
 					for(;;)
 						echogetch();
 				}
@@ -1007,7 +1014,7 @@ static char getch(void)
 		while(!(UCSR0A & _BV(RXC0))) {
 			/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 			/* HACKME:: here is a good place to count times*/
-			count++;
+			count += timeout_on_getch;
 			if (count > MAX_TIME_COUNT)
 				app_start();
 			}
@@ -1018,7 +1025,7 @@ static char getch(void)
 		while(!(UCSR1A & _BV(RXC1))) {
 			/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 			/* HACKME:: here is a good place to count times*/
-			count++;
+			count += timeout_on_getch;
 			if (count > MAX_TIME_COUNT)
 				app_start();
 		}
@@ -1030,7 +1037,7 @@ static char getch(void)
 	while(!(UCSR0A & _BV(RXC0))){
 		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 		/* HACKME:: here is a good place to count times*/
-		count++;
+		count += timeout_on_getch;
 		if (count > MAX_TIME_COUNT)
 			app_start();
 	}
@@ -1040,7 +1047,7 @@ static char getch(void)
 	while(!(UCSRA & _BV(RXC))){
 		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 		/* HACKME:: here is a good place to count times*/
-		count++;
+		count += timeout_on_getch;
 		if (count > MAX_TIME_COUNT)
 			app_start();
 	}
