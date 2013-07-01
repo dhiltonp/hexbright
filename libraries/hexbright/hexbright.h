@@ -245,7 +245,7 @@ class hexbright {
   // If the button is currently released, returns the duration of the last button press.
   //  The time is in milliseconds.
   static int button_pressed_time();
-  // If the button is currently pressed, returns the duration between the last two button presses.
+  // If the button is currently pressed or was just released, returns the duration between the previous two button presses.
   // If the button is currently released, returns the amount of time since the button was released.
   //  The time is in milliseconds.
   static int button_released_time();

@@ -572,7 +572,7 @@ BOOL hexbright::button_just_released() {
 }
 
 int hexbright::button_pressed_time() {
-  if(BUTTON_ON(button_state)) {
+  if(BUTTON_ON(button_state) || BUTTON_JUST_OFF(button_state)) {
     return millis()-time_last_pressed;
   } else {
     return time_last_released - time_last_pressed;
@@ -588,7 +588,19 @@ int hexbright::button_released_time() {
 }
 
 void hexbright::read_button() {
-  /*button_state = button_state << 1;                            // make space for the new value
+  if(BUTTON_JUST_OFF(button_state)) {
+    // we update time_last_released before the read, so that the very first time through after a release, 
+	//  button_released_time() returns the /previous/ button_released_time.
+    time_last_released=millis();
+#if (DEBUG==DEBUG_BUTTON)
+    Serial.println("Button just released");
+    Serial.print("Time spent pressed (ms): ");
+    Serial.println(time_last_released-time_last_pressed);
+#endif
+  }
+  
+  /* READ THE BUTTON!!!
+    button_state = button_state << 1;                            // make space for the new value
     button_state = button_state | digitalReadFast(DPIN_RLED_SW); // add the new value
     button_state = button_state & BUTTON_FILTER;                 // remove excess values */
   // Doing the three commands above on one line saves 2 bytes.  We'll take it!
@@ -600,13 +612,6 @@ void hexbright::read_button() {
     Serial.println("Button just pressed");
     Serial.print("Time spent released (ms): ");
     Serial.println(time_last_pressed-time_last_released);
-#endif
-  } else if(BUTTON_JUST_OFF(button_state)) {
-    time_last_released=millis();
-#if (DEBUG==DEBUG_BUTTON)
-    Serial.println("Button just released");
-    Serial.print("Time spent pressed (ms): ");
-    Serial.println(time_last_released-time_last_pressed);
 #endif
   }
 }
