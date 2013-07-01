@@ -121,6 +121,11 @@ void hexbright::init_hardware() {
   enable_accelerometer();
 #endif
   
+  // was this power on from battery? if so, it was a button press, even if it was too fast to register.
+  read_charge_state();
+  if(get_charge_state()==BATTERY)
+    press_button();
+  
   continue_time = micros();
 }
 
@@ -558,6 +563,10 @@ unsigned char button_state = 0;
 
 unsigned long time_last_pressed = 0; // the time that button was last pressed
 unsigned long time_last_released = 0; // the time that the button was last released
+
+void hexbright::press_button() {
+  button_state |= 1; // a button press has occurred
+}
 
 BOOL hexbright::button_pressed() {
   return BUTTON_ON(button_state);

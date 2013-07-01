@@ -253,7 +253,6 @@ class hexbright {
   // Call in setup loop if you want to use the click counter
   // click_time is the maximum time a click can take before the counter resets
   static void config_click_count(word click_time);
-
   // The number of clicks <= click_time.  Will not return a count  until click_time ms after the button release.
   // Will return -127 unless returning a valid count.
   static char click_count();
@@ -481,6 +480,9 @@ class hexbright {
   static void read_avr_voltage();
 
   static void read_button();
+  // used in init_hardware to initialize the button state to pressed
+  //  so that we can catch very fast initial presses.
+  static void press_button();
   
 #ifdef FLASH_CHECKSUM
   // read through flash, return the checksum
