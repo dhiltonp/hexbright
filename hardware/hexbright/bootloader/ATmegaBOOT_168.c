@@ -1052,26 +1052,8 @@ static char getch(void)
 
 static void getNch(uint8_t count)
 {
-	while(count--) {
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
-		if(bootuart == 1) {
-			while(!(UCSR0A & _BV(RXC0)));
-			UDR0;
-		} 
-		else if(bootuart == 2) {
-			while(!(UCSR1A & _BV(RXC1)));
-			UDR1;
-		}
-#elif defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
+	while(count--)
 		getch();
-#else
-		/* m8,16,32,169,8515,8535,163 */
-		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
-		//while(!(UCSRA & _BV(RXC)));
-		//UDR;
-		getch(); // need to handle time out
-#endif		
-	}
 }
 
 
