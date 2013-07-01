@@ -149,6 +149,12 @@
 #define LED      PINB5
 #endif
 
+/* If there are any boards with the LED between VCC and pin 13, you'll have
+ * to compile the bootloader with -DLED_INVERTED=1
+ */
+#ifndef LED_INVERTED
+#define LED_INVERTED 0
+#endif
 
 /* monitor functions will only be compiled when using ATmega128, due to bootblock size constraints */
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
@@ -338,17 +344,29 @@ static void (*app_start)(void) = 0x0000;
 
 static inline void led_on(void)
 {
+#if LED_INVERTED
+	LED_PORT &= ~_BV(LED);
+#else
 	LED_PORT |= _BV(LED);
+#endif
 }
 
 static inline void led_off(void)
 {
+#if LED_INVERTED
+	LED_PORT |= _BV(LED);
+#else
 	LED_PORT &= ~_BV(LED);
+#endif
 }
 
 static inline int is_led(void)
 {
+#if LED_INVERTED
+	return bit_is_clear(LED_PIN,LED);
+#else
 	return bit_is_set(LED_PIN,LED);
+#endif
 }
 
 
