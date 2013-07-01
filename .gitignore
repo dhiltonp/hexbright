@@ -9,8 +9,10 @@
 
 # Other hexbright project forked from github #
 ##############################################
+# https://github.com/dhiltonp/samples
 hexbright-samples
-hexbrightJC*
+# https://github.com/emc2cube/hexbright
+hexbright-emc2cube
 
 # OS generated files #
 ######################
