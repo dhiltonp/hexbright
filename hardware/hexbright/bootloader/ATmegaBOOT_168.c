@@ -891,9 +891,8 @@ int main(void)
 
 				/* read from uart and echo back */
 				else if(ch == 'u') {
-					for(;;) {
-						putch(getch());
-					}
+					for(;;)
+						echogetch();
 				}
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 				/* external bus loop  */
