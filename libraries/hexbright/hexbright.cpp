@@ -564,8 +564,10 @@ unsigned char button_state = 0;
 unsigned long time_last_pressed = 0; // the time that button was last pressed
 unsigned long time_last_released = 0; // the time that the button was last released
 
+byte press_override = false;
+
 void hexbright::press_button() {
-  button_state |= 1; // a button press has occurred
+  press_override = true;
 }
 
 BOOL hexbright::button_pressed() {
@@ -613,7 +615,12 @@ void hexbright::read_button() {
     button_state = button_state | digitalReadFast(DPIN_RLED_SW); // add the new value
     button_state = button_state & BUTTON_FILTER;                 // remove excess values */
   // Doing the three commands above on one line saves 2 bytes.  We'll take it!
-  button_state = ((button_state<<1) | digitalReadFast(DPIN_RLED_SW)) & BUTTON_FILTER;
+  byte read_value = digitalReadFast(DPIN_RLED_SW);
+  if(press_override) {
+    read_value = 1;
+	press_override = false;
+  }
+  button_state = ((button_state<<1) | read_value) & BUTTON_FILTER;
   
   if(BUTTON_JUST_ON(button_state)) {
     time_last_pressed=millis();

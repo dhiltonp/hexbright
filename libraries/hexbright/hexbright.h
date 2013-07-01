@@ -249,6 +249,10 @@ class hexbright {
   // If the button is currently released, returns the amount of time since the button was released.
   //  The time is in milliseconds.
   static int button_released_time();
+  // The next time update() is run, the button is down, just like it physically happened.
+  //  Used in init_hardware to initialize the button state to pressed
+  //  so that we can catch very fast initial presses.
+  static void press_button();
   
   // Call in setup loop if you want to use the click counter
   // click_time is the maximum time a click can take before the counter resets
@@ -480,9 +484,6 @@ class hexbright {
   static void read_avr_voltage();
 
   static void read_button();
-  // used in init_hardware to initialize the button state to pressed
-  //  so that we can catch very fast initial presses.
-  static void press_button();
   
 #ifdef FLASH_CHECKSUM
   // read through flash, return the checksum
