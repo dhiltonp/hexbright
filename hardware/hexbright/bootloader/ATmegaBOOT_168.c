@@ -246,7 +246,6 @@
 static void error(void);
 static void putch(char);
 static char echogetch(void);
-static void putstr(const char*);
 static char getch(void);
 static void getNch(uint8_t);
 static void byte_response(uint8_t);
@@ -254,6 +253,52 @@ static void nothing_response(void);
 static char gethex(void);
 static void puthex(char);
 static void flash_led(uint8_t);
+
+/* putstr provides a way to output a string symbol from PROGMEM */
+#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
+static void _putstr(uint_farptr_t);
+#else
+static void _putstr(uintptr_t);
+#endif
+
+#ifdef RAMPZ
+# if defined (__AVR_HAVE_LPMX__)
+#  define putstr(sym)						\
+do {								\
+	uint8_t _putstr_hh_tmp;					\
+	asm volatile						\
+	(							\
+		"ldi %0, hh8(%2)" "\n\t"			\
+		"out %1, %0" "\n\t"				\
+		: "=&d" (_putstr_hh_tmp)			\
+		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
+	);							\
+	_putstr((uintptr_t)(prog_char*)(sym));			\
+} while (0)
+
+# else	/* __AVR_HAVE_LPMX__ */
+#  define putstr(sym)						\
+do {								\
+	uint_farptr_t _putstr_tmp;				\
+	asm							\
+	(							\
+		"ldi %D0, lo8(%1)" "\n\t"			\
+		"ldi %C0, hi8(%1)" "\n\t"			\
+		"ldi %B0, hh8(%1)" "\n\t"			\
+		"clr %A0" "\n\t"				\
+		: "=&d" (_putstr_tmp)				\
+		: "p" (&(sym))					\
+	);							\
+	_putstr(_putstr_tmp);					\
+} while (0)
+
+# endif	/* __AVR_HAVE_LPMX__ */
+
+#else  /* RAMPZ */
+# define putstr(s) \
+	_putstr((uintptr_t)(prog_char*)(s))
+
+#endif	/* RAMPZ */
 
 /* some variables */
 static union address_union {
@@ -441,11 +486,9 @@ int main(void)
 
 
 	/* Request programmer ID */
-	/* Not using PROGMEM string due to boot block in m128 being beyond 64kB boundry  */
-	/* Would need to selectively manipulate RAMPZ, and it's only 9 characters anyway so who cares.  */
 	else if(ch=='1') {
 		if (getch() == ' ') {
-			static const char id[] = STRBEG "AVR ISP" STREND;
+			static prog_char id[] = STRBEG "AVR ISP" STREND;
 			putstr(id);
 		} else
 			error();
@@ -726,7 +769,7 @@ int main(void)
 	/* Get device signature bytes  */
 	else if(ch=='u') {
 		if (getch() == ' ') {
-			static const char sig[] =
+			static prog_char sig[] =
 				{ RESPBEG, SIG1, SIG2, SIG3, RESPEND, 0};
 			putstr(sig);
 		} else
@@ -756,17 +799,17 @@ int main(void)
 			uint8_t addrl, addrh;
 
 #ifdef CRUMB128
-			static const char welcome[] = "ATmegaBOOT / Crumb128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / Crumb128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined PROBOMEGA128
-			static const char welcome[] = "ATmegaBOOT / PROBOmega128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / PROBOmega128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined SAVVY128
-			static const char welcome[] = "ATmegaBOOT / Savvy128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / Savvy128 - (C) J.P.Kyle, E.Lins - 050815\n\r";
 #elif defined HEXBRIGHT
-			static const char welcome[] = "ATmegaBOOT / Hexbright - (C) ptesarik - 130617\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / Hexbright - (C) ptesarik - 130617\n\r";
 #elif defined __AVR_ATmega1280__ 
-			static const char welcome[] = "ATmegaBOOT / Arduino Mega - (C) Arduino LLC - 090930\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / Arduino Mega - (C) Arduino LLC - 090930\n\r";
 #else
-			static const char welcome[] = "ATmegaBOOT / UNKNOWN\n\r";
+			static prog_char welcome[] = "ATmegaBOOT / UNKNOWN\n\r";
 #endif
 
 			/* turn on LED */
@@ -778,7 +821,7 @@ int main(void)
 
 			/* test for valid commands */
 			for(;;) {
-				static const char prompt[] = "\n\r: ";
+				static prog_char prompt[] = "\n\r: ";
 				putstr(prompt);
 
 				ch = echogetch();
@@ -823,7 +866,7 @@ int main(void)
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 				/* external bus loop  */
 				else if(ch == 'b') {
-					static const char bus[] = "bus";
+					static prog_char bus[] = "bus";
 					putstr(bus);
 					MCUCR = 0x80;
 					XMCRA = 0;
@@ -1008,11 +1051,43 @@ static char echogetch(void)
 }
 
 
-static void putstr(const char *s)
+#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
+static void _putstr(uint_farptr_t s)
 {
-	while (*s)
-		putch(*s++);
+	char c;
+	while ( (c = pgm_read_byte_far(s++)) )
+		putch(c);
 }
+
+#else  /* RAMPZ && !__AVR_HAVE_LPMX__ */
+
+static char read_str_inc(uintptr_t *p)
+{
+#if defined (__AVR_HAVE_LPMX__)
+	char result;
+	asm
+	(
+# if defined RAMPZ
+		"elpm %0, Z+" "\n\t"
+# else
+		"lpm %0, Z+" "\n\t"
+# endif
+		: "=r" (result), "+z" (*p)
+	);
+	return result;
+#else	/* __AVR_HAVE_LPMX__ */
+	return pgm_read_byte((*p)++);
+#endif	/* __AVR_HAVE_LPMX__ */
+}
+
+
+static void _putstr(uintptr_t s)
+{
+	char c;
+	while ( (c = read_str_inc(&s)) )
+		putch(c);
+}
+#endif	/* RAMPZ && !__AVR_HAVE_LPMX__ */
 
 
 static void byte_response(uint8_t val)
