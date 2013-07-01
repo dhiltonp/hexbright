@@ -336,6 +336,21 @@ static uint8_t bootuart = 0;
 
 static void (*app_start)(void) = 0x0000;
 
+static inline void led_on(void)
+{
+	LED_PORT |= _BV(LED);
+}
+
+static inline void led_off(void)
+{
+	LED_PORT &= ~_BV(LED);
+}
+
+static inline int is_led(void)
+{
+	return bit_is_set(LED_PIN,LED);
+}
+
 
 /* main program starts here */
 int main(void)
@@ -813,8 +828,7 @@ int main(void)
 #endif
 
 			/* turn on LED */
-			LED_DDR |= _BV(LED);
-			LED_PORT &= ~_BV(LED);
+			led_on();
 
 			/* print a welcome message and command overview */
 			putstr(welcome);
@@ -828,11 +842,11 @@ int main(void)
 
 				/* toggle LED */
 				if(ch == 't') {
-					if(bit_is_set(LED_PIN,LED)) {
-						LED_PORT &= ~_BV(LED);
+					if(!is_led()) {
+						led_on();
 						putch('1');
 					} else {
-						LED_PORT |= _BV(LED);
+						led_off();
 						putch('0');
 					}
 				} 
@@ -1113,9 +1127,9 @@ static void nothing_response(void)
 static void flash_led(uint8_t count)
 {
 	while (count--) {
-		LED_PORT |= _BV(LED);
+		led_on();
 		_delay_ms(100);
-		LED_PORT &= ~_BV(LED);
+		led_off();
 		_delay_ms(100);
 	}
 }
