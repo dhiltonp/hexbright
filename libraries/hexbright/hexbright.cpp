@@ -370,7 +370,6 @@ void hexbright::set_light_level(unsigned long level) {
   Serial.print("light level: ");
   Serial.println(level);
 #endif
-  pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, HIGH);
   if(level == 0) {
     // lowest possible power, but cpu still running (DPIN_PWR still high)
@@ -378,7 +377,6 @@ void hexbright::set_light_level(unsigned long level) {
     analogWrite(DPIN_DRV_EN, 0);
   } else if(level == OFF_LEVEL) {
     // power off (DPIN_PWR LOW)
-    pinModeFast(DPIN_PWR, OUTPUT);
     digitalWriteFast(DPIN_PWR, LOW);
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
