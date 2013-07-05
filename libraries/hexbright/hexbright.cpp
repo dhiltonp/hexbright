@@ -76,11 +76,10 @@ int hexbright::flash_checksum() {
 #endif
 
 void hexbright::init_hardware() {
-  // We just powered on! That means either we got plugged
-  // into USB, or the user is pressing the power button.
-  pinModeFast(DPIN_PWR, INPUT);
+  // These next 8 commands are for reference and cost nothing,
+  //  as we are initializing the values to their default state.
+  pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, LOW);
-  // Initialize GPIO
   pinModeFast(DPIN_RLED_SW, INPUT);
   pinModeFast(DPIN_GLED, OUTPUT);
   pinModeFast(DPIN_DRV_MODE, OUTPUT);
