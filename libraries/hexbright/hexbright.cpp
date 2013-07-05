@@ -301,9 +301,9 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
 
 
 int start_light_level = 0;
-int end_light_level = 0;
-int change_duration = 0;
-int change_done  = 1;
+int end_light_level = OFF_LEVEL; // go to OFF_LEVEL once change_duration expires (unless set_light overrides)
+int change_duration = 5000/update_delay; // stay on for 5 seconds
+int change_done = 0;
 
 int max_light_level = MAX_LEVEL;
 
