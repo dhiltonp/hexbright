@@ -304,7 +304,7 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
 int start_light_level = 0;
 int end_light_level = 0;
 int change_duration = 0;
-int change_done  = 0;
+int change_done  = 1;
 
 int max_light_level = MAX_LEVEL;
 
