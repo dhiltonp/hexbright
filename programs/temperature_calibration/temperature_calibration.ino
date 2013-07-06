@@ -38,7 +38,7 @@ void setup() {
   hb.set_light(0,0,NOW); // stay on, because we want the temperature output
 }
 
-int brightness = 1000;
+int brightness = 0;
 
 void loop() {
   hb.update();
