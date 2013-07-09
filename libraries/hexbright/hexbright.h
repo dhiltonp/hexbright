@@ -245,15 +245,18 @@ class hexbright {
   // If the button is currently released, returns the duration of the last button press.
   //  The time is in milliseconds.
   static int button_pressed_time();
-  // If the button is currently pressed, returns the duration between the last two button presses.
+  // If the button is currently pressed or was just released, returns the duration between the previous two button presses.
   // If the button is currently released, returns the amount of time since the button was released.
   //  The time is in milliseconds.
   static int button_released_time();
+  // The next time update() is run, the button is down, just like it physically happened.
+  //  Used in init_hardware to initialize the button state to pressed
+  //  so that we can catch very fast initial presses.
+  static void press_button();
   
   // Call in setup loop if you want to use the click counter
   // click_time is the maximum time a click can take before the counter resets
   static void config_click_count(word click_time);
-
   // The number of clicks <= click_time.  Will not return a count  until click_time ms after the button release.
   // Will return -127 unless returning a valid count.
   static char click_count();
