@@ -256,8 +256,8 @@ static char getch(void);
 static void getNch(uint8_t);
 static void byte_response(uint8_t);
 static void nothing_response(void);
-static char gethex(void);
-static void puthex(char);
+static uint8_t gethex(void);
+static void puthex(uint8_t);
 static void flash_led(uint8_t);
 
 /* putstr provides a way to output a string symbol from PROGMEM */
@@ -945,7 +945,7 @@ static void error(void) {
 		app_start();
 }
 
-static char gethexnib(void) {
+static uint8_t gethexnib(void) {
 	char a;
 	a = echogetch();
 	if(a >= 'a') {
@@ -957,13 +957,13 @@ static char gethexnib(void) {
 }
 
 
-static char gethex(void) {
+static uint8_t gethex(void) {
 	return (gethexnib() << 4) + gethexnib();
 }
 
 
-static void puthex(char ch) {
-	char ah;
+static void puthex(uint8_t ch) {
+	uint8_t ah;
 
 	ah = ch >> 4;
 	if(ah >= 0x0a) {
