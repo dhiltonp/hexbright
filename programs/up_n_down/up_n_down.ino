@@ -153,6 +153,11 @@ void loop() {
     int i;
     // we're changing mode
     switch(new_mode) {
+    case MODE_LOCKED:
+      locked=!locked;
+      updateEEPROM(EEPROM_LOCKED,locked);
+      new_mode=MODE_OFF;
+      /* fall through */
     case MODE_OFF:
       DBG(Serial.println("Mode = off"));
       if(BIT_CHECK(bitreg,GLOW_MODE))
@@ -191,11 +196,6 @@ void loop() {
 	  blink_frequency = blink_freq_map[1];
       }
       hb.set_light(MAX_LEVEL, 0, 20);
-      break;
-    case MODE_LOCKED:
-      locked=!locked;
-      updateEEPROM(EEPROM_LOCKED,locked);
-      new_mode=MODE_OFF;
       break;
     }
     mode=new_mode;
