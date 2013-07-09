@@ -54,4 +54,6 @@ As I wrote in the irc channel:
 (11:11:32 AM) dhiltonp: predicting battery life from the voltage would probably require forcing brightness to be a specific brightness, too.  This could be really bad in practice
 (11:12:20 AM) dhiltonp: let's say the user has their brightness set at 100 or so, to save power and still be able to see.  Then the light blasts on for 1/4 of a second at 500, ruining their night vision - and repeating this every 15-30 seconds
 
-Basically, estimating battery life from the avr voltage appears to be a no-go.
+Basically, estimating % battery remaining from the avr voltage appears to be a no-go.
+
+However, we are able to catch irregularities in voltage that occur, which are generally associated with low power.  We usually notice the issue when the battery is at about 10% remaining (see the 'AVR VOLTAGE' section of <a href="https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.cpp#L1189">hexbright.cpp</a> for the implementation).
