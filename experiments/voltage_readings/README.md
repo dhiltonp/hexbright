@@ -2,25 +2,25 @@ file naming convention:
 discharge-VOLTAGE_TRIGGER-BRIGHTNESS_LEVEL.log
 
 
-R(eset): occurs every 15 seconds
-N(ON): no brightness cap
-F(OFF): full cap (max brightness level=0)
+    R(eset): occurs every 15 seconds
+    N(ON): no brightness cap
+    F(OFF): full cap (max brightness level=0)
 
 
-Each category has 30 samples, occurring over 1/4 of a second.
+Between each state change are 30 samples, taken over a period of 1/4 of a second.
 
-R
-N (still on, max level=500)
-.... (30 samples)
-F (switch off, max level=0)
-.... (30 samples)
-N (switch on, max level=BRIGHTNESS_LEVEL)
-.... (30 samples)
-F (switch off, max level=0)
-.... (30 samples)
-N (switch on, max level=500, stay on until the next R)
-.... (30 samples)
-13.75 seconds pass with max level=500 before logging continues
+    R
+    N (still on, max level=500)
+    .... (30 samples)
+    F (switch off, max level=0)
+    .... (30 samples)
+    N (switch on, max level=BRIGHTNESS_LEVEL)
+    .... (30 samples)
+    F (switch off, max level=0)
+    .... (30 samples)
+    N (switch on, max level=500, stay on until the next R)
+    .... (30 samples)
+    13.75 seconds pass with max level=500 before logging continues
 
 
 ------
