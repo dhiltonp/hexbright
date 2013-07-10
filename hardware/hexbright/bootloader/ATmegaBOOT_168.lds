@@ -74,6 +74,7 @@ SECTIONS
     *(.vectors)
     *crtm168.o(.text)
     *(.init9)  /* Call main().  */
+    *(.fini*)
    }
   /* Internal text space or external memory.  */
   .text :
@@ -126,27 +127,6 @@ SECTIONS
     *(.text)
     . = ALIGN(2);
     *(.text.*)
-    . = ALIGN(2);
-    *(.fini9)  /* _exit() starts here.  */
-    KEEP (*(.fini9))
-    *(.fini8)
-    KEEP (*(.fini8))
-    *(.fini7)
-    KEEP (*(.fini7))
-    *(.fini6)  /* C++ destructors.  */
-    KEEP (*(.fini6))
-    *(.fini5)
-    KEEP (*(.fini5))
-    *(.fini4)
-    KEEP (*(.fini4))
-    *(.fini3)
-    KEEP (*(.fini3))
-    *(.fini2)
-    KEEP (*(.fini2))
-    *(.fini1)
-    KEEP (*(.fini1))
-    *(.fini0)  /* Infinite loop after program termination.  */
-    KEEP (*(.fini0))
      _etext = . ;
   }  > text
   .data	  : AT (ADDR (.text) + SIZEOF (.text))
