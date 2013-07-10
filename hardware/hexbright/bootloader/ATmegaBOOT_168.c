@@ -496,11 +496,6 @@ int noreturn __attribute((section(".text.main"))) main(void)
 	PORTE |= _BV(PINE0);
 #endif
 
-
-	/* set LED pin as output */
-	LED_DDR |= _BV(LED);
-
-
 	/* flash onboard LED to signal entering of bootloader */
 	flash_led(NUM_LED_FLASHES + bootuart);
 
@@ -852,6 +847,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 			timeout_on_getch = 0;
 
 			/* turn on LED */
+			LED_DDR |= _BV(LED);
 			led_on();
 
 			/* print a welcome message and command overview */
@@ -1133,6 +1129,9 @@ static void nothing_response(void)
 
 static void flash_led(uint8_t count)
 {
+	/* set LED pin as output */
+	LED_DDR |= _BV(LED);
+
 	while (count--) {
 		led_on();
 		_delay_ms(100);
