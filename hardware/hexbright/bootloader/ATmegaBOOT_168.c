@@ -647,7 +647,6 @@ int noreturn __attribute((section(".text.main"))) main(void)
 				address.word = address.word << 1;	        //address * 2 -> byte location
 				/* if ((length.byte[0] & 0x01) == 0x01) length.word++;	//Even up an odd number of bytes */
 				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
-				cli();					//Disable interrupts, just to be sure
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
 				while(bit_is_set(EECR,EEPE));			//Wait for previous EEPROM writes to complete
 #else
