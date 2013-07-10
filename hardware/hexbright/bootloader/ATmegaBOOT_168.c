@@ -376,7 +376,7 @@ static inline int is_led(void)
 /* main program starts here */
 int noreturn __attribute((section(".text.main"))) main(void)
 {
-	uint8_t ch,ch2;
+	uint8_t ch;
 	uint16_t w;
 
 #ifdef WATCHDOG_MODS
@@ -528,19 +528,19 @@ int noreturn __attribute((section(".text.main"))) main(void)
 
 	/* AVR ISP/STK500 board commands  DON'T CARE so default nothing_response */
 	else if(ch=='@') {
-		ch2 = getch();
-		if (ch2>0x85) getch();
+		ch = getch();
+		if (ch>0x85) getch();
 		nothing_response();
 	}
 
 
 	/* AVR ISP/STK500 board requests */
 	else if(ch=='A') {
-		ch2 = getch();
-		if(ch2==0x80) byte_response(HW_VER);		// Hardware version
-		else if(ch2==0x81) byte_response(SW_MAJOR);	// Software major version
-		else if(ch2==0x82) byte_response(SW_MINOR);	// Software minor version
-		else if(ch2==0x98) byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
+		ch = getch();
+		if(ch==0x80) byte_response(HW_VER);		// Hardware version
+		else if(ch==0x81) byte_response(SW_MAJOR);	// Software major version
+		else if(ch==0x82) byte_response(SW_MINOR);	// Software minor version
+		else if(ch==0x98) byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
 		else byte_response(0x00);				// Covers various unnecessary responses we don't care about
 	}
 
