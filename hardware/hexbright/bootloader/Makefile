@@ -59,7 +59,7 @@ CC         = avr-gcc
 
 # Override is only needed by avr-lib build system.
 
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) -mshort-calls -DF_CPU=$(AVR_FREQ) $(DEFS)
+override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) -mshort-calls -T $(PROGRAM).lds -DF_CPU=$(AVR_FREQ) $(DEFS)
 override LDFLAGS       = -Wl,$(LDSECTION)
 #override LDFLAGS       = -Wl,-Map,$(PROGRAM).map,$(LDSECTION)
 
