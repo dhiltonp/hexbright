@@ -69,11 +69,34 @@ SECTIONS
   .rela.bss      : { *(.rela.bss)		}
   .rel.plt       : { *(.rel.plt)		}
   .rela.plt      : { *(.rela.plt)		}
+   /DISCARD/ :
+   {
+    *(.vectors)
+    *crtm168.o(.text)
+   }
   /* Internal text space or external memory.  */
   .text :
   {
-    *(.vectors)
-    KEEP(*(.vectors))
+    *(.init0)  /* Start here after reset.  */
+    KEEP (*(.init0))
+    *(.init1)
+    KEEP (*(.init1))
+    *(.init2)  /* Clear __zero_reg__, set up stack pointer.  */
+    KEEP (*(.init2))
+    *(.init3)
+    KEEP (*(.init3))
+    *(.init4)  /* Initialize data and BSS.  */
+    KEEP (*(.init4))
+    *(.init5)
+    KEEP (*(.init5))
+    *(.init6)  /* C++ constructors.  */
+    KEEP (*(.init6))
+    *(.init7)
+    KEEP (*(.init7))
+    *(.init8)
+    KEEP (*(.init8))
+    *(.init9)  /* Call main().  */
+    KEEP (*(.init9))
     /* For data that needs to reside in the lower 64k of progmem.  */
     *(.progmem.gcc*)
     *(.progmem*)
@@ -100,26 +123,6 @@ SECTIONS
     KEEP(SORT(*)(.dtors))
     /* From this point on, we don't bother about wether the insns are
        below or above the 16 bits boundary.  */
-    *(.init0)  /* Start here after reset.  */
-    KEEP (*(.init0))
-    *(.init1)
-    KEEP (*(.init1))
-    *(.init2)  /* Clear __zero_reg__, set up stack pointer.  */
-    KEEP (*(.init2))
-    *(.init3)
-    KEEP (*(.init3))
-    *(.init4)  /* Initialize data and BSS.  */
-    KEEP (*(.init4))
-    *(.init5)
-    KEEP (*(.init5))
-    *(.init6)  /* C++ constructors.  */
-    KEEP (*(.init6))
-    *(.init7)
-    KEEP (*(.init7))
-    *(.init8)
-    KEEP (*(.init8))
-    *(.init9)  /* Call main().  */
-    KEEP (*(.init9))
     *(.text)
     . = ALIGN(2);
     *(.text.*)
