@@ -325,7 +325,6 @@ static struct flags_struct {
 } flags;
 
 static uint8_t buff[256];
-static uint8_t address_high;
 
 #if defined(__AVR_ATmega128__)
 static uint8_t bootuart = 0;
@@ -634,9 +633,10 @@ int noreturn __attribute((section(".text.main"))) main(void)
 				}			
 			}
 			else {					        //Write to FLASH one page at a time
+				uint8_t address_high;
 				if (address.byte[1]>127) address_high = 0x01;	//Only possible with m128, m256 will need 3rd address byte. FIXME
 				else address_high = 0x00;
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
+#ifdef RAMPZ
 				RAMPZ = address_high;
 #endif
 				address.word = address.word << 1;	        //address * 2 -> byte location
