@@ -248,6 +248,8 @@
 #define RESPEND	0x10
 #define STREND	"\x10"
 
+#define noreturn __attribute__((noreturn))
+
 /* function prototypes */
 static void error(void);
 static void putch(char);
@@ -342,7 +344,7 @@ static uint8_t bootuart = 0;
 
 static uint8_t timeout_on_getch = 1;
 
-static void (*app_start)(void) = 0x0000;
+static void noreturn (*app_start)(void) = 0x0000;
 
 static inline void led_on(void)
 {
@@ -373,7 +375,7 @@ static inline int is_led(void)
 
 
 /* main program starts here */
-int main(void)
+int noreturn main(void)
 {
 	uint8_t ch,ch2;
 	uint16_t w;
