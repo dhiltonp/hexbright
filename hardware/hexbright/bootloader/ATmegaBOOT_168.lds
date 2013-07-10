@@ -73,6 +73,7 @@ SECTIONS
    {
     *(.vectors)
     *crtm168.o(.text)
+    *(.init9)  /* Call main().  */
    }
   /* Internal text space or external memory.  */
   .text :
@@ -95,8 +96,7 @@ SECTIONS
     KEEP (*(.init7))
     *(.init8)
     KEEP (*(.init8))
-    *(.init9)  /* Call main().  */
-    KEEP (*(.init9))
+    *(.text.main)
     /* For data that needs to reside in the lower 64k of progmem.  */
     *(.progmem.gcc*)
     *(.progmem*)

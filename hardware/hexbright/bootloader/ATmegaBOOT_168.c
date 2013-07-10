@@ -375,7 +375,7 @@ static inline int is_led(void)
 
 
 /* main program starts here */
-int noreturn main(void)
+int noreturn __attribute((section(".text.main"))) main(void)
 {
 	uint8_t ch,ch2;
 	uint16_t w;
