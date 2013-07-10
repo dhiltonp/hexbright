@@ -99,8 +99,6 @@ SECTIONS
     KEEP (*(.init8))
     *(.text.main)
     /* For data that needs to reside in the lower 64k of progmem.  */
-    *(.progmem.gcc*)
-    *(.progmem*)
     . = ALIGN(2);
      __trampolines_start = . ;
     /* The jump trampolines for the 16-bit limited relocs will reside here.  */
@@ -127,6 +125,9 @@ SECTIONS
     *(.text)
     . = ALIGN(2);
     *(.text.*)
+    /* PROGMEM data */
+    *(.progmem.gcc*)
+    *(.progmem*)
      _etext = . ;
   }  > text
   .data	  : AT (ADDR (.text) + SIZEOF (.text))
