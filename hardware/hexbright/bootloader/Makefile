@@ -148,7 +148,7 @@ hexbright: $(PROGRAM)_hexbright.hex
 
 hexbright_isp: hexbright
 hexbright_isp: TARGET = hexbright
-hexbright_isp: MCU_TARGET = atmega168pa
+hexbright_isp: MCU_TARGET = atmega168p
 hexbright_isp: HFUSE = DD
 hexbright_isp: LFUSE = FF
 hexbright_isp: EFUSE = 00
