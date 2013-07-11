@@ -325,8 +325,6 @@ typedef union byte_word_union address_t;
 typedef union byte_word_union length_t;
 
 /* some variables */
-static address_t address;
-
 static struct flags_struct {
 	unsigned eeprom : 1;
 	unsigned rampz  : 1;
@@ -384,6 +382,7 @@ static inline int is_led(void)
 /* main program starts here */
 int noreturn __attribute((section(".text.main"))) main(void)
 {
+	address_t address;
 	uint8_t ch;
 	uint16_t w;
 
@@ -671,7 +670,6 @@ int noreturn __attribute((section(".text.main"))) main(void)
 #endif
 				uint8_t page_word_count;
 				uint8_t *bufptr = buff;
-				uint16_t addrptr = address.word;
 				uint8_t tmp;
 				asm volatile(
 					 "clr	%[wcnt]		\n\t"	//page_word_count
@@ -768,7 +766,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 : [wcnt] "=d" (page_word_count),
 					   [tmp] "=d" (tmp),
 					   [buff] "+y" (bufptr),
-					   [addr] "+z" (addrptr),
+					   [addr] "+z" (address.word),
 					   [length] "+w" (length.word)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
