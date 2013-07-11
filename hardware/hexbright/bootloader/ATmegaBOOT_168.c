@@ -325,11 +325,6 @@ typedef union byte_word_union address_t;
 typedef union byte_word_union length_t;
 
 /* some variables */
-static struct flags_struct {
-	unsigned eeprom : 1;
-	unsigned rampz  : 1;
-} flags;
-
 static uint8_t buff[256];
 
 #if defined(__AVR_ATmega128__)
@@ -616,6 +611,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 
 	/* Write memory, length is big endian and is in bytes  */
 	else if(ch=='d') {
+		struct {
+			unsigned eeprom : 1;
+		} flags;
 		length_t length;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
@@ -785,10 +783,16 @@ int noreturn __attribute((section(".text.main"))) main(void)
 
 	/* Read memory block mode, length is big endian.  */
 	else if(ch=='t') {
+		struct {
+			unsigned eeprom : 1;
+#ifdef RAMPZ
+			unsigned rampz  : 1;
+#endif
+		} flags;
 		length_t length;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
+#ifdef RAMPZ
 		if (address.word>0x7FFF) flags.rampz = 1;		// No go with m256, FIXME
 		else flags.rampz = 0;
 #endif
@@ -811,11 +815,13 @@ int noreturn __attribute((section(".text.main"))) main(void)
 				}
 				else {
 
-					if (!flags.rampz) putch(pgm_read_byte_near(address.word));
-#if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
-					else putch(pgm_read_byte_far(address.word + 0x10000));
+#ifdef RAMPZ
+					if (flags.rampz)
+						putch(pgm_read_byte_far(address.word + 0x10000));
 					// Hmmmm, yuck  FIXME when m256 arrvies
+					else
 #endif
+					putch(pgm_read_byte_near(address.word));
 					address.word++;
 				}
 			}
