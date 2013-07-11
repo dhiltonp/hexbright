@@ -316,16 +316,17 @@ do {								\
 
 #endif	/* RAMPZ */
 
-/* some variables */
-static union address_union {
+/* data type for word/byte access */
+union byte_word_union {
 	uint16_t word;
 	uint8_t  byte[2];
-} address;
+};
+typedef union byte_word_union address_t;
+typedef union byte_word_union length_t;
 
-static union length_union {
-	uint16_t word;
-	uint8_t  byte[2];
-} length;
+/* some variables */
+static address_t address;
+static length_t length;
 
 static struct flags_struct {
 	unsigned eeprom : 1;
