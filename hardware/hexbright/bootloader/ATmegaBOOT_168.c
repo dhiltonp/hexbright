@@ -647,37 +647,37 @@ int noreturn __attribute((section(".text.main"))) main(void)
 #else
 				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
 #endif
+				uint8_t page_word_count;
+				uint8_t tmp;
 				asm volatile(
-					 "clr	r17		\n\t"	//page_word_count
+					 "clr	%[wcnt]		\n\t"	//page_word_count
 					 "lds	r30,address	\n\t"	//Address of FLASH location (in bytes)
 					 "lds	r31,address+1	\n\t"
 					 "ldi	r28,lo8(buff)	\n\t"	//Start of buffer array in RAM
 					 "ldi	r29,hi8(buff)	\n\t"
-					 "lds	r24,length	\n\t"	//Length of data to be written (in bytes)
-					 "lds	r25,length+1	\n\t"
 					 "length_loop:		\n\t"	//Main loop, repeat for number of words in block							 							 
-					 "cpi	r17,0x00	\n\t"	//If page_word_count=0 then erase page
+					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
 					 "brne	no_page_erase	\n\t"						 
 					 "wait_spm1:		\n\t"
-					 "lds	r16,%[_SPMCSR]	\n\t"	//Wait for previous spm to complete
-					 "andi	r16,1           \n\t"
-					 "cpi	r16,1           \n\t"
+					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "andi	%[tmp],1	\n\t"
+					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm1       \n\t"
-					 "ldi	r16,0x03	\n\t"	//Erase page pointed to by Z
-					 "sts	%[_SPMCSR],r16	\n\t"
+					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
+					 "sts	%[_SPMCSR],%[tmp]\n\t"
 					 "spm			\n\t"							 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
 					 "nop			\n\t"
 #endif
 					 "wait_spm2:		\n\t"
-					 "lds	r16,%[_SPMCSR]	\n\t"	//Wait for previous spm to complete
-					 "andi	r16,1           \n\t"
-					 "cpi	r16,1           \n\t"
+					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "andi	%[tmp],1	\n\t"
+					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm2       \n\t"									 
 
-					 "ldi	r16,0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[_SPMCSR],r16	\n\t"
+					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
+					 "sts	%[_SPMCSR],%[tmp]\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -688,29 +688,29 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "ld	r1,Y+		\n\t"							 
 								 
 					 "wait_spm3:		\n\t"
-					 "lds	r16,%[_SPMCSR]	\n\t"	//Wait for previous spm to complete
-					 "andi	r16,1           \n\t"
-					 "cpi	r16,1           \n\t"
+					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "andi	%[tmp],1	\n\t"
+					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm3       \n\t"
-					 "ldi	r16,0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-					 "sts	%[_SPMCSR],r16	\n\t"
+					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
+					 "sts	%[_SPMCSR],%[tmp]\n\t"
 					 "spm			\n\t"
 								 
-					 "inc	r17		\n\t"	//page_word_count++
-					 "cpi   r17,%[PGSZ]	\n\t"
+					 "inc	%[wcnt]		\n\t"	//page_word_count++
+					 "cpi   %[wcnt],%[PGSZ]	\n\t"
 					 "brlo	same_page	\n\t"	//Still same page in FLASH
 					 "write_page:		\n\t"
-					 "clr	r17		\n\t"	//New page, write current one first
+					 "clr	%[wcnt]		\n\t"	//New page, write current one first
 					 "wait_spm4:		\n\t"
-					 "lds	r16,%[_SPMCSR]	\n\t"	//Wait for previous spm to complete
-					 "andi	r16,1           \n\t"
-					 "cpi	r16,1           \n\t"
+					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "andi	%[tmp],1	\n\t"
+					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm4       \n\t"
 #ifdef __AVR_ATmega163__
 					 "andi	r30,0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
 #endif							 							 
-					 "ldi	r16,0x05	\n\t"	//Write page pointed to by Z
-					 "sts	%[_SPMCSR],r16	\n\t"
+					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
+					 "sts	%[_SPMCSR],%[tmp]\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -718,12 +718,12 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "ori	r30,0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
 #endif
 					 "wait_spm5:		\n\t"
-					 "lds	r16,%[_SPMCSR]	\n\t"	//Wait for previous spm to complete
-					 "andi	r16,1           \n\t"
-					 "cpi	r16,1           \n\t"
+					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "andi	%[tmp],1	\n\t"
+					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm5       \n\t"									 
-					 "ldi	r16,0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[_SPMCSR],r16	\n\t"
+					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
+					 "sts	%[_SPMCSR],%[tmp]\n\t"
 					 "spm			\n\t"					 		 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -731,24 +731,30 @@ int noreturn __attribute((section(".text.main"))) main(void)
 #endif
 					 "same_page:		\n\t"							 
 					 "adiw	r30,2		\n\t"	//Next word in FLASH
-					 "sbiw	r24,2		\n\t"	//length-2
+					 "sbiw	%[length],2	\n\t"	//length-2
 					 "breq	final_write	\n\t"	//Finished
 					 "rjmp	length_loop	\n\t"
 					 "final_write:		\n\t"
-					 "cpi	r17,0		\n\t"
+					 "cpi	%[wcnt],0	\n\t"
 					 "breq	block_done	\n\t"
-					 "adiw	r24,2		\n\t"	//length+2, fool above check on length after short page write
+					 "adiw	%[length],2	\n\t"	//length+2, fool above check on length after short page write
 					 "rjmp	write_page	\n\t"
 					 "block_done:		\n\t"
 					 "clr	__zero_reg__	\n\t"	//restore zero register
 #if defined __AVR_ATmega168__  || __AVR_ATmega328P__ || __AVR_ATmega128__ || __AVR_ATmega1280__ || __AVR_ATmega1281__ 
-					 : [_SPMCSR] "=m" (SPMCSR)
-					 : [PGSZ] "M" (PAGE_SIZE)
-					 : "r0","r16","r17","r24","r25","r28","r29","r30","r31"
+					 : [_SPMCSR] "=m" (SPMCSR),
+					   [wcnt] "=d" (page_word_count),
+					   [tmp] "=d" (tmp)
+					 : [PGSZ] "M" (PAGE_SIZE),
+					   [length] "w" (length.word)
+					 : "r0","r28","r29","r30","r31"
 #else
-					 : [_SPMCSR] "=m" (SPMCR)
-					 : [PGSZ] "M" (PAGE_SIZE)
-					 : "r0","r16","r17","r24","r25","r28","r29","r30","r31"
+					 : [_SPMCSR] "=m" (SPMCR),
+					   [wcnt] "=d" (page_word_count),
+					   [tmp] "=d" (tmp)
+					 : [PGSZ] "M" (PAGE_SIZE),
+					   [length] "w" (length.word)
+					 : "r0","r28","r29","r30","r31"
 #endif
 					 );
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
