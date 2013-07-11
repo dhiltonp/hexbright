@@ -682,9 +682,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 //Wait for previous spm to complete
 					 "wait_spm1:		\n\t"
 					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "andi	%[tmp],1	\n\t"
-					 "cpi	%[tmp],1	\n\t"
-					 "breq	wait_spm1       \n\t"
+					 "sbrc	%[tmp],%[spmen]	\n\t"
+					 "rjmp	wait_spm1	\n\t"
+
 					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
 					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"							 
@@ -695,9 +695,8 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 //Wait for previous spm to complete
 					 "wait_spm2:		\n\t"
 					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "andi	%[tmp],1	\n\t"
-					 "cpi	%[tmp],1	\n\t"
-					 "breq	wait_spm2       \n\t"									 
+					 "sbrc	%[tmp],%[spmen]	\n\t"
+					 "rjmp	wait_spm2	\n\t"
 
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
 					 STORE_TMP_TO_SPM_CREG"	\n\t"
@@ -713,9 +712,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 //Wait for previous spm to complete
 					 "wait_spm3:		\n\t"
 					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "andi	%[tmp],1	\n\t"
-					 "cpi	%[tmp],1	\n\t"
-					 "breq	wait_spm3       \n\t"
+					 "sbrc	%[tmp],%[spmen]	\n\t"
+					 "rjmp	wait_spm3	\n\t"
+
 					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
 					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"
@@ -728,9 +727,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 //Wait for previous spm to complete
 					 "wait_spm4:		\n\t"
 					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "andi	%[tmp],1	\n\t"
-					 "cpi	%[tmp],1	\n\t"
-					 "breq	wait_spm4       \n\t"
+					 "sbrc	%[tmp],%[spmen]	\n\t"
+					 "rjmp	wait_spm4	\n\t"
+
 #ifdef __AVR_ATmega163__
 					 "andi	r30,0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
 #endif							 							 
@@ -745,9 +744,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 //Wait for previous spm to complete
 					 "wait_spm5:		\n\t"
 					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "andi	%[tmp],1	\n\t"
-					 "cpi	%[tmp],1	\n\t"
-					 "breq	wait_spm5       \n\t"									 
+					 "sbrc	%[tmp],%[spmen]	\n\t"
+					 "rjmp	wait_spm5	\n\t"
+
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
 					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"					 		 
@@ -771,6 +770,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					   [tmp] "=d" (tmp)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
+					   [spmen] "i" (SPMEN),
 					   [length] "w" (length.word)
 					 : "r0","r28","r29","r30","r31"
 					);
