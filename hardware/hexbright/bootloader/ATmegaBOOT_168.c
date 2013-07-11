@@ -326,7 +326,6 @@ typedef union byte_word_union length_t;
 
 /* some variables */
 static address_t address;
-static length_t length;
 
 static struct flags_struct {
 	unsigned eeprom : 1;
@@ -618,6 +617,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 
 	/* Write memory, length is big endian and is in bytes  */
 	else if(ch=='d') {
+		length_t length;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
 		flags.eeprom = 0;
@@ -672,7 +672,6 @@ int noreturn __attribute((section(".text.main"))) main(void)
 				uint8_t page_word_count;
 				uint8_t *bufptr = buff;
 				uint16_t addrptr = address.word;
-				uint16_t length_count = length.word;
 				uint8_t tmp;
 				asm volatile(
 					 "clr	%[wcnt]		\n\t"	//page_word_count
@@ -770,7 +769,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					   [tmp] "=d" (tmp),
 					   [buff] "+y" (bufptr),
 					   [addr] "+z" (addrptr),
-					   [length] "+w" (length_count)
+					   [length] "+w" (length.word)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
 					   [spmen] "i" (SPMEN)
@@ -788,6 +787,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 
 	/* Read memory block mode, length is big endian.  */
 	else if(ch=='t') {
+		length_t length;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
