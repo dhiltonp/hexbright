@@ -325,7 +325,7 @@ typedef union byte_word_union address_t;
 typedef union byte_word_union length_t;
 
 /* some variables */
-static uint8_t buff[256];
+static uint8_t buff[256] __attribute__((section(".noinit")));
 
 #if defined(__AVR_ATmega128__)
 static uint8_t bootuart = 0;
