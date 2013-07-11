@@ -154,6 +154,21 @@ hexbright_isp: LFUSE = FF
 hexbright_isp: EFUSE = 00
 hexbright_isp: isp
 
+hexbright_tiny: TARGET = hexbright_tiny
+hexbright_tiny: MCU_TARGET = atmega168p
+hexbright_tiny: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=1' '-DWATCHDOG_MODS' '-DHEXBRIGHT'
+hexbright_tiny: AVR_FREQ = 8000000L
+hexbright_tiny: LDSECTION  = --section-start=.text=0x3c00
+hexbright_tiny: $(PROGRAM)_hexbright_tiny.hex
+
+hexbright_tiny_isp: hexbright_tiny
+hexbright_tiny_isp: TARGET = hexbright_tiny
+hexbright_tiny_isp: MCU_TARGET = atmega168p
+hexbright_tiny_isp: HFUSE = DD
+hexbright_tiny_isp: LFUSE = FF
+hexbright_tiny_isp: EFUSE = 02
+hexbright_tiny_isp: isp
+
 ng: TARGET = ng
 ng: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>1' '-DNUM_LED_FLASHES=3'
 ng: AVR_FREQ = 16000000L
