@@ -669,6 +669,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 # define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
 #endif
 				uint8_t page_word_count;
+				uint8_t *bufptr = buff;
+				uint16_t addrptr = address.word;
+				uint16_t length_count = length.word;
 				uint8_t tmp;
 				asm volatile(
 					 "clr	%[wcnt]		\n\t"	//page_word_count
@@ -763,13 +766,13 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "block_done:		\n\t"
 					 "clr	__zero_reg__	\n\t"	//restore zero register
 					 : [wcnt] "=d" (page_word_count),
-					   [tmp] "=d" (tmp)
+					   [tmp] "=d" (tmp),
+					   [buff] "+y" (bufptr),
+					   [addr] "+z" (addrptr),
+					   [length] "+w" (length_count)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
-					   [spmen] "i" (SPMEN),
-					   [buff] "y" (buff),
-					   [addr] "z" (address.word),
-					   [length] "w" (length.word)
+					   [spmen] "i" (SPMEN)
 					 : "r0"
 					);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
