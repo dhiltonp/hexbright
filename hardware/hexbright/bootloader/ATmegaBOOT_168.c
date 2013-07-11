@@ -242,6 +242,14 @@
 
 #endif
 
+// Some models have an SPM Control Register,
+// some have an SPM Control and Status Register
+#if defined SPMCSR
+# define SPM_CREG  SPMCSR
+#else
+# define SPM_CREG  SPMCR
+#endif
+
 /* Response begin/end markers */
 #define RESPBEG	0x14
 #define STRBEG	"\x14"
@@ -659,25 +667,25 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
 					 "brne	no_page_erase	\n\t"						 
 					 "wait_spm1:		\n\t"
-					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm1       \n\t"
 					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
-					 "sts	%[_SPMCSR],%[tmp]\n\t"
+					 "sts	%[creg],%[tmp]	\n\t"
 					 "spm			\n\t"							 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
 					 "nop			\n\t"
 #endif
 					 "wait_spm2:		\n\t"
-					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "lds	%[tmp],%[creg]\n\t"	//Wait for previous spm to complete
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm2       \n\t"									 
 
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[_SPMCSR],%[tmp]\n\t"
+					 "sts	%[creg],%[tmp]	\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -688,12 +696,12 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "ld	r1,Y+		\n\t"							 
 								 
 					 "wait_spm3:		\n\t"
-					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm3       \n\t"
 					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-					 "sts	%[_SPMCSR],%[tmp]\n\t"
+					 "sts	%[creg],%[tmp]\n\t"
 					 "spm			\n\t"
 								 
 					 "inc	%[wcnt]		\n\t"	//page_word_count++
@@ -702,7 +710,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "write_page:		\n\t"
 					 "clr	%[wcnt]		\n\t"	//New page, write current one first
 					 "wait_spm4:		\n\t"
-					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm4       \n\t"
@@ -710,7 +718,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "andi	r30,0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
 #endif							 							 
 					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
-					 "sts	%[_SPMCSR],%[tmp]\n\t"
+					 "sts	%[creg],%[tmp]	\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -718,12 +726,12 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "ori	r30,0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
 #endif
 					 "wait_spm5:		\n\t"
-					 "lds	%[tmp],%[_SPMCSR]\n\t"	//Wait for previous spm to complete
+					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm5       \n\t"									 
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[_SPMCSR],%[tmp]\n\t"
+					 "sts	%[creg],%[tmp]\n\t"
 					 "spm			\n\t"					 		 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -741,22 +749,13 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "rjmp	write_page	\n\t"
 					 "block_done:		\n\t"
 					 "clr	__zero_reg__	\n\t"	//restore zero register
-#if defined __AVR_ATmega168__  || __AVR_ATmega328P__ || __AVR_ATmega128__ || __AVR_ATmega1280__ || __AVR_ATmega1281__ 
-					 : [_SPMCSR] "=m" (SPMCSR),
+					 : [creg] "=m" (SPM_CREG),
 					   [wcnt] "=d" (page_word_count),
 					   [tmp] "=d" (tmp)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [length] "w" (length.word)
 					 : "r0","r28","r29","r30","r31"
-#else
-					 : [_SPMCSR] "=m" (SPMCR),
-					   [wcnt] "=d" (page_word_count),
-					   [tmp] "=d" (tmp)
-					 : [PGSZ] "M" (PAGE_SIZE),
-					   [length] "w" (length.word)
-					 : "r0","r28","r29","r30","r31"
-#endif
-					 );
+					);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
