@@ -72,7 +72,7 @@ SECTIONS
    /DISCARD/ :
    {
     *(.vectors)
-    *crtm168.o(.text)
+    *crtm*.o(.text)
     *(.init9)  /* Call main().  */
     *(.fini*)
    }
