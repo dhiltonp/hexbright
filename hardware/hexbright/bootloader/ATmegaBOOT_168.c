@@ -672,10 +672,6 @@ int noreturn __attribute((section(".text.main"))) main(void)
 				uint8_t tmp;
 				asm volatile(
 					 "clr	%[wcnt]		\n\t"	//page_word_count
-					 "lds	r30,address	\n\t"	//Address of FLASH location (in bytes)
-					 "lds	r31,address+1	\n\t"
-					 "ldi	r28,lo8(buff)	\n\t"	//Start of buffer array in RAM
-					 "ldi	r29,hi8(buff)	\n\t"
 					 "length_loop:		\n\t"	//Main loop, repeat for number of words in block							 							 
 					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
 					 "brne	no_page_erase	\n\t"						 
@@ -731,7 +727,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "rjmp	wait_spm4	\n\t"
 
 #ifdef __AVR_ATmega163__
-					 "andi	r30,0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
+					 "andi	%A[addr],0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
 #endif							 							 
 					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
 					 STORE_TMP_TO_SPM_CREG"	\n\t"
@@ -739,7 +735,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
 					 "nop			\n\t"
-					 "ori	r30,0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
+					 "ori	%A[addr],0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
 #endif
 					 //Wait for previous spm to complete
 					 "wait_spm5:		\n\t"
@@ -755,7 +751,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "nop			\n\t"
 #endif
 					 "same_page:		\n\t"							 
-					 "adiw	r30,2		\n\t"	//Next word in FLASH
+					 "adiw	%[addr],2	\n\t"	//Next word in FLASH
 					 "sbiw	%[length],2	\n\t"	//length-2
 					 "breq	final_write	\n\t"	//Finished
 					 "rjmp	length_loop	\n\t"
@@ -771,8 +767,10 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
 					   [spmen] "i" (SPMEN),
+					   [buff] "y" (buff),
+					   [addr] "z" (address.word),
 					   [length] "w" (length.word)
-					 : "r0","r28","r29","r30","r31"
+					 : "r0"
 					);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
