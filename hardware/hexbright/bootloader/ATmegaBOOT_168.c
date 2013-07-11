@@ -250,6 +250,16 @@
 # define SPM_CREG  SPMCR
 #endif
 
+// Similarly, this bit is called SPMEN on some devices
+// and SELFPRGEN on others
+#if defined(SPMEN)
+#  define SPM_ENABLE_BIT  SPMEN
+#elif defined(SELFPRGEN)
+#  define SPM_ENABLE_BIT  SELFPRGEN
+#else
+#  error Cannot find SPM Enable bit definition!
+#endif
+
 /* Response begin/end markers */
 #define RESPBEG	0x14
 #define STRBEG	"\x14"
@@ -768,7 +778,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					   [length] "+w" (length.word)
 					 : [PGSZ] "M" (PAGE_SIZE),
 					   [creg] "i" (SPM_CREG_ADDR),
-					   [spmen] "i" (SPMEN)
+					   [spmen] "i" (SPM_ENABLE_BIT)
 					 : "r0"
 					);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
