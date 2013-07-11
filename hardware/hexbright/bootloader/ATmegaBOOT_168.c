@@ -210,6 +210,11 @@
 #define SIG3	0x06
 #define PAGE_SIZE	0x40U	//64 words
 
+#elif defined __AVR_ATmega168P__
+#define SIG2	0x94
+#define SIG3	0x0b
+#define PAGE_SIZE	0x40U	//64 words
+
 #elif defined __AVR_ATmega328P__
 #define SIG2	0x95
 #define SIG3	0x0F
@@ -464,7 +469,7 @@ int noreturn __attribute((section(".text.main"))) main(void)
 	UBRRHI = (F_CPU/(BAUD_RATE*16L)-1) >> 8;
 	UCSRA = 0x00;
 	UCSRB = _BV(TXEN)|_BV(RXEN);	
-#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__)
+#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega168P__) || defined(__AVR_ATmega328P__)
 
 #ifdef DOUBLE_SPEED
 	UCSR0A = (1<<U2X0); //Double speed mode USART0
@@ -1035,7 +1040,7 @@ static void putch(char ch)
 		while (!(UCSR1A & _BV(UDRE1)));
 		UDR1 = ch;
 	}
-#elif defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
+#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega168P__) || defined(__AVR_ATmega328P__)
 	while (!(UCSR0A & _BV(UDRE0)));
 	UDR0 = ch;
 #else
@@ -1073,7 +1078,7 @@ static char getch(void)
 		return UDR1;
 	}
 	return 0;
-#elif defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
+#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega168P__) || defined(__AVR_ATmega328P__)
 	while(!(UCSR0A & _BV(RXC0))){
 		/* 20060803 DojoCorp:: Addon coming from the previous Bootloader*/               
 		/* HACKME:: here is a good place to count times*/
