@@ -18,21 +18,25 @@ Basic Operation
     *   If it is horizontal or angled up, it will start on the high setting. 
     *   Once on, you can hold the button for more than 350ms and change its angle with the ground to adjust the brightness.  Let go the button to lock in the current brightness. Pointing at the ground is the lowest setting and horizontal is the brightest setting.
 
-
 *   2 Clicks-Blinking mode
-    *   By default the light will blink at about 15 hz.
-    *   Holding the button and point at the ground you can speed up the blink from about 50Hz to about 8Hz by pointing at the ceiling. Let go the button to lock in the frequency. 
-    *   By tapping the light you switch to random mode.  The light is randomly turned on the light to full brightness for 20ms.  The odds start at 1:4 that the light will be turned on.  Pointing at the ground and holding the button, the odds drop to 1:2 and point up they go as high as 1:12.
-
+    *   If the flashlight is pointing at the ground it will start blinking at about 0.1Hz
+    *   If it is raised 45 degrees from the ground, it will start blinking at about 1.6Hz
+    *   If it is horizontal or angled up, it will start blinking at about 15Hz
+    *   Holding the button and point and changing the angle of the light with the ground you can speed up or slow down the frequency of the light.
 
 *   3 Clicks-Nightlight mode
-    *   When sitting still, the tailcap glows red.  When picked up, the light turns on to the brightest setting.  If not moved for 3 seconds it dims and the tailcap glows red again.
+    *   When sitting still, the tailcap glows red.  When picked up, the light turns on to the brightest setting.  
+    *   If not moved for 10 seconds it dims and the tailcap glows red again.
+    *   Holding the button will allow adjustment of the brightness of the light. This brightness will be saved in EEPROM and be remembered.
+
+*   4 Clicks-SOS mode
+    *   Light blinks SOS repeatededly in morse code
+
+*   5 Clicks-Lock mode
+    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light.
 
 Extras
 ----------------
 *   Holding the button for longer than 350 ms will cause the light to blink at about 15 hz while the button is held unless you are pointing at the ground.
-    *    While blinking you can tap the light to change to a solid beam.
-    *    This setting is saved so the next time you hold the button it will use your last setting (beam or blink).
 
-
-*    If pointing at the ground, holding the light for 3 seconds or more will cause the button to glow green even when the button is released. 
+*   If pointing at the ground, holding the light for 3 seconds or more will cause the button to glow green even when the button is released. 

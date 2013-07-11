@@ -32,9 +32,9 @@ either expressed or implied, of the FreeBSD Project.
 #include <limits.h>
 
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
-#include "NotArduino.h"
+#include "includes/NotArduino.h"
 #else
-#include "pin_interface.h"
+#include "includes/pin_interface.h"
 #include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
@@ -77,11 +77,10 @@ int hexbright::flash_checksum() {
 #endif
 
 void hexbright::init_hardware() {
-  // We just powered on! That means either we got plugged
-  // into USB, or the user is pressing the power button.
-  pinModeFast(DPIN_PWR, INPUT);
+  // These next 8 commands are for reference and cost nothing,
+  //  as we are initializing the values to their default state.
+  pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, LOW);
-  // Initialize GPIO
   pinModeFast(DPIN_RLED_SW, INPUT);
   pinModeFast(DPIN_GLED, OUTPUT);
   pinModeFast(DPIN_DRV_MODE, OUTPUT);
@@ -128,12 +127,19 @@ void hexbright::init_hardware() {
   enable_accelerometer();
 #endif
   
+  // was this power on from battery? if so, it was a button press, even if it was too fast to register.
+  read_charge_state();
+  if(get_charge_state()==BATTERY)
+    press_button();
+  
   continue_time = micros();
 
 }
 
+word loopCount;
 void hexbright::update() {
   unsigned long now;
+  loopCount++;
 
 #if (DEBUG==DEBUG_LOOP)
   unsigned long start_time=micros();
@@ -303,9 +309,9 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
 
 
 int start_light_level = 0;
-int end_light_level = 0;
-int change_duration = 0;
-int change_done  = 0;
+int end_light_level = OFF_LEVEL; // go to OFF_LEVEL once change_duration expires (unless set_light overrides)
+int change_duration = 5000/update_delay; // stay on for 5 seconds
+int change_done = 0;
 
 int max_light_level = MAX_LEVEL;
 
@@ -372,7 +378,6 @@ void hexbright::set_light_level(unsigned long level) {
   Serial.print("light level: ");
   Serial.println(level);
 #endif
-  pinModeFast(DPIN_PWR, OUTPUT);
   digitalWriteFast(DPIN_PWR, HIGH);
   if(level == 0) {
     // lowest possible power, but cpu still running (DPIN_PWR still high)
@@ -380,17 +385,20 @@ void hexbright::set_light_level(unsigned long level) {
     analogWrite(DPIN_DRV_EN, 0);
   } else if(level == OFF_LEVEL) {
     // power off (DPIN_PWR LOW)
-    pinModeFast(DPIN_PWR, OUTPUT);
     digitalWriteFast(DPIN_PWR, LOW);
     digitalWriteFast(DPIN_DRV_MODE, LOW);
     analogWrite(DPIN_DRV_EN, 0);
-  } else if(level<=500) {
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, .000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
-  } else {
-    level -= 500;
-    digitalWriteFast(DPIN_DRV_MODE, HIGH);
-    analogWrite(DPIN_DRV_EN, .00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+  } else { 
+    byte value;
+    if(level<=500) {
+      digitalWriteFast(DPIN_DRV_MODE, LOW);
+      value = (byte)(.000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
+    } else {
+      level -= 500;
+      digitalWriteFast(DPIN_DRV_MODE, HIGH);
+      value = (byte)(.00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
+    }
+    analogWrite(DPIN_DRV_EN, value);
   }
 }
 
@@ -456,6 +464,7 @@ unsigned int hexbright::get_strobe_error() {
 int led_wait_time[2] = {-1, -1};
 int led_on_time[2] = {-1, -1};
 unsigned char led_brightness[2] = {0, 0};
+byte rledMap[4] = {0b0001, 0b0101, 0b0111, 0b1111};
 
 void hexbright::set_led(unsigned char led, int on_time, int wait_time, unsigned char brightness) {
 #if (DEBUG==DEBUG_LED)
@@ -481,7 +490,14 @@ unsigned char hexbright::get_led_state(unsigned char led) {
 inline void hexbright::_led_on(unsigned char led) {
   if(led == RLED) { // DPIN_RLED_SW
     pinModeFast(DPIN_RLED_SW, OUTPUT);
-    analogWrite(DPIN_RLED_SW, led_brightness[RLED]);
+
+    byte l = rledMap[led_brightness[RLED]>>6];
+    byte r = 1<<(loopCount & 0b11);
+    if(l & r) {
+      digitalWriteFast(DPIN_RLED_SW, HIGH);
+    } else {
+      digitalWriteFast(DPIN_RLED_SW, LOW);
+    }
   } else { // DPIN_GLED
     analogWrite(DPIN_GLED, led_brightness[GLED]);
   }
@@ -514,6 +530,7 @@ inline void hexbright::adjust_leds() {
     Serial.println((led_wait_time[RLED])*update_delay);
   }
 #endif
+
   int i=0;
   for(i=0; i<2; i++) {
     if(led_on_time[i]>0) {
@@ -552,6 +569,12 @@ unsigned char button_state = 0;
 unsigned long time_last_pressed = 0; // the time that button was last pressed
 unsigned long time_last_released = 0; // the time that the button was last released
 
+byte press_override = false;
+
+void hexbright::press_button() {
+  press_override = true;
+}
+
 BOOL hexbright::button_pressed() {
   return BUTTON_ON(button_state);
 }
@@ -565,7 +588,7 @@ BOOL hexbright::button_just_released() {
 }
 
 int hexbright::button_pressed_time() {
-  if(BUTTON_ON(button_state)) {
+  if(BUTTON_ON(button_state) || BUTTON_JUST_OFF(button_state)) {
     return millis()-time_last_pressed;
   } else {
     return time_last_released - time_last_pressed;
@@ -581,11 +604,28 @@ int hexbright::button_released_time() {
 }
 
 void hexbright::read_button() {
-  /*button_state = button_state << 1;                            // make space for the new value
+  if(BUTTON_JUST_OFF(button_state)) {
+    // we update time_last_released before the read, so that the very first time through after a release, 
+	//  button_released_time() returns the /previous/ button_released_time.
+    time_last_released=millis();
+#if (DEBUG==DEBUG_BUTTON)
+    Serial.println("Button just released");
+    Serial.print("Time spent pressed (ms): ");
+    Serial.println(time_last_released-time_last_pressed);
+#endif
+  }
+  
+  /* READ THE BUTTON!!!
+    button_state = button_state << 1;                            // make space for the new value
     button_state = button_state | digitalReadFast(DPIN_RLED_SW); // add the new value
     button_state = button_state & BUTTON_FILTER;                 // remove excess values */
   // Doing the three commands above on one line saves 2 bytes.  We'll take it!
-  button_state = ((button_state<<1) | digitalReadFast(DPIN_RLED_SW)) & BUTTON_FILTER;
+  byte read_value = digitalReadFast(DPIN_RLED_SW);
+  if(press_override) {
+    read_value = 1;
+	press_override = false;
+  }
+  button_state = ((button_state<<1) | read_value) & BUTTON_FILTER;
   
   if(BUTTON_JUST_ON(button_state)) {
     time_last_pressed=millis();
@@ -594,16 +634,59 @@ void hexbright::read_button() {
     Serial.print("Time spent released (ms): ");
     Serial.println(time_last_pressed-time_last_released);
 #endif
-  } else if(BUTTON_JUST_OFF(button_state)) {
-    time_last_released=millis();
-#if (DEBUG==DEBUG_BUTTON)
-    Serial.println("Button just released");
-    Serial.print("Time spent pressed (ms): ");
-    Serial.println(time_last_released-time_last_pressed);
-#endif
   }
 }
 
+byte clickState;
+#define CLICK_OFF 0
+#define CLICK_ACTIVE 1
+#define CLICK_WAIT 2
+
+byte clickCount;
+word max_click_time;
+void hexbright::config_click_count(word click_time) {
+  max_click_time = click_time;
+  clickState=0;
+}
+
+char hexbright::click_count() {
+  switch(clickState) {
+  case CLICK_OFF:
+    if(button_just_pressed()) {
+      // click just started
+      clickState = CLICK_ACTIVE;
+      clickCount=0;
+      //Serial.println("Clicking just started");
+    }
+    break;
+  case CLICK_ACTIVE:   
+    if(button_just_released()) {
+      if(button_pressed_time() > max_click_time) {
+	// button held to long
+	//Serial.println("Click held too long");
+	clickState = CLICK_OFF;
+      } else {
+	// click is counted
+	clickState = CLICK_WAIT;
+	clickCount++;
+	//Serial.println("Click counted");
+      }
+    }
+    break;
+  case CLICK_WAIT:
+    // button is released for long enough, we're done clicking
+    if(button_released_time() > max_click_time) {
+      clickState = CLICK_OFF;
+      //Serial.print("Click finished: "); Serial.println((int)clickCount);
+      return clickCount;
+    } else if(button_pressed()) {
+      // move back to active state
+      clickState = CLICK_ACTIVE;
+      //Serial.println("Click active");
+    }
+  }
+  return -127;
+} 
 
 ///////////////////////////////////////////////
 ////////////////ACCELEROMETER//////////////////
@@ -1033,6 +1116,13 @@ void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
   read_value = tmp2; 
 }
 #endif
+
+void hexbright::print_power() {
+  print_charge(GLED);
+  if (low_voltage_state() && get_led_state(RLED) == LED_OFF) {
+    set_led(RLED,50,1000);
+  }
+}
 
 
 ///////////////////////////////////////////////

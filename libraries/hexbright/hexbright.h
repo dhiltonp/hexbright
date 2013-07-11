@@ -82,8 +82,7 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_ACCEL 8 // accelerometer
 #define DEBUG_NUMBER 9 // number printing utility
 #define DEBUG_CHARGE 10 // charge state
-
-
+#define DEBUG_PROGRAM 11 // use this to enable/disable print statements in the program rather than the library
 
 #if (DEBUG==DEBUG_TEMP)
 #define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
@@ -122,6 +121,12 @@ either expressed or implied, of the FreeBSD Project.
 #define CHARGING 1
 #define BATTERY 7
 #define CHARGED 3
+
+// Bit manipulation macros
+#define BIT_CHECK(reg,bit) (reg & (1<<bit))
+#define BIT_SET(reg,bit) reg |= (1<<bit)
+#define BIT_CLEAR(reg,bit) reg &= ~(1<<bit)
+#define BIT_TOGGLE(reg,bit) reg ^= (1<<bit)
 
 class hexbright {
  public:
@@ -229,22 +234,38 @@ class hexbright {
   unsigned int get_strobe_error();
 #endif // STROBE
 
-  // Returns true if the button is being pressed
+  // Button debouncing is handled inside the library.
+  // Returns true if the button is being pressed.
   static BOOL button_pressed();
   // button has just been pressed
   static BOOL button_just_pressed();
   // button has just been released
   static BOOL button_just_released();
-  // returns the amount of time (in ms) that the button was last (or is currently being) pressed
+  // If the button is currently pressed, returns the amount of time the button has been pressed.
+  // If the button is currently released, returns the duration of the last button press.
+  //  The time is in milliseconds.
   static int button_pressed_time();
-  // returns the amount of time (in ms) that the button was last (or is currently being) released
+  // If the button is currently pressed or was just released, returns the duration between the previous two button presses.
+  // If the button is currently released, returns the amount of time since the button was released.
+  //  The time is in milliseconds.
   static int button_released_time();
+  // The next time update() is run, the button is down, just like it physically happened.
+  //  Used in init_hardware to initialize the button state to pressed
+  //  so that we can catch very fast initial presses.
+  static void press_button();
   
+  // Call in setup loop if you want to use the click counter
+  // click_time is the maximum time a click can take before the counter resets
+  static void config_click_count(word click_time);
+  // The number of clicks <= click_time.  Will not return a count  until click_time ms after the button release.
+  // Will return -127 unless returning a valid count.
+  static char click_count();
+
   // led = GLED or RLED,
   // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
   // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
   //   Defaults to 100 ms.
-  // brightness (0-255) = brightness of rear led
+  // brightness (0-255) = brightness of rear led. note that rled brightness only has 2 bits of resolution and has visible flahing at the lowest setting.
   //   Defaults to 255 (full brightness)
   // Takes up 16 bytes.
   static void set_led(unsigned char led, int on_time, int wait_time=100, unsigned char brightness=255);
@@ -288,6 +309,7 @@ class hexbright {
   //  if(!printing_number())
   //    print_charge(GLED);
   //  ...end of loop...
+  // See also: print_power
   static void print_charge(unsigned char led);
   // returns CHARGING, CHARGED, or BATTERY
   static unsigned char get_charge_state();
@@ -313,7 +335,19 @@ class hexbright {
   static void input_digit(unsigned int min_digit, unsigned int max_digit);
   // grab the value that is currently selected (based on twist orientation)
   static unsigned int get_input_digit();
-  
+
+  // prints charge state (using print_charge).
+  //  if in a low battery state, flashes red for 50 ms, followed by a 1 second delay
+  // If you are using print_number, call it before this function if possible.
+  // I recommend the following (if using print_number()):
+  //  ...code that may call print number...
+  //  if(!printing_number())
+  //    print_charge(GLED);
+  //  ...end of loop...
+  // see also print_charge for usage
+  static void print_power();
+
+
 #ifdef ACCELEROMETER
   // accepts things like ACC_REG_TILT
   // TILT is now read by default in the private method, at the cost of 12 bytes.
@@ -360,7 +394,7 @@ class hexbright {
   static char get_spin();
   //returns the angle between straight down and our current vector
   // returns a value from 0 to 1. 0 == down, 1 == straight up.
-  // Multiply by 1.8 to get degrees.  Expect noise of about .1.
+  // Multiply by 180 to get degrees.  Expect noise of about .1 (15-20 degrees).
   static double difference_from_down();
   // lots of noise < 5 degrees.  Most noise is < 10 degrees
   // noise varies partially based on sample rate, which is not currently configurable

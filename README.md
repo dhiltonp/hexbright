@@ -10,9 +10,6 @@ Key Features
 
 *   Automatic low-battery detection (no spontaneous power-offs if too much power is drawn) 
 
-    Due to issues with a voltage drop when being unplugged from usb, it's not as polished as it should be.  I need some hardware to improve the algorithm to handle this, which should be arriving next week (mid February)
-    (Feb 13: Hardware has arrived, I'm running tests.  Expect excellence within a week.)
-
 *   All hardware management is done internal to the library; you can focus on firmware features, not implementation.
 
 *   Multiple debug modes to help diagnose problems ([DEBUG in hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71))
@@ -65,14 +62,14 @@ Text Instructions
 Overview
 -----------------
 
+*   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
+    <br>(also use it to set [DEBUG modes](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71), [enable printing](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L75), or to [save space](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L39))
+
 *   ['temperature_calibration'](https://github.com/dhiltonp/hexbright/tree/master/programs/temperature_calibration) is one of the simplest programs you could write.
 
 *   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
 
 *   ['down_light'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) contains an example of using the accelerometer.
-
-*   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
-
 
 I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
 
