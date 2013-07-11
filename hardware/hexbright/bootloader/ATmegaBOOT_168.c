@@ -655,6 +655,19 @@ int noreturn __attribute((section(".text.main"))) main(void)
 #else
 				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
 #endif
+
+// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
+// Update the following list if compilation fails in the assembler
+// with a message like "I/O address out of range 0...0x3f".
+#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
+# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
+#else
+# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
+#endif
 				uint8_t page_word_count;
 				uint8_t tmp;
 				asm volatile(
@@ -666,26 +679,28 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "length_loop:		\n\t"	//Main loop, repeat for number of words in block							 							 
 					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
 					 "brne	no_page_erase	\n\t"						 
+					 //Wait for previous spm to complete
 					 "wait_spm1:		\n\t"
-					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
+					 LOAD_SPM_CREG_TO_TMP"	\n\t"
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm1       \n\t"
 					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
-					 "sts	%[creg],%[tmp]	\n\t"
+					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"							 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
 					 "nop			\n\t"
 #endif
+					 //Wait for previous spm to complete
 					 "wait_spm2:		\n\t"
-					 "lds	%[tmp],%[creg]\n\t"	//Wait for previous spm to complete
+					 LOAD_SPM_CREG_TO_TMP"	\n\t"
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm2       \n\t"									 
 
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[creg],%[tmp]	\n\t"
+					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -695,13 +710,14 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "ld	r0,Y+		\n\t"	//Write 2 bytes into page buffer
 					 "ld	r1,Y+		\n\t"							 
 								 
+					 //Wait for previous spm to complete
 					 "wait_spm3:		\n\t"
-					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
+					 LOAD_SPM_CREG_TO_TMP"	\n\t"
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm3       \n\t"
 					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-					 "sts	%[creg],%[tmp]\n\t"
+					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"
 								 
 					 "inc	%[wcnt]		\n\t"	//page_word_count++
@@ -709,8 +725,9 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "brlo	same_page	\n\t"	//Still same page in FLASH
 					 "write_page:		\n\t"
 					 "clr	%[wcnt]		\n\t"	//New page, write current one first
+					 //Wait for previous spm to complete
 					 "wait_spm4:		\n\t"
-					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
+					 LOAD_SPM_CREG_TO_TMP"	\n\t"
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm4       \n\t"
@@ -718,20 +735,21 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "andi	r30,0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
 #endif							 							 
 					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
-					 "sts	%[creg],%[tmp]	\n\t"
+					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
 					 "nop			\n\t"
 					 "ori	r30,0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
 #endif
+					 //Wait for previous spm to complete
 					 "wait_spm5:		\n\t"
-					 "lds	%[tmp],%[creg]	\n\t"	//Wait for previous spm to complete
+					 LOAD_SPM_CREG_TO_TMP"	\n\t"
 					 "andi	%[tmp],1	\n\t"
 					 "cpi	%[tmp],1	\n\t"
 					 "breq	wait_spm5       \n\t"									 
 					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 "sts	%[creg],%[tmp]\n\t"
+					 STORE_TMP_TO_SPM_CREG"	\n\t"
 					 "spm			\n\t"					 		 
 #ifdef __AVR_ATmega163__
 					 ".word 0xFFFF		\n\t"
@@ -749,10 +767,10 @@ int noreturn __attribute((section(".text.main"))) main(void)
 					 "rjmp	write_page	\n\t"
 					 "block_done:		\n\t"
 					 "clr	__zero_reg__	\n\t"	//restore zero register
-					 : [creg] "=m" (SPM_CREG),
-					   [wcnt] "=d" (page_word_count),
+					 : [wcnt] "=d" (page_word_count),
 					   [tmp] "=d" (tmp)
 					 : [PGSZ] "M" (PAGE_SIZE),
+					   [creg] "i" (SPM_CREG_ADDR),
 					   [length] "w" (length.word)
 					 : "r0","r28","r29","r30","r31"
 					);
