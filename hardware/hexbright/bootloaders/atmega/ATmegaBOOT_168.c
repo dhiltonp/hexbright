@@ -389,8 +389,80 @@ static inline int is_led(void)
 }
 
 
+/* execution starts here after RESET */
+void __attribute__((naked, section(".vectors"))) init(void)
+{
+	/* Clear __zero_reg__, set up stack pointer.  */
+	uint8_t register tmp;
+	asm volatile (
+		"clr	__zero_reg__		\n\t"
+		"out	%[sreg],__zero_reg__	\n\t"
+		"ldi	%[tmp],lo8(%[ramend])	\n\t"
+		"out	%[sph],%[tmp]		\n\t"
+		"ldi	%[tmp],hi8(%[ramend])	\n\t"
+		"out	%[spl],%[tmp]		\n\t"
+		: [tmp] "=r" (tmp)
+		: [ramend] "i" (RAMEND),
+		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
+		  [sph] "i" (_SFR_IO_ADDR(SPH)),
+		  [spl] "i" (_SFR_IO_ADDR(SPL))
+		: "memory"
+		);
+
+	/* Copy initialized static data. */
+	extern char __data_start[], __data_end[], __data_load_start[];
+	register char *data_ptr = __data_start;
+	register char *data_load_ptr = __data_load_start;
+	register uint8_t data_endhi;
+	asm volatile (
+		"ldi	%[endhi],hi8(%[end])	\n\t"
+		"rjmp	2f			\n\t"
+		"1:\n\t"
+#if defined (__AVR_HAVE_LPMX__)
+		"lpm	r0,Z+			\n\t"
+#else
+		"lpm				\n\t"
+		"adiw	%[ptr],1		\n\t"
+#endif
+		"st	X+,r0			\n\t"
+		"2:\n\t"
+		"cpi	%A[ptr],lo8(%[end])	\n\t"
+		"cpc	%B[ptr],%[endhi]	\n\t"
+		"brne	1b			\n\t"
+		: [ptr] "+x" (data_ptr),
+		  [lptr] "+z" (data_load_ptr),
+		  [endhi] "=d" (data_endhi)
+		: [start] "p" (__data_start),
+		  [end] "p" (__data_end),
+		  [load_start] "p" (__data_load_start)
+		: "r0", "memory"
+		);
+
+	/* Clear BSS.  */
+	extern char __bss_start[], __bss_end[];
+	register char *bss_ptr = __bss_start;
+	register uint8_t bss_endhi;
+	asm volatile (
+		"ldi	%[endhi],hi8(%[end])	\n\t"
+		"rjmp	2f			\n\t"
+		"1:\n\t"
+		"st	X+,__zero_reg__		\n\t"
+		"2:\n\t"
+		"cpi	%A[ptr],lo8(%[end])	\n\t"
+		"cpc	%B[ptr],%[endhi]	\n\t"
+		"brne	1b			\n\t"
+		: [ptr] "+x" (bss_ptr),
+		  [endhi] "=d" (bss_endhi)
+		: [end] "i" (__bss_end)
+		: "memory"
+		);
+
+	/* Call main().  */
+	asm volatile ("rjmp main\n\t");
+}
+
 /* main program starts here */
-int noreturn __attribute((section(".text.main"))) main(void)
+int noreturn main(void)
 {
 	address_t address;
 	uint8_t ch;
