@@ -313,11 +313,11 @@ do {								\
 	uint_farptr_t _putstr_tmp;				\
 	asm							\
 	(							\
-		"ldi %D0, lo8(%1)" "\n\t"			\
-		"ldi %C0, hi8(%1)" "\n\t"			\
-		"ldi %B0, hh8(%1)" "\n\t"			\
-		"clr %A0" "\n\t"				\
-		: "=&d" (_putstr_tmp)				\
+		"ldi %A0, lo8(%1)" "\n\t"			\
+		"ldi %B0, hi8(%1)" "\n\t"			\
+		"ldi %C0, hh8(%1)" "\n\t"			\
+		"clr %D0" "\n\t"				\
+		: "=r" (_putstr_tmp)				\
 		: "p" (&(sym))					\
 	);							\
 	_putstr(_putstr_tmp);					\
@@ -1192,8 +1192,10 @@ static char echogetch(void)
 static void _putstr(uint_farptr_t s)
 {
 	char c;
-	while ( (c = pgm_read_byte_far(s++)) )
+	while ( (c = pgm_read_byte_far(s)) ) {
 		putch(c);
+		++s;
+	}
 }
 
 #else  /* RAMPZ && !__AVR_HAVE_LPMX__ */
