@@ -37,8 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define EEPROM_NIGHTLIGHT_BRIGHTNESS 1
 
 // Modes
-#define MAX_MODE 5
-
 #define MODE_OFF 0
 #define MODE_LEVEL 1
 #define MODE_BLINK 2
@@ -140,7 +138,7 @@ void loop() {
   // Get the click count
   new_mode = hb.click_count();
   if(new_mode>=MODE_OFF) {
-    DBG(Serial.print("Clicks recieved: "); Serial.println((int)new_mode));
+    DBG(Serial.print("Clicks received: "); Serial.println((int)new_mode));
     if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
