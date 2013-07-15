@@ -33,6 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define DBG(a)
 #endif
 
+#define EEPROM_LOCKED 0
+#define EEPROM_NIGHTLIGHT_BRIGHTNESS 1
+
 // Modes
 #define MAX_MODE 5
 
@@ -44,28 +47,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MODE_LOCKED 5
 
  // Defaults
-struct cfg {
-  byte locked;
-  word nightlight_brightness;
-};
-static const struct cfg default_cfg = {
-  0,				// locked
-  500,				// nightlight_brightness
-};
 static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
 static const int nightlight_timeout = 10000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
-
-// Stored settings
-struct eeprom_slot {
-  byte seq;
-  struct cfg cfg;
-};
-#define eeprom_off(_field) ((word)(intptr_t)&((struct eeprom_slot*)0)->_field)
-
-// this number must not be a multiple of 255!
-#define EEPROM_SLOTS	((E2END+1)/sizeof(struct eeprom_slot))
 
 // State
 static unsigned long treg1=0; 
@@ -79,14 +64,12 @@ const unsigned QUICKSTROBE=3;
 static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
 
-static struct cfg cfg;		// Current configuration
-static struct cfg saved_cfg;	// Last saved configuration
-static byte eeprom_seq;		// Next EEPROM sequence number
-static word eeprom_loc;		// EEPROM location of the configuration
+static word nightlight_brightness;
 
 const word blink_freq_map[] = {70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
+static byte locked;
 hexbright hb;
 
 int adjustLED() {
@@ -107,82 +90,14 @@ int adjustLED() {
   return -1;
 }
 
-// Utility functions for EEPROM access
-
-// Fast compute (n1 - n2) % 255
-static byte subMod255(word n1, word n2)
-{
-  word sub = n1 - n2;
-  byte ret = sub + (sub >> 8);
-  return ret + (ret == 0xff);
-}
-
-static byte seqEEPROM(word slot)
-{
-  return EEPROM.read(slot * sizeof(struct eeprom_slot) + eeprom_off(seq));
-}
-
-// Move to the next EEPROM slot
-static void nextEEPROM(void)
-{
-  ++eeprom_seq;
-  if (eeprom_seq == 0xff)
-    eeprom_seq = 0;
-  eeprom_loc += sizeof(struct eeprom_slot);
-  if (eeprom_loc > E2END - sizeof(struct eeprom_slot))
-    eeprom_loc = 0;
-}
-
-// Load current configuration from EEPROM
-static void readEEPROM(void)
-{
-  byte l, h, m;			// low, high, mid
-  byte lseq, mseq;
-
-  l = 0;
-  h = EEPROM_SLOTS;
-  m = h >> 1;
-  lseq = seqEEPROM(l);
-  while (m != l) {
-    mseq = seqEEPROM(m);
-    if (mseq != 0xff &&
-	subMod255(mseq, lseq) == subMod255(m, l)) {
-      l = m;
-      lseq = mseq;
-    } else
-      h = m;
-    m = ((word)l + (word)h) >> 1;
+byte updateEEPROM(word location, byte value) {
+  byte c = EEPROM.read(location);
+  DBG(Serial.print("Read "); Serial.print(c); Serial.print(" from EEPROM location: "); Serial.println(location));
+  if(c!=value) {
+    DBG(Serial.print("Writing new value: "); Serial.println(value));
+    EEPROM.write(location, value);
   }
-
-  if (lseq == 0xff) {
-    eeprom_seq = 0;
-    eeprom_loc = 0;
-    DBG(Serial.println("Using default configuration"));
-    memcpy(&saved_cfg, &default_cfg, sizeof(struct cfg));
-  } else {
-    eeprom_seq = lseq;
-    eeprom_loc = l * sizeof(struct eeprom_slot);
-    DBG(Serial.println("Reading defaults from EEPROM"));
-    byte i, *p;
-    for (i = 0, p = (byte*)&saved_cfg; i < sizeof(struct cfg); ++i, ++p)
-      *p = EEPROM.read(eeprom_loc + eeprom_off(cfg) + i);
-    nextEEPROM();
-  }
-
-  cfg = saved_cfg;
-}
-
-static void updateEEPROM() {
-  if (memcmp(&cfg, &saved_cfg, sizeof(struct cfg)) == 0)
-    return;			// no changes need to be saved
-
-  byte i, *p;
-  for (i = 0, p = (byte*)&cfg; i < sizeof(struct cfg); ++i, ++p)
-    EEPROM.write(eeprom_loc + eeprom_off(cfg) + i, *p);
-  EEPROM.write(eeprom_loc + eeprom_off(seq), eeprom_seq);
-  saved_cfg = cfg;
-  DBG(Serial.println("Configuration saved to EEPROM"));
-  nextEEPROM();
+  return value;
 }
 
 void setup() {
@@ -191,9 +106,13 @@ void setup() {
   hb = hexbright();
   hb.init_hardware();
 
-  readEEPROM();
-  DBG(Serial.print("Locked: "); Serial.println(cfg.locked));
-  DBG(Serial.print("Nightlight Brightness: "); Serial.println(cfg.nightlight_brightness));
+
+  DBG(Serial.println("Reading defaults from EEPROM"));
+  locked = EEPROM.read(EEPROM_LOCKED);
+  DBG(Serial.print("Locked: "); Serial.println(locked));
+  nightlight_brightness = EEPROM.read(EEPROM_NIGHTLIGHT_BRIGHTNESS)*4;
+  nightlight_brightness = nightlight_brightness==0 ? 1000 : nightlight_brightness;
+  DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
   
   DBG(Serial.println("Powered up!"));
 
@@ -222,7 +141,7 @@ void loop() {
   new_mode = hb.click_count();
   if(new_mode>=MODE_OFF) {
     DBG(Serial.print("Clicks recieved: "); Serial.println((int)new_mode));
-    if(mode!=MODE_OFF || (cfg.locked && new_mode!=MODE_LOCKED) ) {
+    if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
     } 
@@ -235,12 +154,12 @@ void loop() {
     // we're changing mode
     switch(new_mode) {
     case MODE_LOCKED:
-      cfg.locked=!cfg.locked;
+      locked=!locked;
+      updateEEPROM(EEPROM_LOCKED,locked);
       new_mode=MODE_OFF;
       /* fall through */
     case MODE_OFF:
       DBG(Serial.println("Mode = off"));
-      updateEEPROM();
       if(BIT_CHECK(bitreg,GLOW_MODE))
 	hb.set_light(CURRENT_LEVEL, 0, NOW);
       else
@@ -260,7 +179,7 @@ void loop() {
       break;
     case MODE_NIGHTLIGHT:
       DBG(Serial.println("Mode = nightlight"));
-      DBG(Serial.print("Nightlight Brightness: "); Serial.println(cfg.nightlight_brightness));
+      DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
@@ -290,7 +209,7 @@ void loop() {
       hb.set_led(GLED, 100, 100, 64);
     
     // holding the button
-    if(hb.button_pressed() && !cfg.locked) {
+    if(hb.button_pressed() && !locked) {
 	double d = hb.difference_from_down();
 	if(BIT_CHECK(bitreg,QUICKSTROBE) || (hb.button_pressed_time() > click && d > 0.10 )) {
 	  BIT_SET(bitreg,QUICKSTROBE);
@@ -325,14 +244,18 @@ void loop() {
     if(hb.moved(nightlight_sensitivity)) {
       //Serial.println("Nightlight Moved");
       treg1 = time;
-      hb.set_light(CURRENT_LEVEL, cfg.nightlight_brightness, 1000);
+      hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
     } else if(time > treg1 + nightlight_timeout) {
       hb.set_light(CURRENT_LEVEL, 0, 1000);
    }
     int i = adjustLED();
     if(i>0) {
       DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
-      cfg.nightlight_brightness = i;
+      nightlight_brightness = i;
+    }
+    if(hb.button_just_released()) {
+      DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
+      updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
     }
     break; }
   case MODE_BLINK:
