@@ -100,6 +100,9 @@
 #include <avr/eeprom.h>
 #endif
 
+/* STK500 commands */
+#include "command.h"
+
 /* SW_MAJOR and MINOR needs to be updated from time to time to avoid
  * warning message from AVR Studio.
  * never allow AVR Studio to do an update !!!!
@@ -264,12 +267,6 @@
 #else
 #  error Cannot find SPM Enable bit definition!
 #endif
-
-/* Response begin/end markers */
-#define RESPBEG	0x14
-#define STRBEG	"\x14"
-#define RESPEND	0x10
-#define STREND	"\x10"
 
 #define noreturn __attribute__((noreturn))
 
@@ -600,15 +597,18 @@ int noreturn main(void)
 	/* A bunch of if...else if... gives smaller code than switch...case ! */
 
 	/* Hello is anyone home ? */ 
-	if(ch=='0') {
+	if(ch == Cmnd_STK_GET_SYNC) {
 		nothing_response();
 	}
 
 
 	/* Request programmer ID */
-	else if(ch=='1') {
-		if (getch() == ' ') {
-			static prog_char id[] = STRBEG "AVR ISP" STREND;
+	else if(ch == Cmnd_STK_GET_SIGN_ON) {
+		if (getch() == Sync_CRC_EOP) {
+			static prog_char id[] = {
+				Resp_STK_INSYNC,
+				'A', 'V', 'R', ' ', 'I', 'S', 'P',
+				Resp_STK_OK, 0 };
 			putstr(id);
 		} else
 			error();
@@ -616,7 +616,7 @@ int noreturn main(void)
 
 
 	/* AVR ISP/STK500 board commands  DON'T CARE so default nothing_response */
-	else if(ch=='@') {
+	else if(ch == Cmnd_STK_SET_PARAMETER) {
 		ch = getch();
 		if (ch>0x85) getch();
 		nothing_response();
@@ -624,25 +624,30 @@ int noreturn main(void)
 
 
 	/* AVR ISP/STK500 board requests */
-	else if(ch=='A') {
+	else if(ch == Cmnd_STK_GET_PARAMETER) {
 		ch = getch();
-		if(ch==0x80) byte_response(HW_VER);		// Hardware version
-		else if(ch==0x81) byte_response(SW_MAJOR);	// Software major version
-		else if(ch==0x82) byte_response(SW_MINOR);	// Software minor version
-		else if(ch==0x98) byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
-		else byte_response(0x00);				// Covers various unnecessary responses we don't care about
+		if (ch == Parm_STK_HW_VER)
+			byte_response(HW_VER);		// Hardware version
+		else if (ch == Parm_STK_SW_MAJOR)
+			byte_response(SW_MAJOR);	// Software major ver
+		else if (ch == Parm_STK_SW_MINOR)
+			byte_response(SW_MINOR);	// Software minor ver
+		else if (ch == 0x98)
+			byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
+		else
+			byte_response(0x00);		// Covers various unnecessary responses we don't care about
 	}
 
 
 	/* Device Parameters  DON'T CARE, DEVICE IS FIXED  */
-	else if(ch=='B') {
+	else if(ch == Cmnd_STK_SET_DEVICE) {
 		getNch(20);
 		nothing_response();
 	}
 
 
 	/* Parallel programming stuff  DON'T CARE  */
-	else if(ch=='E') {
+	else if(ch == Cmnd_STK_GET_STATUS) {
 		getNch(5);
 		nothing_response();
 	}
@@ -650,13 +655,13 @@ int noreturn main(void)
 
 	/* P: Enter programming mode  */
 	/* R: Erase device, don't care as we will erase one page at a time anyway.  */
-	else if(ch=='P' || ch=='R') {
+	else if(ch == Cmnd_STK_ENTER_PROGMODE || ch == Cmnd_STK_CHIP_ERASE) {
 		nothing_response();
 	}
 
 
 	/* Leave programming mode  */
-	else if(ch=='Q') {
+	else if(ch == Cmnd_STK_LEAVE_PROGMODE) {
 		nothing_response();
 #ifdef WATCHDOG_MODS
 		// autoreset via watchdog (sneaky!)
@@ -669,7 +674,7 @@ int noreturn main(void)
 	/* Set address, little endian. EEPROM in bytes, FLASH in words  */
 	/* Perhaps extra address bytes may be added in future to support > 128kB FLASH.  */
 	/* This might explain why little endian was used here, big endian used everywhere else.  */
-	else if(ch=='U') {
+	else if(ch == Cmnd_STK_LOAD_ADDRESS) {
 		address.byte[0] = getch();
 		address.byte[1] = getch();
 		nothing_response();
@@ -677,7 +682,7 @@ int noreturn main(void)
 
 
 	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
-	else if(ch=='V') {
+	else if(ch == Cmnd_STK_UNIVERSAL) {
 		if (getch() == 0x30) {
 			getch();
 			ch = getch();
@@ -697,7 +702,7 @@ int noreturn main(void)
 
 
 	/* Write memory, length is big endian and is in bytes  */
-	else if(ch=='d') {
+	else if(ch == Cmnd_STK_PROG_PAGE) {
 		struct {
 			unsigned eeprom : 1;
 		} flags;
@@ -709,7 +714,7 @@ int noreturn main(void)
 		for (w=0;w<length.word;w++) {
 			buff[w] = getch();	                        // Store data in buffer, can't keep up with serial data stream whilst programming pages
 		}
-		if (getch() == ' ') {
+		if (getch() == Sync_CRC_EOP) {
 			if (flags.eeprom) {		                //Write to EEPROM one byte at a time
 				address.word <<= 1;
 				for(w=0;w<length.word;w++) {
@@ -861,15 +866,15 @@ int noreturn main(void)
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
-			putch(RESPBEG);
-			putch(RESPEND);
+			putch(Resp_STK_INSYNC);
+			putch(Resp_STK_OK);
 		} else
 			error();
 	}
 
 
 	/* Read memory block mode, length is big endian.  */
-	else if(ch=='t') {
+	else if(ch == Cmnd_STK_READ_PAGE) {
 		struct {
 			unsigned eeprom : 1;
 #ifdef RAMPZ
@@ -886,8 +891,8 @@ int noreturn main(void)
 		address.word = address.word << 1;	        // address * 2 -> byte location
 		if (getch() == 'E') flags.eeprom = 1;
 		else flags.eeprom = 0;
-		if (getch() == ' ') {		                // Command terminator
-			putch(RESPBEG);
+		if (getch() == Sync_CRC_EOP) {	                // Command terminator
+			putch(Resp_STK_INSYNC);
 			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
 				if (flags.eeprom) {	                        // Byte access EEPROM read
 #if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
@@ -912,16 +917,18 @@ int noreturn main(void)
 					address.word++;
 				}
 			}
-			putch(RESPEND);
+			putch(Resp_STK_OK);
 		}
 	}
 
 
 	/* Get device signature bytes  */
-	else if(ch=='u') {
-		if (getch() == ' ') {
-			static prog_char sig[] =
-				{ RESPBEG, SIG1, SIG2, SIG3, RESPEND, 0};
+	else if(ch == Cmnd_STK_READ_SIGN) {
+		if (getch() == Sync_CRC_EOP) {
+			static prog_char sig[] = {
+				Resp_STK_INSYNC,
+				SIG1, SIG2, SIG3,
+				Resp_STK_OK, 0};
 			putstr(sig);
 		} else
 			error();
@@ -929,7 +936,7 @@ int noreturn main(void)
 
 
 	/* Read oscillator calibration byte */
-	else if(ch=='v') {
+	else if(ch == Cmnd_STK_READ_OSCCAL) {
 		byte_response(0x00);
 	}
 
@@ -1231,10 +1238,10 @@ static void _putstr(uintptr_t s)
 
 static void byte_response(uint8_t val)
 {
-	if (getch() == ' ') {
-		putch(RESPBEG);
+	if (getch() == Sync_CRC_EOP) {
+		putch(Resp_STK_INSYNC);
 		putch(val);
-		putch(RESPEND);
+		putch(Resp_STK_OK);
 	} else
 		error();
 }
@@ -1242,9 +1249,9 @@ static void byte_response(uint8_t val)
 
 static void nothing_response(void)
 {
-	if (getch() == ' ') {
-		putch(RESPBEG);
-		putch(RESPEND);
+	if (getch() == Sync_CRC_EOP) {
+		putch(Resp_STK_INSYNC);
+		putch(Resp_STK_OK);
 	} else
 		error();
 }
