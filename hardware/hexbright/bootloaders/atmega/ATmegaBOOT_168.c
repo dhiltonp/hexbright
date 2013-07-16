@@ -189,8 +189,12 @@
  */
 #if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
 typedef uint_farptr_t pgmptr_t;
+# define read_pgmptr	pgm_read_byte_far
+
 #else
 typedef uintptr_t pgmptr_t;
+# define read_pgmptr	pgm_read_byte
+
 #endif
 
 /* function prototypes */
@@ -1134,11 +1138,7 @@ static char read_str_inc(pgmptr_t *p)
 		: "=r" (result), "+z" (*p)
 	);
 #else  /* __AVR_HAVE_LPMX__ */
-# if defined RAMPZ
-	result = pgm_read_byte_far(*p);
-# else
-	result = pgm_read_byte(*p);
-# endif
+	result = read_pgmptr(*p);
 	++*p;
 #endif	/* __AVR_HAVE_LPMX__ */
 	return result;
