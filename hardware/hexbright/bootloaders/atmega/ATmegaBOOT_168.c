@@ -647,7 +647,7 @@ int noreturn main(void)
 
 
 	/* Parallel programming stuff  DON'T CARE  */
-	else if(ch == Cmnd_STK_GET_STATUS) {
+	else if(ch == Cmnd_STK_SET_DEVICE_EXT) {
 		getNch(5);
 		nothing_response();
 	}
