@@ -228,7 +228,7 @@ do {								\
 		"ldi %B0, hi8(%1)" "\n\t"			\
 		"ldi %C0, hh8(%1)" "\n\t"			\
 		"clr %D0" "\n\t"				\
-		: "=r" (_putstr_tmp)				\
+		: "=d" (_putstr_tmp)				\
 		: "p" (&(sym))					\
 	);							\
 	_putstr(_putstr_tmp);					\
@@ -312,7 +312,7 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		"out	%[sph],%[tmp]		\n\t"
 		"ldi	%[tmp],hi8(%[ramend])	\n\t"
 		"out	%[spl],%[tmp]		\n\t"
-		: [tmp] "=r" (tmp)
+		: [tmp] "=d" (tmp)
 		: [ramend] "i" (RAMEND),
 		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
 		  [sph] "i" (_SFR_IO_ADDR(SPH)),
