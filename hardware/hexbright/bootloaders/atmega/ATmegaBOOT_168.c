@@ -207,45 +207,48 @@ static uint8_t gethex(void);
 static void puthex(uint8_t);
 static void flash_led(uint8_t);
 
-/* putstr provides a way to output a string symbol from PROGMEM */
+/* use_pgmvar provides an abstraction for reading PROGMEM. */
 #ifdef RAMPZ
 # if defined (__AVR_HAVE_LPMX__)
-#  define putstr(sym)						\
+#  define use_pgmvar(sym,func)					\
 do {								\
-	uint8_t _putstr_hh_tmp;					\
+	uint8_t _use_pgmvar_hh_tmp;				\
 	asm volatile						\
 	(							\
 		"ldi %0, hh8(%2)" "\n\t"			\
 		"out %1, %0" "\n\t"				\
-		: "=&d" (_putstr_hh_tmp)			\
+		: "=&d" (_use_pgmvar_hh_tmp)			\
 		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
 	);							\
-	_putstr((pgmptr_t)(prog_char*)(sym));			\
+	func((pgmptr_t)(prog_char*)(sym));			\
 } while (0)
 
 # else	/* __AVR_HAVE_LPMX__ */
-#  define putstr(sym)						\
+#  define use_pgmvar(sym,func)					\
 do {								\
-	uint_farptr_t _putstr_tmp;				\
+	uint_farptr_t _use_pgmvar_tmp;				\
 	asm							\
 	(							\
 		"ldi %A0, lo8(%1)" "\n\t"			\
 		"ldi %B0, hi8(%1)" "\n\t"			\
 		"ldi %C0, hh8(%1)" "\n\t"			\
 		"clr %D0" "\n\t"				\
-		: "=d" (_putstr_tmp)				\
+		: "=d" (_use_pgmvar_tmp)			\
 		: "p" (&(sym))					\
 	);							\
-	_putstr(_putstr_tmp);					\
+	func(_use_pgmvar_tmp);					\
 } while (0)
 
 # endif	/* __AVR_HAVE_LPMX__ */
 
 #else  /* RAMPZ */
-# define putstr(s) \
-	_putstr((pgmptr_t)(prog_char*)(s))
+# define use_pgmvar(s,func)					\
+	func((pgmptr_t)(prog_char*)(s))
 
 #endif	/* RAMPZ */
+
+/* putstr provides a way to output a string symbol from PROGMEM */
+#define putstr(sym)	use_pgmvar(sym,_putstr)
 
 /* data type for word/byte access */
 union byte_word_union {
