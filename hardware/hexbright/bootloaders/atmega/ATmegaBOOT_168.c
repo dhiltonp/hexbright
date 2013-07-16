@@ -185,6 +185,7 @@
 #define noreturn __attribute__((noreturn))
 
 /* function prototypes */
+static void prog_buffer(uintptr_t, uint8_t *, uint16_t);
 static void error(void);
 static void putch(char);
 static char echogetch(void);
@@ -660,123 +661,7 @@ int noreturn main(void)
 				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
 #endif
 
-// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
-// Update the following list if compilation fails in the assembler
-// with a message like "I/O address out of range 0...0x3f".
-#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
-# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
-#else
-# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
-#endif
-				uint8_t page_word_count;
-				uint8_t *bufptr = buff;
-				uint8_t tmp;
-				asm volatile(
-					 "clr	%[wcnt]		\n\t"	//page_word_count
-					 "length_loop:		\n\t"	//Main loop, repeat for number of words in block							 							 
-					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
-					 "brne	no_page_erase	\n\t"						 
-					 //Wait for previous spm to complete
-					 "wait_spm1:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm1	\n\t"
-
-					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"							 
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 //Wait for previous spm to complete
-					 "wait_spm2:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm2	\n\t"
-
-					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 "no_page_erase:		\n\t"							 
-					 "ld	r0,Y+		\n\t"	//Write 2 bytes into page buffer
-					 "ld	r1,Y+		\n\t"							 
-								 
-					 //Wait for previous spm to complete
-					 "wait_spm3:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm3	\n\t"
-
-					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-								 
-					 "inc	%[wcnt]		\n\t"	//page_word_count++
-					 "cpi   %[wcnt],%[PGSZ]	\n\t"
-					 "brlo	same_page	\n\t"	//Still same page in FLASH
-					 "write_page:		\n\t"
-					 "clr	%[wcnt]		\n\t"	//New page, write current one first
-					 //Wait for previous spm to complete
-					 "wait_spm4:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm4	\n\t"
-
-#ifdef __AVR_ATmega163__
-					 "andi	%A[addr],0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
-#endif							 							 
-					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-					 "ori	%A[addr],0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
-#endif
-					 //Wait for previous spm to complete
-					 "wait_spm5:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm5	\n\t"
-
-					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"					 		 
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 "same_page:		\n\t"							 
-					 "adiw	%[addr],2	\n\t"	//Next word in FLASH
-					 "sbiw	%[length],2	\n\t"	//length-2
-					 "breq	final_write	\n\t"	//Finished
-					 "rjmp	length_loop	\n\t"
-					 "final_write:		\n\t"
-					 "cpi	%[wcnt],0	\n\t"
-					 "breq	block_done	\n\t"
-					 "adiw	%[length],2	\n\t"	//length+2, fool above check on length after short page write
-					 "rjmp	write_page	\n\t"
-					 "block_done:		\n\t"
-					 "clr	__zero_reg__	\n\t"	//restore zero register
-					 : [wcnt] "=d" (page_word_count),
-					   [tmp] "=d" (tmp),
-					   [buff] "+y" (bufptr),
-					   [addr] "+z" (address.word),
-					   [length] "+w" (length.word)
-					 : [PGSZ] "M" (SPM_PAGESIZE / 2),
-					   [creg] "i" (SPM_CREG_ADDR),
-					   [spmen] "i" (SPM_ENABLE_BIT)
-					 : "r0"
-					);
+				prog_buffer(address.word, buff, length.word);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
@@ -975,6 +860,125 @@ int noreturn main(void)
 
 }
 
+// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
+// Update the following list if compilation fails in the assembler
+// with a message like "I/O address out of range 0...0x3f".
+#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
+# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
+#else
+# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
+#endif
+
+static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
+{
+	uint8_t page_word_count = 0;
+	uint8_t tmp;
+	asm volatile(
+		"length_loop:		\n\t"	//Main loop, repeat for number of words in block
+		"cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
+		"brne	no_page_erase	\n\t"
+		//Wait for previous spm to complete
+		"wait_spm1:		\n\t"
+		LOAD_SPM_CREG_TO_TMP"	\n\t"
+		"sbrc	%[tmp],%[spmen]	\n\t"
+		"rjmp	wait_spm1	\n\t"
+
+		"ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
+		STORE_TMP_TO_SPM_CREG"	\n\t"
+		"spm			\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF		\n\t"
+		"nop			\n\t"
+#endif
+		//Wait for previous spm to complete
+		"wait_spm2:		\n\t"
+		LOAD_SPM_CREG_TO_TMP"	\n\t"
+		"sbrc	%[tmp],%[spmen]	\n\t"
+		"rjmp	wait_spm2	\n\t"
+
+		"ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
+		STORE_TMP_TO_SPM_CREG"	\n\t"
+		"spm			\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF		\n\t"
+		"nop			\n\t"
+#endif
+		"no_page_erase:		\n\t"
+		"ld	r0,Y+		\n\t"	//Write 2 bytes into page buffer
+		"ld	r1,Y+		\n\t"
+
+		//Wait for previous spm to complete
+		"wait_spm3:		\n\t"
+		LOAD_SPM_CREG_TO_TMP"	\n\t"
+		"sbrc	%[tmp],%[spmen]	\n\t"
+		"rjmp	wait_spm3	\n\t"
+
+		"ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
+		STORE_TMP_TO_SPM_CREG"	\n\t"
+		"spm			\n\t"
+
+		"inc	%[wcnt]		\n\t"	//page_word_count++
+		"cpi   %[wcnt],%[PGSZ]	\n\t"
+		"brlo	same_page	\n\t"	//Still same page in FLASH
+		"write_page:		\n\t"
+		"clr	%[wcnt]		\n\t"	//New page, write current one first
+		//Wait for previous spm to complete
+		"wait_spm4:		\n\t"
+		LOAD_SPM_CREG_TO_TMP"	\n\t"
+		"sbrc	%[tmp],%[spmen]	\n\t"
+		"rjmp	wait_spm4	\n\t"
+
+#ifdef __AVR_ATmega163__
+		"andi	%A[addr],0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
+#endif
+		"ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
+		STORE_TMP_TO_SPM_CREG"	\n\t"
+		"spm			\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF		\n\t"
+		"nop			\n\t"
+		"ori	%A[addr],0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
+#endif
+		//Wait for previous spm to complete
+		"wait_spm5:		\n\t"
+		LOAD_SPM_CREG_TO_TMP"	\n\t"
+		"sbrc	%[tmp],%[spmen]	\n\t"
+		"rjmp	wait_spm5	\n\t"
+
+		"ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
+		STORE_TMP_TO_SPM_CREG"	\n\t"
+		"spm			\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF		\n\t"
+		"nop			\n\t"
+#endif
+		"same_page:		\n\t"
+		"adiw	%[addr],2	\n\t"	//Next word in FLASH
+		"sbiw	%[length],2	\n\t"	//length-2
+		"breq	final_write	\n\t"	//Finished
+		"rjmp	length_loop	\n\t"
+		"final_write:		\n\t"
+		"cpi	%[wcnt],0	\n\t"
+		"breq	block_done	\n\t"
+		"adiw	%[length],2	\n\t"	//length+2, fool above check on length after short page write
+		"rjmp	write_page	\n\t"
+		"block_done:		\n\t"
+		"clr	__zero_reg__	\n\t"	//restore zero register
+		: [tmp] "=d" (tmp),
+		  [wcnt] "+d" (page_word_count),
+		  [buff] "+y" (buffer),
+		  [addr] "+z" (address),
+		  [length] "+w" (length)
+		: [PGSZ] "M" (SPM_PAGESIZE / 2),
+		  [creg] "i" (SPM_CREG_ADDR),
+		  [spmen] "i" (SPM_ENABLE_BIT)
+		: "r0"
+		);
+}
 
 static void error(void) {
 	static uint8_t error_count;
