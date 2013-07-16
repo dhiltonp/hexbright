@@ -184,6 +184,15 @@
 
 #define noreturn __attribute__((noreturn))
 
+/* pgmptr_t is just enough big to serve as a pointer for reading
+ * PROGMEM bytes from the bootloader area.
+ */
+#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
+typedef uint_farptr_t pgmptr_t;
+#else
+typedef uintptr_t pgmptr_t;
+#endif
+
 /* function prototypes */
 static void prog_buffer(uintptr_t, uint8_t *, uint16_t);
 static void error(void);
@@ -191,6 +200,7 @@ static void putch(char);
 static char echogetch(void);
 static char getch(void);
 static void getNch(uint8_t);
+static void _putstr(pgmptr_t);
 static void byte_response(uint8_t);
 static void nothing_response(void);
 static uint8_t gethex(void);
@@ -198,12 +208,6 @@ static void puthex(uint8_t);
 static void flash_led(uint8_t);
 
 /* putstr provides a way to output a string symbol from PROGMEM */
-#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
-static void _putstr(uint_farptr_t);
-#else
-static void _putstr(uintptr_t);
-#endif
-
 #ifdef RAMPZ
 # if defined (__AVR_HAVE_LPMX__)
 #  define putstr(sym)						\
@@ -216,7 +220,7 @@ do {								\
 		: "=&d" (_putstr_hh_tmp)			\
 		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
 	);							\
-	_putstr((uintptr_t)(prog_char*)(sym));			\
+	_putstr((pgmptr_t)(prog_char*)(sym));			\
 } while (0)
 
 # else	/* __AVR_HAVE_LPMX__ */
@@ -239,7 +243,7 @@ do {								\
 
 #else  /* RAMPZ */
 # define putstr(s) \
-	_putstr((uintptr_t)(prog_char*)(s))
+	_putstr((pgmptr_t)(prog_char*)(s))
 
 #endif	/* RAMPZ */
 
@@ -1113,22 +1117,10 @@ static char echogetch(void)
 }
 
 
-#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
-static void _putstr(uint_farptr_t s)
+static char read_str_inc(pgmptr_t *p)
 {
-	char c;
-	while ( (c = pgm_read_byte_far(s)) ) {
-		putch(c);
-		++s;
-	}
-}
-
-#else  /* RAMPZ && !__AVR_HAVE_LPMX__ */
-
-static char read_str_inc(uintptr_t *p)
-{
-#if defined (__AVR_HAVE_LPMX__)
 	char result;
+#if defined (__AVR_HAVE_LPMX__)
 	asm
 	(
 # if defined RAMPZ
@@ -1138,21 +1130,23 @@ static char read_str_inc(uintptr_t *p)
 # endif
 		: "=r" (result), "+z" (*p)
 	);
-	return result;
-#else	/* __AVR_HAVE_LPMX__ */
-	return pgm_read_byte((*p)++);
+#else  /* __AVR_HAVE_LPMX__ */
+# if defined RAMPZ
+	result = pgm_read_byte_far(*p);
+# else
+	result = pgm_read_byte(*p);
+# endif
+	++*p;
 #endif	/* __AVR_HAVE_LPMX__ */
+	return result;
 }
 
-
-static void _putstr(uintptr_t s)
+static void _putstr(pgmptr_t s)
 {
 	char c;
 	while ( (c = read_str_inc(&s)) )
 		putch(c);
 }
-#endif	/* RAMPZ && !__AVR_HAVE_LPMX__ */
-
 
 static void byte_response(uint8_t val)
 {
