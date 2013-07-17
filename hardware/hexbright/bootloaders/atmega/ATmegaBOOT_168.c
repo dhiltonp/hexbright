@@ -996,6 +996,10 @@ static void error(void) {
 		app_start();
 }
 
+// gethex/puthex is used only with MONITOR
+// and produces a gcc warning otherwise.
+#if defined MONITOR
+
 static uint8_t gethexnib(void) {
 	char a;
 	a = echogetch();
@@ -1034,6 +1038,7 @@ static void puthex(uint8_t ch) {
 	putch(ch);
 }
 
+#endif	/* MONITOR */
 
 static void putch(char ch)
 {
