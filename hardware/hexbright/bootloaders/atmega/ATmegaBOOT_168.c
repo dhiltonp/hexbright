@@ -917,8 +917,8 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 		"nop			\n\t"
 #endif
 		"no_page_erase:		\n\t"
-		"ld	r0,Y+		\n\t"	//Write 2 bytes into page buffer
-		"ld	r1,Y+		\n\t"
+		"ld	r0,X+		\n\t"	//Write 2 bytes into page buffer
+		"ld	r1,X+		\n\t"
 
 		//Wait for previous spm to complete
 		"wait_spm3:		\n\t"
@@ -979,7 +979,7 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 		"clr	__zero_reg__	\n\t"	//restore zero register
 		: [tmp] "=d" (tmp),
 		  [wcnt] "+d" (page_word_count),
-		  [buff] "+y" (buffer),
+		  [buff] "+x" (buffer),
 		  [addr] "+z" (address),
 		  [length] "+w" (length)
 		: [PGSZ] "M" (SPM_PAGESIZE / 2),
