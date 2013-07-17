@@ -246,8 +246,8 @@ do {								\
 # endif	/* __AVR_HAVE_LPMX__ */
 
 #else  /* RAMPZ */
-# define use_pgmvar(s,func)					\
-	func((pgmptr_t)(prog_char*)(s))
+# define use_pgmvar(sym,func)					\
+	func((pgmptr_t)(prog_char*)&(sym))
 
 #endif	/* RAMPZ */
 
