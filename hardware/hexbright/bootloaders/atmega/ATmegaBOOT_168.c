@@ -263,6 +263,12 @@ typedef union byte_word_union address_t;
 typedef union byte_word_union length_t;
 
 /* some variables */
+static prog_char signature_response[] = {
+	Resp_STK_INSYNC,
+	SIGNATURE_0, SIGNATURE_1, SIGNATURE_2,
+	Resp_STK_OK, 0
+};
+
 static uint8_t buff[256] __attribute__((section(".noinit")));
 
 #if defined(__AVR_ATmega128__)
@@ -613,13 +619,9 @@ int noreturn main(void)
 			getch();
 			ch = getch();
 			getch();
-			if (ch == 0) {
-				byte_response(SIGNATURE_0);
-			} else if (ch == 1) {
-				byte_response(SIGNATURE_1);
-			} else {
-				byte_response(SIGNATURE_2);
-			} 
+#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + ch))
+			use_pgmvar(signature_response[1], sig_fn);
+#undef sig_fn
 		} else {
 			getNch(3);
 			byte_response(0x00);
@@ -735,11 +737,7 @@ int noreturn main(void)
 	/* Get device signature bytes  */
 	else if(ch == Cmnd_STK_READ_SIGN) {
 		if (getch() == Sync_CRC_EOP) {
-			static prog_char sig[] = {
-				Resp_STK_INSYNC,
-				SIGNATURE_0, SIGNATURE_1, SIGNATURE_2,
-				Resp_STK_OK, 0};
-			putstr(sig);
+			putstr(signature_response);
 		} else
 			error();
 	}
