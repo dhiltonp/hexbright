@@ -217,10 +217,9 @@ static void flash_led(uint8_t);
 #  define use_pgmvar(sym,func)					\
 do {								\
 	uint8_t _use_pgmvar_hh_tmp;				\
-	asm volatile						\
-	(							\
-		"ldi %0, hh8(%2)" "\n\t"			\
-		"out %1, %0" "\n\t"				\
+	asm volatile (						\
+		"ldi	%0, hh8(%2)"	"\n\t"			\
+		"out	%1, %0"		"\n\t"			\
 		: "=&d" (_use_pgmvar_hh_tmp)			\
 		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
 	);							\
@@ -231,12 +230,11 @@ do {								\
 #  define use_pgmvar(sym,func)					\
 do {								\
 	uint_farptr_t _use_pgmvar_tmp;				\
-	asm							\
-	(							\
-		"ldi %A0, lo8(%1)" "\n\t"			\
-		"ldi %B0, hi8(%1)" "\n\t"			\
-		"ldi %C0, hh8(%1)" "\n\t"			\
-		"clr %D0" "\n\t"				\
+	asm (							\
+		"ldi	%A0, lo8(%1)"	"\n\t"			\
+		"ldi	%B0, hi8(%1)"	"\n\t"			\
+		"ldi	%C0, hh8(%1)"	"\n\t"			\
+		"clr	%D0"		"\n\t"			\
 		: "=d" (_use_pgmvar_tmp)			\
 		: "p" (&(sym))					\
 	);							\
@@ -324,12 +322,12 @@ void __attribute__((naked, section(".vectors"))) init(void)
 	/* Clear __zero_reg__, set up stack pointer.  */
 	uint8_t register tmp;
 	asm volatile (
-		"clr	__zero_reg__		\n\t"
-		"out	%[sreg],__zero_reg__	\n\t"
-		"ldi	%[tmp],lo8(%[ramend])	\n\t"
-		"out	%[sph],%[tmp]		\n\t"
-		"ldi	%[tmp],hi8(%[ramend])	\n\t"
-		"out	%[spl],%[tmp]		\n\t"
+		"clr	__zero_reg__"		"\n\t"
+		"out	%[sreg],__zero_reg__"	"\n\t"
+		"ldi	%[tmp],lo8(%[ramend])"	"\n\t"
+		"out	%[sph],%[tmp]"		"\n\t"
+		"ldi	%[tmp],hi8(%[ramend])"	"\n\t"
+		"out	%[spl],%[tmp]"		"\n\t"
 		: [tmp] "=d" (tmp)
 		: [ramend] "i" (RAMEND),
 		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
@@ -345,22 +343,22 @@ void __attribute__((naked, section(".vectors"))) init(void)
 	register char *data_load_ptr = __data_load_start;
 	register uint8_t data_endhi;
 	asm volatile (
-		".global __do_copy_data"       "\n"
-		"__do_copy_data:                \n\t"
-		"ldi	%[endhi],hi8(%[end])	\n\t"
-		"rjmp	2f			\n\t"
-		"1:\n\t"
+		".global __do_copy_data"	"\n\t"
+	"__do_copy_data:"			"\n\t"
+		"ldi	%[endhi],hi8(%[end])"	"\n\t"
+		"rjmp	2f"			"\n\t"
+	"1:"					"\n\t"
 #if defined (__AVR_HAVE_LPMX__)
-		"lpm	r0,Z+			\n\t"
+		"lpm	r0,Z+"			"\n\t"
 #else
-		"lpm				\n\t"
-		"adiw	%[ptr],1		\n\t"
+		"lpm"				"\n\t"
+		"adiw	%[ptr],1"		"\n\t"
 #endif
-		"st	X+,r0			\n\t"
-		"2:\n\t"
-		"cpi	%A[ptr],lo8(%[end])	\n\t"
-		"cpc	%B[ptr],%[endhi]	\n\t"
-		"brne	1b			\n\t"
+		"st	X+,r0"			"\n\t"
+	"2:"					"\n\t"
+		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
+		"cpc	%B[ptr],%[endhi]"	"\n\t"
+		"brne	1b"			"\n\t"
 		: [ptr] "+x" (data_ptr),
 		  [lptr] "+z" (data_load_ptr),
 		  [endhi] "=d" (data_endhi)
@@ -377,16 +375,16 @@ void __attribute__((naked, section(".vectors"))) init(void)
 	register char *bss_ptr = __bss_start;
 	register uint8_t bss_endhi;
 	asm volatile (
-		".global __do_clear_bss"       "\n"
-		"__do_clear_bss:                \n\t"
-		"ldi	%[endhi],hi8(%[end])	\n\t"
-		"rjmp	2f			\n\t"
-		"1:\n\t"
-		"st	X+,__zero_reg__		\n\t"
-		"2:\n\t"
-		"cpi	%A[ptr],lo8(%[end])	\n\t"
-		"cpc	%B[ptr],%[endhi]	\n\t"
-		"brne	1b			\n\t"
+		".global __do_clear_bss"	"\n\t"
+	"__do_clear_bss:"			"\n\t"
+		"ldi	%[endhi],hi8(%[end])"	"\n\t"
+		"rjmp	2f"			"\n\t"
+	"1:"					"\n\t"
+		"st	X+,__zero_reg__"	"\n\t"
+	"2:"					"\n\t"
+		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
+		"cpc	%B[ptr],%[endhi]"	"\n\t"
+		"brne	1b"			"\n\t"
 		: [ptr] "+x" (bss_ptr),
 		  [endhi] "=d" (bss_endhi)
 		: [end] "i" (__bss_end)
@@ -395,7 +393,7 @@ void __attribute__((naked, section(".vectors"))) init(void)
 #endif	/* HAVE_BSS */
 
 	/* Call main().  */
-	asm volatile ("rjmp main\n\t");
+	asm volatile ("rjmp	main"	"\n\t");
 }
 
 /* main program starts here */
@@ -417,7 +415,7 @@ int noreturn main(void)
 	if (! (ch &  _BV(EXTRF))) // if it's a not an external reset...
 		app_start();  // skip bootloader
 #else
-	asm volatile("nop\n\t");
+	asm volatile("nop"	"\n\t");
 #endif
 
 	/* set pin direction for bootloader pin and enable pullup */
@@ -894,97 +892,112 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 {
 	uint8_t page_word_count = 0;
 	uint8_t tmp;
-	asm volatile(
-		"length_loop:		\n\t"	//Main loop, repeat for number of words in block
-		"cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
-		"brne	no_page_erase	\n\t"
-		//Wait for previous spm to complete
-		"wait_spm1:		\n\t"
-		LOAD_SPM_CREG_TO_TMP"	\n\t"
-		"sbrc	%[tmp],%[spmen]	\n\t"
-		"rjmp	wait_spm1	\n\t"
+	asm volatile (
+		//Main loop, repeat for number of words in block
+	"length_loop:"			"\n\t"
 
-		"ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
-		STORE_TMP_TO_SPM_CREG"	\n\t"
-		"spm			\n\t"
-#ifdef __AVR_ATmega163__
-		".word 0xFFFF		\n\t"
-		"nop			\n\t"
-#endif
-		//Wait for previous spm to complete
-		"wait_spm2:		\n\t"
-		LOAD_SPM_CREG_TO_TMP"	\n\t"
-		"sbrc	%[tmp],%[spmen]	\n\t"
-		"rjmp	wait_spm2	\n\t"
-
-		"ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-		STORE_TMP_TO_SPM_CREG"	\n\t"
-		"spm			\n\t"
-#ifdef __AVR_ATmega163__
-		".word 0xFFFF		\n\t"
-		"nop			\n\t"
-#endif
-		"no_page_erase:		\n\t"
-		"ld	r0,X+		\n\t"	//Write 2 bytes into page buffer
-		"ld	r1,X+		\n\t"
+		//If page_word_count=0 then erase page
+		"cpi	%[wcnt],0x00"	"\n\t"
+		"brne	no_page_erase"	"\n\t"
 
 		//Wait for previous spm to complete
-		"wait_spm3:		\n\t"
-		LOAD_SPM_CREG_TO_TMP"	\n\t"
-		"sbrc	%[tmp],%[spmen]	\n\t"
-		"rjmp	wait_spm3	\n\t"
+	"wait_spm1:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm1"	"\n\t"
 
-		"ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-		STORE_TMP_TO_SPM_CREG"	\n\t"
-		"spm			\n\t"
-
-		"inc	%[wcnt]		\n\t"	//page_word_count++
-		"cpi   %[wcnt],%[PGSZ]	\n\t"
-		"brlo	same_page	\n\t"	//Still same page in FLASH
-		"write_page:		\n\t"
-		"clr	%[wcnt]		\n\t"	//New page, write current one first
-		//Wait for previous spm to complete
-		"wait_spm4:		\n\t"
-		LOAD_SPM_CREG_TO_TMP"	\n\t"
-		"sbrc	%[tmp],%[spmen]	\n\t"
-		"rjmp	wait_spm4	\n\t"
-
+		//Erase page pointed to by Z
+		"ldi	%[tmp],0x03"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
 #ifdef __AVR_ATmega163__
-		"andi	%A[addr],0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
-#endif
-		"ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
-		STORE_TMP_TO_SPM_CREG"	\n\t"
-		"spm			\n\t"
-#ifdef __AVR_ATmega163__
-		".word 0xFFFF		\n\t"
-		"nop			\n\t"
-		"ori	%A[addr],0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
 #endif
 		//Wait for previous spm to complete
-		"wait_spm5:		\n\t"
-		LOAD_SPM_CREG_TO_TMP"	\n\t"
-		"sbrc	%[tmp],%[spmen]	\n\t"
-		"rjmp	wait_spm5	\n\t"
+	"wait_spm2:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm2"	"\n\t"
 
-		"ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-		STORE_TMP_TO_SPM_CREG"	\n\t"
-		"spm			\n\t"
+		//Re-enable RWW section
+		"ldi	%[tmp],0x11"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
 #ifdef __AVR_ATmega163__
-		".word 0xFFFF		\n\t"
-		"nop			\n\t"
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
 #endif
-		"same_page:		\n\t"
-		"adiw	%[addr],2	\n\t"	//Next word in FLASH
-		"sbiw	%[length],2	\n\t"	//length-2
-		"breq	final_write	\n\t"	//Finished
-		"rjmp	length_loop	\n\t"
-		"final_write:		\n\t"
-		"cpi	%[wcnt],0	\n\t"
-		"breq	block_done	\n\t"
-		"adiw	%[length],2	\n\t"	//length+2, fool above check on length after short page write
-		"rjmp	write_page	\n\t"
-		"block_done:		\n\t"
-		"clr	__zero_reg__	\n\t"	//restore zero register
+	"no_page_erase:"		"\n\t"
+		//Write 2 bytes into page buffer
+		"ld	r0,X+"		"\n\t"
+		"ld	r1,X+"		"\n\t"
+
+		//Wait for previous spm to complete
+	"wait_spm3:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm3"	"\n\t"
+
+		//Load r0,r1 into FLASH page buffer
+		"ldi	%[tmp],0x01"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+
+		"inc	%[wcnt]"	"\n\t"	//page_word_count++
+		"cpi   %[wcnt],%[PGSZ]"	"\n\t"
+		"brlo	same_page"	"\n\t"	//Still same page in FLASH
+
+		//New page, write current one first
+	"write_page:"			"\n\t"
+		"clr	%[wcnt]"	"\n\t"
+
+		//Wait for previous spm to complete
+	"wait_spm4:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm4"	"\n\t"
+
+#ifdef __AVR_ATmega163__
+		// m163 requires Z6:Z1 to be zero during page write
+		"andi	%A[addr],0x80"	"\n\t"
+#endif
+		//Write page pointed to by Z
+		"ldi	%[tmp],0x05"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+		// recover Z6:Z1 state after page write (had to be zero during write)
+		"ori	%A[addr],0x7E"	"\n\t"
+#endif
+		//Wait for previous spm to complete
+	"wait_spm5:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm5"	"\n\t"
+
+		//Re-enable RWW section
+		"ldi	%[tmp],0x11"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+#endif
+	"same_page:"			"\n\t"
+		"adiw	%[addr],2"	"\n\t"	//Next word in FLASH
+		"sbiw	%[length],2"	"\n\t"	//length-2
+		"breq	final_write"	"\n\t"	//Finished
+		"rjmp	length_loop"	"\n\t"
+	"final_write:"			"\n\t"
+		"cpi	%[wcnt],0"	"\n\t"
+		"breq	block_done"	"\n\t"
+		"adiw	%[length],2"	"\n\t"	//length+2, fool above check on length after short page write
+		"rjmp	write_page"	"\n\t"
+	"block_done:"			"\n\t"
+		"clr	__zero_reg__"	"\n\t"	//restore zero register
 		: [tmp] "=d" (tmp),
 		  [wcnt] "+d" (page_word_count),
 		  [buff] "+x" (buffer),
@@ -994,7 +1007,7 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 		  [creg] "i" (SPM_CREG_ADDR),
 		  [spmen] "i" (SPM_ENABLE_BIT)
 		: "r0"
-		);
+	);
 }
 
 static void error(void) {
@@ -1139,12 +1152,11 @@ static char read_str_inc(pgmptr_t *p)
 {
 	char result;
 #if defined (__AVR_HAVE_LPMX__)
-	asm
-	(
+	asm (
 # if defined RAMPZ
-		"elpm %0, Z+" "\n\t"
+		"elpm	%0, Z+"		"\n\t"
 # else
-		"lpm %0, Z+" "\n\t"
+		"lpm	%0, Z+"		"\n\t"
 # endif
 		: "=r" (result), "+z" (*p)
 	);
