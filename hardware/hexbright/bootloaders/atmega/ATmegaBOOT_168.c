@@ -1011,7 +1011,11 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 }
 
 static void error(void) {
+#ifdef GPIOR0
+# define error_count (*(uint8_t*)&GPIOR0)
+#else
 	static uint8_t error_count;
+#endif
 
 	if (++error_count == MAX_ERROR_COUNT)
 		app_start();

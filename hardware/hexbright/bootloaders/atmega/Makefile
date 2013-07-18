@@ -53,7 +53,7 @@ OBJ        = $(PROGRAM).o
 LDS        = $(PROGRAM).lds
 OPTIMIZE   = -O2 -Os
 
-DEFS       = -DHAVE_BSS
+DEFS       =
 LIBS       =
 
 CC         = avr-gcc
