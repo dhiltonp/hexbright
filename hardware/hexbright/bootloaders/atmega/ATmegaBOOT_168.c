@@ -338,12 +338,15 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		: "memory"
 		);
 
+#ifdef HAVE_DATA
 	/* Copy initialized static data. */
 	extern char __data_start[], __data_end[], __data_load_start[];
 	register char *data_ptr = __data_start;
 	register char *data_load_ptr = __data_load_start;
 	register uint8_t data_endhi;
 	asm volatile (
+		".global __do_copy_data"       "\n"
+		"__do_copy_data:                \n\t"
 		"ldi	%[endhi],hi8(%[end])	\n\t"
 		"rjmp	2f			\n\t"
 		"1:\n\t"
@@ -366,12 +369,16 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		  [load_start] "p" (__data_load_start)
 		: "r0", "memory"
 		);
+#endif	/* HAVE_DATA */
 
+#ifdef HAVE_BSS
 	/* Clear BSS.  */
 	extern char __bss_start[], __bss_end[];
 	register char *bss_ptr = __bss_start;
 	register uint8_t bss_endhi;
 	asm volatile (
+		".global __do_clear_bss"       "\n"
+		"__do_clear_bss:                \n\t"
 		"ldi	%[endhi],hi8(%[end])	\n\t"
 		"rjmp	2f			\n\t"
 		"1:\n\t"
@@ -385,6 +392,7 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		: [end] "i" (__bss_end)
 		: "memory"
 		);
+#endif	/* HAVE_BSS */
 
 	/* Call main().  */
 	asm volatile ("rjmp main\n\t");
