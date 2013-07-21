@@ -198,7 +198,7 @@ typedef uintptr_t pgmptr_t;
 #endif
 
 /* function prototypes */
-static void prog_buffer(uintptr_t, uint8_t *, uint16_t);
+static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
 static void putch(char);
 static char echogetch(void);
@@ -723,7 +723,7 @@ int noreturn main(void)
 				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
 #endif
 
-				prog_buffer(address.word, buff, length.word);
+				prog_buffer(&address.word, buff, length.word);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
@@ -918,7 +918,7 @@ int noreturn main(void)
 
 }
 
-static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
+static void prog_buffer(uintptr_t *address, uint8_t *buffer, uint16_t length)
 {
 	uint8_t page_word_count = 0;
 	uint8_t tmp;
@@ -1031,7 +1031,7 @@ static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 		: [tmp] "=d" (tmp),
 		  [wcnt] "+d" (page_word_count),
 		  [buff] "+x" (buffer),
-		  [addr] "+z" (address),
+		  [addr] "+z" (*address),
 		  [length] "+w" (length)
 		: [PGSZ] "M" (SPM_PAGESIZE / 2),
 		  [creg] "i" (SPM_CREG_ADDR),
