@@ -221,7 +221,7 @@ do {								\
 		: "=&d" (_use_pgmvar_hh_tmp)			\
 		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
 	);							\
-	func((pgmptr_t)(prog_char*)(sym));			\
+	func((pgmptr_t)(prog_char*)&(sym));			\
 } while (0)
 
 # else	/* __AVR_HAVE_LPMX__ */
