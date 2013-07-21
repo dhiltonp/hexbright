@@ -89,16 +89,11 @@
 /* some includes */
 #include <inttypes.h>
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
-
-/* the current avr-libc eeprom functions do not support the ATmega168 */
-/* own eeprom write/read functions are used instead */
-#if !defined(__AVR_ATmega168__) || !defined(__AVR_ATmega328P__)
-#include <avr/eeprom.h>
-#endif
 
 /* STK500 commands */
 #include "command.h"
@@ -678,15 +673,7 @@ int noreturn main(void)
 		if (getch() == Sync_CRC_EOP) {
 			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
 				for(w=0;w<length.word;w++) {
-#if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
-					while(EECR & (1<<EEPE));
-					EEAR = (uint16_t)(void *)address.word;
-					EEDR = buff[w];
-					EECR |= (1<<EEMPE);
-					EECR |= (1<<EEPE);
-#else
 					eeprom_write_byte((void *)address.word,buff[w]);
-#endif
 					address.word++;
 				}			
 			}
@@ -695,12 +682,7 @@ int noreturn main(void)
 				RAMPZ = address.byte[2];
 #endif
 				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
-				while(bit_is_set(EECR,EEPE));			//Wait for previous EEPROM writes to complete
-#else
-				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
-#endif
-
+				eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
 				prog_buffer(&address.word, buff, length.word);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
@@ -723,14 +705,7 @@ int noreturn main(void)
 			putch(Resp_STK_INSYNC);
 			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
 				if (memtype == 'E') {			// Byte access EEPROM read
-#if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
-					while(EECR & (1<<EEPE));
-					EEAR = (uint16_t)(void *)address.word;
-					EECR |= (1<<EERE);
-					putch(EEDR);
-#else
 					putch(eeprom_read_byte((void *)address.word));
-#endif
 					address.word++;
 				}
 				else {
