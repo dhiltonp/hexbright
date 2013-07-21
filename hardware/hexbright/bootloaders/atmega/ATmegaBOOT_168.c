@@ -197,15 +197,17 @@ static void universal_command(void);
 static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
 static void putch(char);
-static char echogetch(void);
 static char getch(void);
 static void getNch(uint8_t);
 static void _putstr(pgmptr_t);
 static void byte_response(uint8_t);
 static void nothing_response(void);
+static void flash_led(uint8_t);
+#if defined MONITOR
+static char echogetch(void);
 static uint8_t gethex(void);
 static void puthex(uint8_t);
-static void flash_led(uint8_t);
+#endif
 
 /* use_pgmvar provides an abstraction for reading PROGMEM. */
 #ifdef RAMPZ
@@ -1036,49 +1038,6 @@ static void error(void) {
 		app_start();
 }
 
-// gethex/puthex is used only with MONITOR
-// and produces a gcc warning otherwise.
-#if defined MONITOR
-
-static uint8_t gethexnib(void) {
-	char a;
-	a = echogetch();
-	if(a >= 'a') {
-		return (a - 'a' + 0x0a);
-	} else if(a >= '0') {
-		return(a - '0');
-	}
-	return a;
-}
-
-
-static uint8_t gethex(void) {
-	return (gethexnib() << 4) + gethexnib();
-}
-
-
-static void puthex(uint8_t ch) {
-	uint8_t ah;
-
-	ah = ch >> 4;
-	if(ah >= 0x0a) {
-		ah = ah - 0x0a + 'a';
-	} else {
-		ah += '0';
-	}
-	
-	ch &= 0x0f;
-	if(ch >= 0x0a) {
-		ch = ch - 0x0a + 'a';
-	} else {
-		ch += '0';
-	}
-	
-	putch(ah);
-	putch(ch);
-}
-
-#endif	/* MONITOR */
 
 static void putch(char ch)
 {
@@ -1159,14 +1118,6 @@ static void getNch(uint8_t count)
 }
 
 
-static char echogetch(void)
-{
-	char ch = getch();
-	putch(ch);
-	return ch;
-}
-
-
 static char read_str_inc(pgmptr_t *p)
 {
 	char result;
@@ -1226,5 +1177,57 @@ static void flash_led(uint8_t count)
 	}
 }
 
+
+// gethex/puthex is used only with MONITOR
+// and produces a gcc warning otherwise.
+#if defined MONITOR
+
+static char echogetch(void)
+{
+	char ch = getch();
+	putch(ch);
+	return ch;
+}
+
+static uint8_t gethexnib(void)
+{
+	char a;
+	a = echogetch();
+	if(a >= 'a') {
+		return (a - 'a' + 0x0a);
+	} else if(a >= '0') {
+		return(a - '0');
+	}
+	return a;
+}
+
+static uint8_t gethex(void)
+{
+	return (gethexnib() << 4) + gethexnib();
+}
+
+static void puthex(uint8_t ch)
+{
+	uint8_t ah;
+
+	ah = ch >> 4;
+	if(ah >= 0x0a) {
+		ah = ah - 0x0a + 'a';
+	} else {
+		ah += '0';
+	}
+
+	ch &= 0x0f;
+	if(ch >= 0x0a) {
+		ch = ch - 0x0a + 'a';
+	} else {
+		ch += '0';
+	}
+
+	putch(ah);
+	putch(ch);
+}
+
+#endif	/* MONITOR */
 
 /* end of file ATmegaBOOT.c */
