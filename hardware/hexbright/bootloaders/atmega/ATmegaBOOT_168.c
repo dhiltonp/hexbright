@@ -270,7 +270,16 @@ union byte_word_union {
 	uint16_t word;
 	uint8_t  byte[2];
 };
+union byte_word_dword_union {
+	uint32_t dword;
+	uint16_t word;
+	uint8_t  byte[4];
+};
+#ifdef RAMPZ
+typedef union byte_word_dword_union address_t;
+#else
 typedef union byte_word_union address_t;
+#endif
 typedef union byte_word_union length_t;
 
 /* some variables */
@@ -413,9 +422,6 @@ void __attribute__((naked, section(".vectors"))) init(void)
 int noreturn main(void)
 {
 	address_t address;
-#ifdef RAMPZ
-	uint8_t address_high;
-#endif
 	uint8_t ch;
 	uint16_t w;
 
@@ -640,12 +646,12 @@ int noreturn main(void)
 			"lsl	%A[addr]"	"\n\t"
 			"rol	%B[addr]"	"\n\t"
 #ifdef RAMPZ
-			"clr	%[high]"	"\n\t"
-			"rol	%[high]"	"\n\t"
-#endif
+			"clr	%C[addr]"	"\n\t"
+			"rol	%C[addr]"	"\n\t"
+			"clr	%D[addr]"	"\n\t"
+			: [addr] "+r" (address.dword)
+#else
 			: [addr] "+r" (address.word)
-#ifdef RAMPZ
-			  , [high] "+r" (address_high)
 #endif
 		);
 		nothing_response();
@@ -728,7 +734,7 @@ int noreturn main(void)
 			}
 			else {					        //Write to FLASH one page at a time
 #ifdef RAMPZ
-				RAMPZ = address_high;
+				RAMPZ = address.byte[2];
 #endif
 				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
@@ -775,7 +781,7 @@ int noreturn main(void)
 				else {
 
 #ifdef RAMPZ
-					putch(pgm_read_byte_far(address.word + ((uint_farptr_t)address_high << 16)));
+					putch(pgm_read_byte_far(address.dword));
 #else
 					putch(pgm_read_byte_near(address.word));
 #endif
