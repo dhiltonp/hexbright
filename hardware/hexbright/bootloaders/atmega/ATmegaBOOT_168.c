@@ -198,6 +198,7 @@ typedef uintptr_t pgmptr_t;
 #endif
 
 /* function prototypes */
+static void universal_command(void);
 static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
 static void putch(char);
@@ -660,47 +661,7 @@ int noreturn main(void)
 
 	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
 	else if(ch == Cmnd_STK_UNIVERSAL) {
-		uint8_t byte1, byte2, byte3, byte4;
-		byte1 = getch();
-		byte2 = getch();
-		byte3 = getch();
-		byte4 = getch();
-		if (byte1 == 0x30 && byte2 == 0x00) {
-			// Read Signature Byte
-#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + byte3))
-			use_pgmvar(signature_response[1], sig_fn);
-#undef sig_fn
-		} else if ( (byte1 & ~0x08) == 0x50 &&
-			    (byte2 & ~0x08) == 0x00) {
-			// Read Lock/LFUSE/HFUSE/EFUSE
-			uint16_t addr = 0;
-			asm (
-				"bst	%[byte1],3"	"\n\t"
-				"bld	%A[addr],0"	"\n\t"
-				"bst	%[byte2],3"	"\n\t"
-				"bld	%A[addr],1"	"\n\t"
-				"ldi	%[tmp],%[cval]"	"\n\t"
-				STORE_TMP_TO_SPM_CREG	"\n\t"
-#if defined (__AVR_HAVE_LPMX__)
-				"lpm	%[tmp],Z"	"\n\t"
-#else
-				"lpm"			"\n\t"
-				"mov	%[tmp],r0"	"\n\t"
-#endif
-				: [addr] "+z" (addr),
-				  [tmp] "=r" (ch)
-				: [byte1] "r" (byte1),
-				  [byte2] "r" (byte2),
-				  [creg] "i" (SPM_CREG_ADDR),
-				  [cval] "i" (_BV(BLBSET) | _BV(SPM_ENABLE_BIT))
-#if !defined(__AVR_HAVE_LPMX__)
-				: "r0"
-#endif
-			);
-			byte_response(ch);
-		} else {
-			byte_response(0x00);
-		}
+		universal_command();
 	}
 
 
@@ -920,6 +881,51 @@ int noreturn main(void)
 
 	} /* end of forever loop */
 
+}
+
+static void universal_command(void)
+{
+	uint8_t byte1, byte2, byte3, byte4;
+	byte1 = getch();
+	byte2 = getch();
+	byte3 = getch();
+	byte4 = getch();
+	if (byte1 == 0x30 && byte2 == 0x00) {
+		// Read Signature Byte
+#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + byte3))
+		use_pgmvar(signature_response[1], sig_fn);
+#undef sig_fn
+	} else if ( (byte1 & ~0x08) == 0x50 &&
+		    (byte2 & ~0x08) == 0x00) {
+		// Read Lock/LFUSE/HFUSE/EFUSE
+		uint16_t addr = 0;
+		asm (
+			"bst	%[byte1],3"	"\n\t"
+			"bld	%A[addr],0"	"\n\t"
+			"bst	%[byte2],3"	"\n\t"
+			"bld	%A[addr],1"	"\n\t"
+			"ldi	%[tmp],%[cval]"	"\n\t"
+			STORE_TMP_TO_SPM_CREG	"\n\t"
+#if defined (__AVR_HAVE_LPMX__)
+			"lpm	%[tmp],Z"	"\n\t"
+#else
+			"lpm"			"\n\t"
+			"mov	%[tmp],r0"	"\n\t"
+#endif
+			: [addr] "+z" (addr),
+			  [tmp] "=r" (byte4)
+			: [byte1] "r" (byte1),
+			  [byte2] "r" (byte2),
+			  [creg] "i" (SPM_CREG_ADDR),
+			  [cval] "i" (_BV(BLBSET) | _BV(SPM_ENABLE_BIT))
+#if !defined(__AVR_HAVE_LPMX__)
+			: "r0"
+#endif
+		);
+		byte_response(byte4);
+	} else {
+		byte_response(0x00);
+	}
 }
 
 static void prog_buffer(uintptr_t *address, uint8_t *buffer, uint16_t length)
