@@ -706,19 +706,16 @@ int noreturn main(void)
 
 	/* Write memory, length is big endian and is in bytes  */
 	else if(ch == Cmnd_STK_PROG_PAGE) {
-		struct {
-			unsigned eeprom : 1;
-		} flags;
 		length_t length;
+		uint8_t memtype;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-		flags.eeprom = 0;
-		if (getch() == 'E') flags.eeprom = 1;
+		memtype = getch();
 		for (w=0;w<length.word;w++) {
 			buff[w] = getch();	                        // Store data in buffer, can't keep up with serial data stream whilst programming pages
 		}
 		if (getch() == Sync_CRC_EOP) {
-			if (flags.eeprom) {		                //Write to EEPROM one byte at a time
+			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
 				for(w=0;w<length.word;w++) {
 #if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
 					while(EECR & (1<<EEPE));
@@ -756,18 +753,15 @@ int noreturn main(void)
 
 	/* Read memory block mode, length is big endian.  */
 	else if(ch == Cmnd_STK_READ_PAGE) {
-		struct {
-			unsigned eeprom : 1;
-		} flags;
 		length_t length;
+		uint8_t memtype;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-		if (getch() == 'E') flags.eeprom = 1;
-		else flags.eeprom = 0;
+		memtype = getch();
 		if (getch() == Sync_CRC_EOP) {	                // Command terminator
 			putch(Resp_STK_INSYNC);
 			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
-				if (flags.eeprom) {	                        // Byte access EEPROM read
+				if (memtype == 'E') {			// Byte access EEPROM read
 #if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
 					while(EECR & (1<<EEPE));
 					EEAR = (uint16_t)(void *)address.word;
