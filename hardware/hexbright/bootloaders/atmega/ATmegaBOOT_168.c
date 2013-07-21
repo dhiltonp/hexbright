@@ -413,6 +413,9 @@ void __attribute__((naked, section(".vectors"))) init(void)
 int noreturn main(void)
 {
 	address_t address;
+#ifdef RAMPZ
+	uint8_t address_high;
+#endif
 	uint8_t ch;
 	uint16_t w;
 
@@ -628,6 +631,23 @@ int noreturn main(void)
 	else if(ch == Cmnd_STK_LOAD_ADDRESS) {
 		address.byte[0] = getch();
 		address.byte[1] = getch();
+
+		/* Both memory types are word-addressable, but byte addresses
+		 * are used for EEAR and the Z register in lpm/spm, so convert
+		 * the word address into a byte address here.
+		 */
+		asm (
+			"lsl	%A[addr]"	"\n\t"
+			"rol	%B[addr]"	"\n\t"
+#ifdef RAMPZ
+			"clr	%[high]"	"\n\t"
+			"rol	%[high]"	"\n\t"
+#endif
+			: [addr] "+r" (address.word)
+#ifdef RAMPZ
+			  , [high] "+r" (address_high)
+#endif
+		);
 		nothing_response();
 	}
 
@@ -693,7 +713,6 @@ int noreturn main(void)
 		}
 		if (getch() == Sync_CRC_EOP) {
 			if (flags.eeprom) {		                //Write to EEPROM one byte at a time
-				address.word <<= 1;
 				for(w=0;w<length.word;w++) {
 #if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
 					while(EECR & (1<<EEPE));
@@ -708,14 +727,9 @@ int noreturn main(void)
 				}			
 			}
 			else {					        //Write to FLASH one page at a time
-				uint8_t address_high;
-				if (address.byte[1]>127) address_high = 0x01;	//Only possible with m128, m256 will need 3rd address byte. FIXME
-				else address_high = 0x00;
 #ifdef RAMPZ
 				RAMPZ = address_high;
 #endif
-				address.word = address.word << 1;	        //address * 2 -> byte location
-				/* if ((length.byte[0] & 0x01) == 0x01) length.word++;	//Even up an odd number of bytes */
 				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
 				while(bit_is_set(EECR,EEPE));			//Wait for previous EEPROM writes to complete
@@ -738,18 +752,10 @@ int noreturn main(void)
 	else if(ch == Cmnd_STK_READ_PAGE) {
 		struct {
 			unsigned eeprom : 1;
-#ifdef RAMPZ
-			unsigned rampz  : 1;
-#endif
 		} flags;
 		length_t length;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-#ifdef RAMPZ
-		if (address.word>0x7FFF) flags.rampz = 1;		// No go with m256, FIXME
-		else flags.rampz = 0;
-#endif
-		address.word = address.word << 1;	        // address * 2 -> byte location
 		if (getch() == 'E') flags.eeprom = 1;
 		else flags.eeprom = 0;
 		if (getch() == Sync_CRC_EOP) {	                // Command terminator
@@ -769,12 +775,10 @@ int noreturn main(void)
 				else {
 
 #ifdef RAMPZ
-					if (flags.rampz)
-						putch(pgm_read_byte_far(address.word + 0x10000));
-					// Hmmmm, yuck  FIXME when m256 arrvies
-					else
-#endif
+					putch(pgm_read_byte_far(address.word + ((uint_farptr_t)address_high << 16)));
+#else
 					putch(pgm_read_byte_near(address.word));
+#endif
 					address.word++;
 				}
 			}
