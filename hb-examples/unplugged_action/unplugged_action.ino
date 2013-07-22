@@ -1,15 +1,15 @@
 #include <hexbright.h>
-
 #include <Wire.h>
 
-#define MS 20
 hexbright hb;
 
 #define OFF_MODE 0
 #define CHARGE_MODE 1
 #define AUTO_OFF_MODE 2
 
-int auto_off_timer=0;
+#define AUTO_OFF_WAIT 10000 // 10 seconds
+
+unsigned int auto_off_start_time=0;
 int mode=CHARGE_MODE;
 
 void setup() {
@@ -25,23 +25,23 @@ void loop() {
     if(hb.get_charge_state()==BATTERY) { // battery power or real off?
       hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       mode=OFF_MODE;
-    } else { // plugged in, set CHARGE_MODE (pseudo off)
+    } else { 
+      // we're plugged in, set CHARGE_MODE (pseudo off), 
+      hb.set_light(CURRENT_LEVEL, 0, NOW);
       mode=CHARGE_MODE;
     }
   }
 
   if(mode==CHARGE_MODE) {
-    if(hb.get_charge_state()==BATTERY) {
+    if(hb.get_charge_state()==BATTERY) { // we've changed to battery power!
       hb.set_light(CURRENT_LEVEL,150,NOW);
       mode=AUTO_OFF_MODE;
-      auto_off_timer=10000/MS; // 10 seconds
+      auto_off_start_time=millis();
     } else { // flash LED because we're plugged in
-      if(hb.get_led_state(GLED)==LED_OFF)
-        hb.set_led(GLED,100,350);
+      hb.print_charge(GLED);
     }
   } else if (mode==AUTO_OFF_MODE) {
-    auto_off_timer--;
-    if(auto_off_timer==0) {
+    if(millis()-auto_off_start_time > AUTO_OFF_WAIT) {
       hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     }
   }
