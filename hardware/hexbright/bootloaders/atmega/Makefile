@@ -50,9 +50,10 @@ STK500-2 = $(STK500) -d$(MCU_TARGET) -ms -q -lCF -LCF -cUSB -I200kHz -s -wt
 
 
 OBJ        = $(PROGRAM).o
+LDS        = $(PROGRAM).lds
 OPTIMIZE   = -O2 -Os
 
-DEFS       = 
+DEFS       = -DHAVE_DATA -DHAVE_BSS
 LIBS       =
 
 CC         = avr-gcc
@@ -156,6 +157,7 @@ hexbright_isp: isp
 
 hexbright_tiny: TARGET = hexbright_tiny
 hexbright_tiny: MCU_TARGET = atmega168p
+hexbright_tiny: DEFS = -UHAVE_DATA -UHAVE_BSS
 hexbright_tiny: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=1' '-DWATCHDOG_MODS' '-DHEXBRIGHT'
 hexbright_tiny: AVR_FREQ = 8000000L
 hexbright_tiny: LDSECTION  = --section-start=.text=0x3c00
@@ -235,7 +237,7 @@ isp-stk500: $(PROGRAM)_$(TARGET).hex
 	$(STK500-2)
 
 %.elf: $(OBJ)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS) $(LDS)
 
 clean:
 	rm -rf *.o *.elf *.lst *.map *.sym *.lss *.eep *.srec *.bin *.hex
