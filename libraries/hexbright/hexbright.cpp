@@ -312,16 +312,8 @@ void hexbright::set_light(int start_level, int end_level, long time) {
   // duration ranges from 1-MAXINT
   // light_level can be from 0-1000
   int current_level = get_light_level();
-  if(start_level == CURRENT_LEVEL) {
-    start_light_level = current_level;
-  } else {
-    start_light_level = start_level;
-  }
-  if (end_level == CURRENT_LEVEL) {
-    end_light_level = get_light_level();
-  } else {
-    end_light_level = end_level;
-  }
+  start_light_level = start_level == CURRENT_LEVEL ? current_level : start_level;
+  end_light_level   = end_level   == CURRENT_LEVEL ? current_level : end_level;
   
   change_duration = ((float)time)/update_delay;
   change_done = 0;
