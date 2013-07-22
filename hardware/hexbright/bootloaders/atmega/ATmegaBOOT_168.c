@@ -89,16 +89,14 @@
 /* some includes */
 #include <inttypes.h>
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
 
-/* the current avr-libc eeprom functions do not support the ATmega168 */
-/* own eeprom write/read functions are used instead */
-#if !defined(__AVR_ATmega168__) || !defined(__AVR_ATmega328P__)
-#include <avr/eeprom.h>
-#endif
+/* STK500 commands */
+#include "command.h"
 
 /* SW_MAJOR and MINOR needs to be updated from time to time to avoid
  * warning message from AVR Studio.
@@ -161,92 +159,6 @@
 #define MONITOR 1
 #endif
 
-/* define various device id's */
-/* manufacturer byte is always the same */
-#define SIG1	0x1E	// Yep, Atmel is the only manufacturer of AVR micros.  Single source :(
-
-#if defined __AVR_ATmega1280__
-#define SIG2	0x97
-#define SIG3	0x03
-#define PAGE_SIZE	0x80U	//128 words
-
-#elif defined __AVR_ATmega1281__
-#define SIG2	0x97
-#define SIG3	0x04
-#define PAGE_SIZE	0x80U	//128 words
-
-#elif defined __AVR_ATmega128__
-#define SIG2	0x97
-#define SIG3	0x02
-#define PAGE_SIZE	0x80U	//128 words
-
-#elif defined __AVR_ATmega64__
-#define SIG2	0x96
-#define SIG3	0x02
-#define PAGE_SIZE	0x80U	//128 words
-
-#elif defined __AVR_ATmega32__
-#define SIG2	0x95
-#define SIG3	0x02
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega16__
-#define SIG2	0x94
-#define SIG3	0x03
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega8__
-#define SIG2	0x93
-#define SIG3	0x07
-#define PAGE_SIZE	0x20U	//32 words
-
-#elif defined __AVR_ATmega88__
-#define SIG2	0x93
-#define SIG3	0x0a
-#define PAGE_SIZE	0x20U	//32 words
-
-#elif defined __AVR_ATmega168__
-#define SIG2	0x94
-#define SIG3	0x06
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega168P__
-#define SIG2	0x94
-#define SIG3	0x0b
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega328P__
-#define SIG2	0x95
-#define SIG3	0x0F
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega162__
-#define SIG2	0x94
-#define SIG3	0x04
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega163__
-#define SIG2	0x94
-#define SIG3	0x02
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega169__
-#define SIG2	0x94
-#define SIG3	0x05
-#define PAGE_SIZE	0x40U	//64 words
-
-#elif defined __AVR_ATmega8515__
-#define SIG2	0x93
-#define SIG3	0x06
-#define PAGE_SIZE	0x20U	//32 words
-
-#elif defined __AVR_ATmega8535__
-#define SIG2	0x93
-#define SIG3	0x08
-#define PAGE_SIZE	0x20U	//32 words
-
-#endif
-
 // Some models have an SPM Control Register,
 // some have an SPM Control and Status Register
 #if defined SPMCSR
@@ -265,81 +177,116 @@
 #  error Cannot find SPM Enable bit definition!
 #endif
 
-/* Response begin/end markers */
-#define RESPBEG	0x14
-#define STRBEG	"\x14"
-#define RESPEND	0x10
-#define STREND	"\x10"
-
 #define noreturn __attribute__((noreturn))
 
-/* function prototypes */
-static void error(void);
-static void putch(char);
-static char echogetch(void);
-static char getch(void);
-static void getNch(uint8_t);
-static void byte_response(uint8_t);
-static void nothing_response(void);
-static uint8_t gethex(void);
-static void puthex(uint8_t);
-static void flash_led(uint8_t);
-
-/* putstr provides a way to output a string symbol from PROGMEM */
+/* pgmptr_t is just enough big to serve as a pointer for reading
+ * PROGMEM bytes from the bootloader area.
+ */
 #if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
-static void _putstr(uint_farptr_t);
+typedef uint_farptr_t pgmptr_t;
+# define read_pgmptr	pgm_read_byte_far
+
 #else
-static void _putstr(uintptr_t);
+typedef uintptr_t pgmptr_t;
+# define read_pgmptr	pgm_read_byte
+
 #endif
 
+/* function prototypes */
+static void universal_command(void);
+static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
+static void error(void);
+static void putch(char);
+static char getch(void);
+static void getNch(uint8_t);
+static void _putstr(pgmptr_t);
+static void byte_response(uint8_t);
+static void nothing_response(void);
+static void flash_led(uint8_t);
+#if defined MONITOR
+static char echogetch(void);
+static uint8_t gethex(void);
+static void puthex(uint8_t);
+#endif
+
+/* use_pgmvar provides an abstraction for reading PROGMEM. */
 #ifdef RAMPZ
 # if defined (__AVR_HAVE_LPMX__)
-#  define putstr(sym)						\
+#  define use_pgmvar(sym,func)					\
 do {								\
-	uint8_t _putstr_hh_tmp;					\
-	asm volatile						\
-	(							\
-		"ldi %0, hh8(%2)" "\n\t"			\
-		"out %1, %0" "\n\t"				\
-		: "=&d" (_putstr_hh_tmp)			\
+	uint8_t _use_pgmvar_hh_tmp;				\
+	asm volatile (						\
+		"ldi	%0, hh8(%2)"	"\n\t"			\
+		"out	%1, %0"		"\n\t"			\
+		: "=&d" (_use_pgmvar_hh_tmp)			\
 		: "I" (_SFR_IO_ADDR(RAMPZ)), "p" (&(sym))	\
 	);							\
-	_putstr((uintptr_t)(prog_char*)(sym));			\
+	func((pgmptr_t)(prog_char*)&(sym));			\
 } while (0)
 
 # else	/* __AVR_HAVE_LPMX__ */
-#  define putstr(sym)						\
+#  define use_pgmvar(sym,func)					\
 do {								\
-	uint_farptr_t _putstr_tmp;				\
-	asm							\
-	(							\
-		"ldi %A0, lo8(%1)" "\n\t"			\
-		"ldi %B0, hi8(%1)" "\n\t"			\
-		"ldi %C0, hh8(%1)" "\n\t"			\
-		"clr %D0" "\n\t"				\
-		: "=r" (_putstr_tmp)				\
+	uint_farptr_t _use_pgmvar_tmp;				\
+	asm (							\
+		"ldi	%A0, lo8(%1)"	"\n\t"			\
+		"ldi	%B0, hi8(%1)"	"\n\t"			\
+		"ldi	%C0, hh8(%1)"	"\n\t"			\
+		"clr	%D0"		"\n\t"			\
+		: "=d" (_use_pgmvar_tmp)			\
 		: "p" (&(sym))					\
 	);							\
-	_putstr(_putstr_tmp);					\
+	func(_use_pgmvar_tmp);					\
 } while (0)
 
 # endif	/* __AVR_HAVE_LPMX__ */
 
 #else  /* RAMPZ */
-# define putstr(s) \
-	_putstr((uintptr_t)(prog_char*)(s))
+# define use_pgmvar(sym,func)					\
+	func((pgmptr_t)(prog_char*)&(sym))
 
 #endif	/* RAMPZ */
+
+/* putstr provides a way to output a string symbol from PROGMEM */
+#define putstr(sym)	use_pgmvar(sym,_putstr)
+
+// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
+// Update the following list if compilation fails in the assembler
+// with a message like "I/O address out of range 0...0x3f".
+#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
+# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
+#else
+# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
+#endif
 
 /* data type for word/byte access */
 union byte_word_union {
 	uint16_t word;
 	uint8_t  byte[2];
 };
+union byte_word_dword_union {
+	uint32_t dword;
+	uint16_t word;
+	uint8_t  byte[4];
+};
+#ifdef RAMPZ
+typedef union byte_word_dword_union address_t;
+#else
 typedef union byte_word_union address_t;
+#endif
 typedef union byte_word_union length_t;
 
 /* some variables */
+static prog_char signature_response[] = {
+	Resp_STK_INSYNC,
+	SIGNATURE_0, SIGNATURE_1, SIGNATURE_2,
+	Resp_STK_OK, 0
+};
+
 static uint8_t buff[256] __attribute__((section(".noinit")));
 
 #if defined(__AVR_ATmega128__)
@@ -393,15 +340,15 @@ static inline int is_led(void)
 void __attribute__((naked, section(".vectors"))) init(void)
 {
 	/* Clear __zero_reg__, set up stack pointer.  */
-	uint8_t register tmp;
+	uint16_t register ptr;
 	asm volatile (
-		"clr	__zero_reg__		\n\t"
-		"out	%[sreg],__zero_reg__	\n\t"
-		"ldi	%[tmp],lo8(%[ramend])	\n\t"
-		"out	%[sph],%[tmp]		\n\t"
-		"ldi	%[tmp],hi8(%[ramend])	\n\t"
-		"out	%[spl],%[tmp]		\n\t"
-		: [tmp] "=r" (tmp)
+		"clr	__zero_reg__"		"\n\t"
+		"out	%[sreg],__zero_reg__"	"\n\t"
+		"ldi	%B[ptr],hi8(%[ramend])"	"\n\t"
+		"ldi	%A[ptr],lo8(%[ramend])"	"\n\t"
+		"out	%[sph],%B[ptr]"		"\n\t"
+		"out	%[spl],%A[ptr]"		"\n\t"
+		: [ptr] "=d" (ptr)
 		: [ramend] "i" (RAMEND),
 		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
 		  [sph] "i" (_SFR_IO_ADDR(SPH)),
@@ -409,26 +356,29 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		: "memory"
 		);
 
+#ifdef HAVE_DATA
 	/* Copy initialized static data. */
 	extern char __data_start[], __data_end[], __data_load_start[];
 	register char *data_ptr = __data_start;
 	register char *data_load_ptr = __data_load_start;
 	register uint8_t data_endhi;
 	asm volatile (
-		"ldi	%[endhi],hi8(%[end])	\n\t"
-		"rjmp	2f			\n\t"
-		"1:\n\t"
+		".global __do_copy_data"	"\n\t"
+	"__do_copy_data:"			"\n\t"
+		"ldi	%[endhi],hi8(%[end])"	"\n\t"
+		"rjmp	2f"			"\n\t"
+	"1:"					"\n\t"
 #if defined (__AVR_HAVE_LPMX__)
-		"lpm	r0,Z+			\n\t"
+		"lpm	r0,Z+"			"\n\t"
 #else
-		"lpm				\n\t"
-		"adiw	%[ptr],1		\n\t"
+		"lpm"				"\n\t"
+		"adiw	%[ptr],1"		"\n\t"
 #endif
-		"st	X+,r0			\n\t"
-		"2:\n\t"
-		"cpi	%A[ptr],lo8(%[end])	\n\t"
-		"cpc	%B[ptr],%[endhi]	\n\t"
-		"brne	1b			\n\t"
+		"st	X+,r0"			"\n\t"
+	"2:"					"\n\t"
+		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
+		"cpc	%B[ptr],%[endhi]"	"\n\t"
+		"brne	1b"			"\n\t"
 		: [ptr] "+x" (data_ptr),
 		  [lptr] "+z" (data_load_ptr),
 		  [endhi] "=d" (data_endhi)
@@ -437,28 +387,33 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		  [load_start] "p" (__data_load_start)
 		: "r0", "memory"
 		);
+#endif	/* HAVE_DATA */
 
+#ifdef HAVE_BSS
 	/* Clear BSS.  */
 	extern char __bss_start[], __bss_end[];
 	register char *bss_ptr = __bss_start;
 	register uint8_t bss_endhi;
 	asm volatile (
-		"ldi	%[endhi],hi8(%[end])	\n\t"
-		"rjmp	2f			\n\t"
-		"1:\n\t"
-		"st	X+,__zero_reg__		\n\t"
-		"2:\n\t"
-		"cpi	%A[ptr],lo8(%[end])	\n\t"
-		"cpc	%B[ptr],%[endhi]	\n\t"
-		"brne	1b			\n\t"
+		".global __do_clear_bss"	"\n\t"
+	"__do_clear_bss:"			"\n\t"
+		"ldi	%[endhi],hi8(%[end])"	"\n\t"
+		"rjmp	2f"			"\n\t"
+	"1:"					"\n\t"
+		"st	X+,__zero_reg__"	"\n\t"
+	"2:"					"\n\t"
+		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
+		"cpc	%B[ptr],%[endhi]"	"\n\t"
+		"brne	1b"			"\n\t"
 		: [ptr] "+x" (bss_ptr),
 		  [endhi] "=d" (bss_endhi)
 		: [end] "i" (__bss_end)
 		: "memory"
 		);
+#endif	/* HAVE_BSS */
 
 	/* Call main().  */
-	asm volatile ("rjmp main\n\t");
+	asm volatile ("rjmp	main"	"\n\t");
 }
 
 /* main program starts here */
@@ -480,7 +435,7 @@ int noreturn main(void)
 	if (! (ch &  _BV(EXTRF))) // if it's a not an external reset...
 		app_start();  // skip bootloader
 #else
-	asm volatile("nop\n\t");
+	asm volatile("nop"	"\n\t");
 #endif
 
 	/* set pin direction for bootloader pin and enable pullup */
@@ -600,15 +555,18 @@ int noreturn main(void)
 	/* A bunch of if...else if... gives smaller code than switch...case ! */
 
 	/* Hello is anyone home ? */ 
-	if(ch=='0') {
+	if(ch == Cmnd_STK_GET_SYNC) {
 		nothing_response();
 	}
 
 
 	/* Request programmer ID */
-	else if(ch=='1') {
-		if (getch() == ' ') {
-			static prog_char id[] = STRBEG "AVR ISP" STREND;
+	else if(ch == Cmnd_STK_GET_SIGN_ON) {
+		if (getch() == Sync_CRC_EOP) {
+			static prog_char id[] = {
+				Resp_STK_INSYNC,
+				'A', 'V', 'R', ' ', 'I', 'S', 'P',
+				Resp_STK_OK, 0 };
 			putstr(id);
 		} else
 			error();
@@ -616,7 +574,7 @@ int noreturn main(void)
 
 
 	/* AVR ISP/STK500 board commands  DON'T CARE so default nothing_response */
-	else if(ch=='@') {
+	else if(ch == Cmnd_STK_SET_PARAMETER) {
 		ch = getch();
 		if (ch>0x85) getch();
 		nothing_response();
@@ -624,25 +582,30 @@ int noreturn main(void)
 
 
 	/* AVR ISP/STK500 board requests */
-	else if(ch=='A') {
+	else if(ch == Cmnd_STK_GET_PARAMETER) {
 		ch = getch();
-		if(ch==0x80) byte_response(HW_VER);		// Hardware version
-		else if(ch==0x81) byte_response(SW_MAJOR);	// Software major version
-		else if(ch==0x82) byte_response(SW_MINOR);	// Software minor version
-		else if(ch==0x98) byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
-		else byte_response(0x00);				// Covers various unnecessary responses we don't care about
+		if (ch == Parm_STK_HW_VER)
+			byte_response(HW_VER);		// Hardware version
+		else if (ch == Parm_STK_SW_MAJOR)
+			byte_response(SW_MAJOR);	// Software major ver
+		else if (ch == Parm_STK_SW_MINOR)
+			byte_response(SW_MINOR);	// Software minor ver
+		else if (ch == 0x98)
+			byte_response(0x03);		// Unknown but seems to be required by avr studio 3.56
+		else
+			byte_response(0x00);		// Covers various unnecessary responses we don't care about
 	}
 
 
 	/* Device Parameters  DON'T CARE, DEVICE IS FIXED  */
-	else if(ch=='B') {
+	else if(ch == Cmnd_STK_SET_DEVICE) {
 		getNch(20);
 		nothing_response();
 	}
 
 
 	/* Parallel programming stuff  DON'T CARE  */
-	else if(ch=='E') {
+	else if(ch == Cmnd_STK_SET_DEVICE_EXT) {
 		getNch(5);
 		nothing_response();
 	}
@@ -650,13 +613,13 @@ int noreturn main(void)
 
 	/* P: Enter programming mode  */
 	/* R: Erase device, don't care as we will erase one page at a time anyway.  */
-	else if(ch=='P' || ch=='R') {
+	else if(ch == Cmnd_STK_ENTER_PROGMODE || ch == Cmnd_STK_CHIP_ERASE) {
 		nothing_response();
 	}
 
 
 	/* Leave programming mode  */
-	else if(ch=='Q') {
+	else if(ch == Cmnd_STK_LEAVE_PROGMODE) {
 		nothing_response();
 #ifdef WATCHDOG_MODS
 		// autoreset via watchdog (sneaky!)
@@ -669,267 +632,110 @@ int noreturn main(void)
 	/* Set address, little endian. EEPROM in bytes, FLASH in words  */
 	/* Perhaps extra address bytes may be added in future to support > 128kB FLASH.  */
 	/* This might explain why little endian was used here, big endian used everywhere else.  */
-	else if(ch=='U') {
+	else if(ch == Cmnd_STK_LOAD_ADDRESS) {
 		address.byte[0] = getch();
 		address.byte[1] = getch();
+
+		/* Both memory types are word-addressable, but byte addresses
+		 * are used for EEAR and the Z register in lpm/spm, so convert
+		 * the word address into a byte address here.
+		 */
+		asm (
+			"lsl	%A[addr]"	"\n\t"
+			"rol	%B[addr]"	"\n\t"
+#ifdef RAMPZ
+			"clr	%C[addr]"	"\n\t"
+			"rol	%C[addr]"	"\n\t"
+			"clr	%D[addr]"	"\n\t"
+			: [addr] "+r" (address.dword)
+#else
+			: [addr] "+r" (address.word)
+#endif
+		);
 		nothing_response();
 	}
 
 
 	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
-	else if(ch=='V') {
-		if (getch() == 0x30) {
-			getch();
-			ch = getch();
-			getch();
-			if (ch == 0) {
-				byte_response(SIG1);
-			} else if (ch == 1) {
-				byte_response(SIG2); 
-			} else {
-				byte_response(SIG3);
-			} 
-		} else {
-			getNch(3);
-			byte_response(0x00);
-		}
+	else if(ch == Cmnd_STK_UNIVERSAL) {
+		universal_command();
 	}
 
 
 	/* Write memory, length is big endian and is in bytes  */
-	else if(ch=='d') {
-		struct {
-			unsigned eeprom : 1;
-		} flags;
+	else if(ch == Cmnd_STK_PROG_PAGE) {
 		length_t length;
+		uint8_t memtype;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-		flags.eeprom = 0;
-		if (getch() == 'E') flags.eeprom = 1;
+		memtype = getch();
 		for (w=0;w<length.word;w++) {
 			buff[w] = getch();	                        // Store data in buffer, can't keep up with serial data stream whilst programming pages
 		}
-		if (getch() == ' ') {
-			if (flags.eeprom) {		                //Write to EEPROM one byte at a time
-				address.word <<= 1;
+		if (getch() == Sync_CRC_EOP) {
+			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
 				for(w=0;w<length.word;w++) {
-#if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
-					while(EECR & (1<<EEPE));
-					EEAR = (uint16_t)(void *)address.word;
-					EEDR = buff[w];
-					EECR |= (1<<EEMPE);
-					EECR |= (1<<EEPE);
-#else
 					eeprom_write_byte((void *)address.word,buff[w]);
-#endif
 					address.word++;
 				}			
 			}
 			else {					        //Write to FLASH one page at a time
-				uint8_t address_high;
-				if (address.byte[1]>127) address_high = 0x01;	//Only possible with m128, m256 will need 3rd address byte. FIXME
-				else address_high = 0x00;
 #ifdef RAMPZ
-				RAMPZ = address_high;
+				RAMPZ = address.byte[2];
 #endif
-				address.word = address.word << 1;	        //address * 2 -> byte location
-				/* if ((length.byte[0] & 0x01) == 0x01) length.word++;	//Even up an odd number of bytes */
 				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega1281__)
-				while(bit_is_set(EECR,EEPE));			//Wait for previous EEPROM writes to complete
-#else
-				while(bit_is_set(EECR,EEWE));			//Wait for previous EEPROM writes to complete
-#endif
-
-// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
-// Update the following list if compilation fails in the assembler
-// with a message like "I/O address out of range 0...0x3f".
-#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
-# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
-#else
-# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
-#endif
-				uint8_t page_word_count;
-				uint8_t *bufptr = buff;
-				uint8_t tmp;
-				asm volatile(
-					 "clr	%[wcnt]		\n\t"	//page_word_count
-					 "length_loop:		\n\t"	//Main loop, repeat for number of words in block							 							 
-					 "cpi	%[wcnt],0x00	\n\t"	//If page_word_count=0 then erase page
-					 "brne	no_page_erase	\n\t"						 
-					 //Wait for previous spm to complete
-					 "wait_spm1:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm1	\n\t"
-
-					 "ldi	%[tmp],0x03	\n\t"	//Erase page pointed to by Z
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"							 
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 //Wait for previous spm to complete
-					 "wait_spm2:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm2	\n\t"
-
-					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 "no_page_erase:		\n\t"							 
-					 "ld	r0,Y+		\n\t"	//Write 2 bytes into page buffer
-					 "ld	r1,Y+		\n\t"							 
-								 
-					 //Wait for previous spm to complete
-					 "wait_spm3:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm3	\n\t"
-
-					 "ldi	%[tmp],0x01	\n\t"	//Load r0,r1 into FLASH page buffer
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-								 
-					 "inc	%[wcnt]		\n\t"	//page_word_count++
-					 "cpi   %[wcnt],%[PGSZ]	\n\t"
-					 "brlo	same_page	\n\t"	//Still same page in FLASH
-					 "write_page:		\n\t"
-					 "clr	%[wcnt]		\n\t"	//New page, write current one first
-					 //Wait for previous spm to complete
-					 "wait_spm4:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm4	\n\t"
-
-#ifdef __AVR_ATmega163__
-					 "andi	%A[addr],0x80	\n\t"	// m163 requires Z6:Z1 to be zero during page write
-#endif							 							 
-					 "ldi	%[tmp],0x05	\n\t"	//Write page pointed to by Z
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-					 "ori	%A[addr],0x7E	\n\t"	// recover Z6:Z1 state after page write (had to be zero during write)
-#endif
-					 //Wait for previous spm to complete
-					 "wait_spm5:		\n\t"
-					 LOAD_SPM_CREG_TO_TMP"	\n\t"
-					 "sbrc	%[tmp],%[spmen]	\n\t"
-					 "rjmp	wait_spm5	\n\t"
-
-					 "ldi	%[tmp],0x11	\n\t"	//Re-enable RWW section
-					 STORE_TMP_TO_SPM_CREG"	\n\t"
-					 "spm			\n\t"					 		 
-#ifdef __AVR_ATmega163__
-					 ".word 0xFFFF		\n\t"
-					 "nop			\n\t"
-#endif
-					 "same_page:		\n\t"							 
-					 "adiw	%[addr],2	\n\t"	//Next word in FLASH
-					 "sbiw	%[length],2	\n\t"	//length-2
-					 "breq	final_write	\n\t"	//Finished
-					 "rjmp	length_loop	\n\t"
-					 "final_write:		\n\t"
-					 "cpi	%[wcnt],0	\n\t"
-					 "breq	block_done	\n\t"
-					 "adiw	%[length],2	\n\t"	//length+2, fool above check on length after short page write
-					 "rjmp	write_page	\n\t"
-					 "block_done:		\n\t"
-					 "clr	__zero_reg__	\n\t"	//restore zero register
-					 : [wcnt] "=d" (page_word_count),
-					   [tmp] "=d" (tmp),
-					   [buff] "+y" (bufptr),
-					   [addr] "+z" (address.word),
-					   [length] "+w" (length.word)
-					 : [PGSZ] "M" (PAGE_SIZE),
-					   [creg] "i" (SPM_CREG_ADDR),
-					   [spmen] "i" (SPM_ENABLE_BIT)
-					 : "r0"
-					);
+				eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
+				prog_buffer(&address.word, buff, length.word);
 				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 				/* exit the bootloader without a power cycle anyhow */
 			}
-			putch(RESPBEG);
-			putch(RESPEND);
+			putch(Resp_STK_INSYNC);
+			putch(Resp_STK_OK);
 		} else
 			error();
 	}
 
 
 	/* Read memory block mode, length is big endian.  */
-	else if(ch=='t') {
-		struct {
-			unsigned eeprom : 1;
-#ifdef RAMPZ
-			unsigned rampz  : 1;
-#endif
-		} flags;
+	else if(ch == Cmnd_STK_READ_PAGE) {
 		length_t length;
+		uint8_t memtype;
 		length.byte[1] = getch();
 		length.byte[0] = getch();
-#ifdef RAMPZ
-		if (address.word>0x7FFF) flags.rampz = 1;		// No go with m256, FIXME
-		else flags.rampz = 0;
-#endif
-		address.word = address.word << 1;	        // address * 2 -> byte location
-		if (getch() == 'E') flags.eeprom = 1;
-		else flags.eeprom = 0;
-		if (getch() == ' ') {		                // Command terminator
-			putch(RESPBEG);
+		memtype = getch();
+		if (getch() == Sync_CRC_EOP) {	                // Command terminator
+			putch(Resp_STK_INSYNC);
 			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
-				if (flags.eeprom) {	                        // Byte access EEPROM read
-#if defined(__AVR_ATmega168__)  || defined(__AVR_ATmega328P__)
-					while(EECR & (1<<EEPE));
-					EEAR = (uint16_t)(void *)address.word;
-					EECR |= (1<<EERE);
-					putch(EEDR);
-#else
+				if (memtype == 'E') {			// Byte access EEPROM read
 					putch(eeprom_read_byte((void *)address.word));
-#endif
 					address.word++;
 				}
 				else {
 
 #ifdef RAMPZ
-					if (flags.rampz)
-						putch(pgm_read_byte_far(address.word + 0x10000));
-					// Hmmmm, yuck  FIXME when m256 arrvies
-					else
-#endif
+					putch(pgm_read_byte_far(address.dword));
+#else
 					putch(pgm_read_byte_near(address.word));
+#endif
 					address.word++;
 				}
 			}
-			putch(RESPEND);
+			putch(Resp_STK_OK);
 		}
 	}
 
 
 	/* Get device signature bytes  */
-	else if(ch=='u') {
-		if (getch() == ' ') {
-			static prog_char sig[] =
-				{ RESPBEG, SIG1, SIG2, SIG3, RESPEND, 0};
-			putstr(sig);
+	else if(ch == Cmnd_STK_READ_SIGN) {
+		if (getch() == Sync_CRC_EOP) {
+			putstr(signature_response);
 		} else
 			error();
 	}
 
 
 	/* Read oscillator calibration byte */
-	else if(ch=='v') {
+	else if(ch == Cmnd_STK_READ_OSCCAL) {
 		byte_response(0x00);
 	}
 
@@ -1054,50 +860,182 @@ int noreturn main(void)
 
 }
 
+static void universal_command(void)
+{
+	uint8_t byte1, byte2, byte3, byte4;
+	byte1 = getch();
+	byte2 = getch();
+	byte3 = getch();
+	byte4 = getch();
+	if (byte1 == 0x30 && byte2 == 0x00) {
+		// Read Signature Byte
+#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + byte3))
+		use_pgmvar(signature_response[1], sig_fn);
+#undef sig_fn
+	} else if ( (byte1 & ~0x08) == 0x50 &&
+		    (byte2 & ~0x08) == 0x00) {
+		// Read Lock/LFUSE/HFUSE/EFUSE
+		uint16_t addr = 0;
+		asm (
+			"bst	%[byte1],3"	"\n\t"
+			"bld	%A[addr],0"	"\n\t"
+			"bst	%[byte2],3"	"\n\t"
+			"bld	%A[addr],1"	"\n\t"
+			"ldi	%[tmp],%[cval]"	"\n\t"
+			STORE_TMP_TO_SPM_CREG	"\n\t"
+#if defined (__AVR_HAVE_LPMX__)
+			"lpm	%[tmp],Z"	"\n\t"
+#else
+			"lpm"			"\n\t"
+			"mov	%[tmp],r0"	"\n\t"
+#endif
+			: [addr] "+z" (addr),
+			  [tmp] "=r" (byte4)
+			: [byte1] "r" (byte1),
+			  [byte2] "r" (byte2),
+			  [creg] "i" (SPM_CREG_ADDR),
+			  [cval] "i" (_BV(BLBSET) | _BV(SPM_ENABLE_BIT))
+#if !defined(__AVR_HAVE_LPMX__)
+			: "r0"
+#endif
+		);
+		byte_response(byte4);
+	} else {
+		byte_response(0x00);
+	}
+}
+
+static void prog_buffer(uintptr_t *address, uint8_t *buffer, uint16_t length)
+{
+	uint8_t page_word_count = 0;
+	uint8_t tmp;
+	asm volatile (
+		//Main loop, repeat for number of words in block
+	"length_loop:"			"\n\t"
+
+		//If page_word_count=0 then erase page
+		"cpi	%[wcnt],0x00"	"\n\t"
+		"brne	no_page_erase"	"\n\t"
+
+		//Wait for previous spm to complete
+	"wait_spm1:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm1"	"\n\t"
+
+		//Erase page pointed to by Z
+		"ldi	%[tmp],0x03"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+#endif
+		//Wait for previous spm to complete
+	"wait_spm2:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm2"	"\n\t"
+
+		//Re-enable RWW section
+		"ldi	%[tmp],0x11"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+#endif
+	"no_page_erase:"		"\n\t"
+		//Write 2 bytes into page buffer
+		"ld	r0,X+"		"\n\t"
+		"ld	r1,X+"		"\n\t"
+
+		//Wait for previous spm to complete
+	"wait_spm3:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm3"	"\n\t"
+
+		//Load r0,r1 into FLASH page buffer
+		"ldi	%[tmp],0x01"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+
+		"inc	%[wcnt]"	"\n\t"	//page_word_count++
+		"cpi   %[wcnt],%[PGSZ]"	"\n\t"
+		"brlo	same_page"	"\n\t"	//Still same page in FLASH
+
+		//New page, write current one first
+	"write_page:"			"\n\t"
+		"clr	%[wcnt]"	"\n\t"
+
+		//Wait for previous spm to complete
+	"wait_spm4:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm4"	"\n\t"
+
+#ifdef __AVR_ATmega163__
+		// m163 requires Z6:Z1 to be zero during page write
+		"andi	%A[addr],0x80"	"\n\t"
+#endif
+		//Write page pointed to by Z
+		"ldi	%[tmp],0x05"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+		// recover Z6:Z1 state after page write (had to be zero during write)
+		"ori	%A[addr],0x7E"	"\n\t"
+#endif
+		//Wait for previous spm to complete
+	"wait_spm5:"			"\n\t"
+		LOAD_SPM_CREG_TO_TMP	"\n\t"
+		"sbrc	%[tmp],%[spmen]""\n\t"
+		"rjmp	wait_spm5"	"\n\t"
+
+		//Re-enable RWW section
+		"ldi	%[tmp],0x11"	"\n\t"
+		STORE_TMP_TO_SPM_CREG	"\n\t"
+		"spm"			"\n\t"
+#ifdef __AVR_ATmega163__
+		".word 0xFFFF"		"\n\t"
+		"nop"			"\n\t"
+#endif
+	"same_page:"			"\n\t"
+		"adiw	%[addr],2"	"\n\t"	//Next word in FLASH
+		"sbiw	%[length],2"	"\n\t"	//length-2
+		"breq	final_write"	"\n\t"	//Finished
+		"rjmp	length_loop"	"\n\t"
+	"final_write:"			"\n\t"
+		"cpi	%[wcnt],0"	"\n\t"
+		"breq	block_done"	"\n\t"
+		"adiw	%[length],2"	"\n\t"	//length+2, fool above check on length after short page write
+		"rjmp	write_page"	"\n\t"
+	"block_done:"			"\n\t"
+		"clr	__zero_reg__"	"\n\t"	//restore zero register
+		: [tmp] "=d" (tmp),
+		  [wcnt] "+d" (page_word_count),
+		  [buff] "+x" (buffer),
+		  [addr] "+z" (*address),
+		  [length] "+w" (length)
+		: [PGSZ] "M" (SPM_PAGESIZE / 2),
+		  [creg] "i" (SPM_CREG_ADDR),
+		  [spmen] "i" (SPM_ENABLE_BIT)
+		: "r0"
+	);
+}
 
 static void error(void) {
+#ifdef GPIOR0
+# define error_count (*(uint8_t*)&GPIOR0)
+#else
 	static uint8_t error_count;
+#endif
 
 	if (++error_count == MAX_ERROR_COUNT)
 		app_start();
-}
-
-static uint8_t gethexnib(void) {
-	char a;
-	a = echogetch();
-	if(a >= 'a') {
-		return (a - 'a' + 0x0a);
-	} else if(a >= '0') {
-		return(a - '0');
-	}
-	return a;
-}
-
-
-static uint8_t gethex(void) {
-	return (gethexnib() << 4) + gethexnib();
-}
-
-
-static void puthex(uint8_t ch) {
-	uint8_t ah;
-
-	ah = ch >> 4;
-	if(ah >= 0x0a) {
-		ah = ah - 0x0a + 'a';
-	} else {
-		ah += '0';
-	}
-	
-	ch &= 0x0f;
-	if(ch >= 0x0a) {
-		ch = ch - 0x0a + 'a';
-	} else {
-		ch += '0';
-	}
-	
-	putch(ah);
-	putch(ch);
 }
 
 
@@ -1180,61 +1118,38 @@ static void getNch(uint8_t count)
 }
 
 
-static char echogetch(void)
+static char read_str_inc(pgmptr_t *p)
 {
-	char ch = getch();
-	putch(ch);
-	return ch;
-}
-
-
-#if defined(RAMPZ) && !defined(__AVR_HAVE_LPMX__)
-static void _putstr(uint_farptr_t s)
-{
-	char c;
-	while ( (c = pgm_read_byte_far(s)) ) {
-		putch(c);
-		++s;
-	}
-}
-
-#else  /* RAMPZ && !__AVR_HAVE_LPMX__ */
-
-static char read_str_inc(uintptr_t *p)
-{
-#if defined (__AVR_HAVE_LPMX__)
 	char result;
-	asm
-	(
+#if defined (__AVR_HAVE_LPMX__)
+	asm (
 # if defined RAMPZ
-		"elpm %0, Z+" "\n\t"
+		"elpm	%0, Z+"		"\n\t"
 # else
-		"lpm %0, Z+" "\n\t"
+		"lpm	%0, Z+"		"\n\t"
 # endif
 		: "=r" (result), "+z" (*p)
 	);
-	return result;
-#else	/* __AVR_HAVE_LPMX__ */
-	return pgm_read_byte((*p)++);
+#else  /* __AVR_HAVE_LPMX__ */
+	result = read_pgmptr(*p);
+	++*p;
 #endif	/* __AVR_HAVE_LPMX__ */
+	return result;
 }
 
-
-static void _putstr(uintptr_t s)
+static void _putstr(pgmptr_t s)
 {
 	char c;
 	while ( (c = read_str_inc(&s)) )
 		putch(c);
 }
-#endif	/* RAMPZ && !__AVR_HAVE_LPMX__ */
-
 
 static void byte_response(uint8_t val)
 {
-	if (getch() == ' ') {
-		putch(RESPBEG);
+	if (getch() == Sync_CRC_EOP) {
+		putch(Resp_STK_INSYNC);
 		putch(val);
-		putch(RESPEND);
+		putch(Resp_STK_OK);
 	} else
 		error();
 }
@@ -1242,9 +1157,9 @@ static void byte_response(uint8_t val)
 
 static void nothing_response(void)
 {
-	if (getch() == ' ') {
-		putch(RESPBEG);
-		putch(RESPEND);
+	if (getch() == Sync_CRC_EOP) {
+		putch(Resp_STK_INSYNC);
+		putch(Resp_STK_OK);
 	} else
 		error();
 }
@@ -1262,5 +1177,57 @@ static void flash_led(uint8_t count)
 	}
 }
 
+
+// gethex/puthex is used only with MONITOR
+// and produces a gcc warning otherwise.
+#if defined MONITOR
+
+static char echogetch(void)
+{
+	char ch = getch();
+	putch(ch);
+	return ch;
+}
+
+static uint8_t gethexnib(void)
+{
+	char a;
+	a = echogetch();
+	if(a >= 'a') {
+		return (a - 'a' + 0x0a);
+	} else if(a >= '0') {
+		return(a - '0');
+	}
+	return a;
+}
+
+static uint8_t gethex(void)
+{
+	return (gethexnib() << 4) + gethexnib();
+}
+
+static void puthex(uint8_t ch)
+{
+	uint8_t ah;
+
+	ah = ch >> 4;
+	if(ah >= 0x0a) {
+		ah = ah - 0x0a + 'a';
+	} else {
+		ah += '0';
+	}
+
+	ch &= 0x0f;
+	if(ch >= 0x0a) {
+		ch = ch - 0x0a + 'a';
+	} else {
+		ch += '0';
+	}
+
+	putch(ah);
+	putch(ch);
+}
+
+#endif	/* MONITOR */
 
 /* end of file ATmegaBOOT.c */
