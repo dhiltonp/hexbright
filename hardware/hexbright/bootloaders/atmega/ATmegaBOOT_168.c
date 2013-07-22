@@ -252,6 +252,19 @@ do {								\
 /* putstr provides a way to output a string symbol from PROGMEM */
 #define putstr(sym)	use_pgmvar(sym,_putstr)
 
+// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
+// Update the following list if compilation fails in the assembler
+// with a message like "I/O address out of range 0...0x3f".
+#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
+# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
+#else
+# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
+# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
+# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
+#endif
+
 /* data type for word/byte access */
 union byte_word_union {
 	uint16_t word;
@@ -621,15 +634,45 @@ int noreturn main(void)
 
 	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
 	else if(ch == Cmnd_STK_UNIVERSAL) {
-		if (getch() == 0x30) {
-			getch();
-			ch = getch();
-			getch();
-#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + ch))
+		uint8_t byte1, byte2, byte3, byte4;
+		byte1 = getch();
+		byte2 = getch();
+		byte3 = getch();
+		byte4 = getch();
+		if (byte1 == 0x30 && byte2 == 0x00) {
+			// Read Signature Byte
+#define sig_fn(ptr)	byte_response(read_pgmptr(ptr + byte3))
 			use_pgmvar(signature_response[1], sig_fn);
 #undef sig_fn
+		} else if ( (byte1 & ~0x08) == 0x50 &&
+			    (byte2 & ~0x08) == 0x00) {
+			// Read Lock/LFUSE/HFUSE/EFUSE
+			uint16_t addr = 0;
+			asm (
+				"bst	%[byte1],3"	"\n\t"
+				"bld	%A[addr],0"	"\n\t"
+				"bst	%[byte2],3"	"\n\t"
+				"bld	%A[addr],1"	"\n\t"
+				"ldi	%[tmp],%[cval]"	"\n\t"
+				STORE_TMP_TO_SPM_CREG	"\n\t"
+#if defined (__AVR_HAVE_LPMX__)
+				"lpm	%[tmp],Z"	"\n\t"
+#else
+				"lpm"			"\n\t"
+				"mov	%[tmp],r0"	"\n\t"
+#endif
+				: [addr] "+z" (addr),
+				  [tmp] "=r" (ch)
+				: [byte1] "r" (byte1),
+				  [byte2] "r" (byte2),
+				  [creg] "i" (SPM_CREG_ADDR),
+				  [cval] "i" (_BV(BLBSET) | _BV(SPM_ENABLE_BIT))
+#if !defined(__AVR_HAVE_LPMX__)
+				: "r0"
+#endif
+			);
+			byte_response(ch);
 		} else {
-			getNch(3);
 			byte_response(0x00);
 		}
 	}
@@ -874,19 +917,6 @@ int noreturn main(void)
 	} /* end of forever loop */
 
 }
-
-// Sadly, _SFR_IO_REG_P can't be used as a pre-processor condition...
-// Update the following list if compilation fails in the assembler
-// with a message like "I/O address out of range 0...0x3f".
-#if defined (__AVR_ATmega128__) || defined (__AVR_ATmega64__)
-# define SPM_CREG_ADDR		_SFR_MEM_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"lds	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"sts	%[creg],%[tmp]"
-#else
-# define SPM_CREG_ADDR		_SFR_IO_ADDR(SPM_CREG)
-# define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
-# define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
-#endif
 
 static void prog_buffer(uintptr_t address, uint8_t *buffer, uint16_t length)
 {
