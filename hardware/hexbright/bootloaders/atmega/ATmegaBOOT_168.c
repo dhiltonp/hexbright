@@ -340,15 +340,15 @@ static inline int is_led(void)
 void __attribute__((naked, section(".vectors"))) init(void)
 {
 	/* Clear __zero_reg__, set up stack pointer.  */
-	uint8_t register tmp;
+	uint16_t register ptr;
 	asm volatile (
 		"clr	__zero_reg__"		"\n\t"
 		"out	%[sreg],__zero_reg__"	"\n\t"
-		"ldi	%[tmp],lo8(%[ramend])"	"\n\t"
-		"out	%[sph],%[tmp]"		"\n\t"
-		"ldi	%[tmp],hi8(%[ramend])"	"\n\t"
-		"out	%[spl],%[tmp]"		"\n\t"
-		: [tmp] "=d" (tmp)
+		"ldi	%B[ptr],hi8(%[ramend])"	"\n\t"
+		"ldi	%A[ptr],lo8(%[ramend])"	"\n\t"
+		"out	%[sph],%B[ptr]"		"\n\t"
+		"out	%[spl],%A[ptr]"		"\n\t"
+		: [ptr] "=d" (ptr)
 		: [ramend] "i" (RAMEND),
 		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
 		  [sph] "i" (_SFR_IO_ADDR(SPH)),
