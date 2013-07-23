@@ -674,9 +674,10 @@ int noreturn main(void)
 		}
 		if (getch() == Sync_CRC_EOP) {
 			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
-				for(w=0;w<length.word;w++) {
+				while (length.word) {
 					eeprom_write_byte((void *)address.word,buff[w]);
 					address.word++;
+					length.word--;
 				}			
 			}
 			else {					        //Write to FLASH one page at a time
@@ -705,10 +706,10 @@ int noreturn main(void)
 		memtype = getch();
 		if (getch() == Sync_CRC_EOP) {	                // Command terminator
 			putch(Resp_STK_INSYNC);
-			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
-				if (memtype == 'E') {			// Byte access EEPROM read
+			while (length.word) {
+				if (memtype == 'E') {
+					// Byte access EEPROM read
 					putch(eeprom_read_byte((void *)address.word));
-					address.word++;
 				}
 				else {
 
@@ -717,8 +718,9 @@ int noreturn main(void)
 #else
 					putch(pgm_read_byte_near(address.word));
 #endif
-					address.word++;
 				}
+				address.word++;
+				length.word--;
 			}
 			putch(Resp_STK_OK);
 		}
