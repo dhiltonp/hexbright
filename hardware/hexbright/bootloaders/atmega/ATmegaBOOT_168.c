@@ -358,17 +358,17 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		"rjmp	2f"			"\n\t"
 	"1:"					"\n\t"
 #if defined (__AVR_HAVE_LPMX__)
-		"lpm	r0,Z+"			"\n\t"
+		"lpm	r0,%a[lptr]+"		"\n\t"
 #else
 		"lpm"				"\n\t"
-		"adiw	%[ptr],1"		"\n\t"
+		"adiw	%[lptr],1"		"\n\t"
 #endif
-		"st	X+,r0"			"\n\t"
+		"st	%a[ptr]+,r0"		"\n\t"
 	"2:"					"\n\t"
 		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
 		"cpc	%B[ptr],%[endhi]"	"\n\t"
 		"brne	1b"			"\n\t"
-		: [ptr] "+x" (data_ptr),
+		: [ptr] "+e" (data_ptr),
 		  [lptr] "+z" (data_load_ptr),
 		  [endhi] "=d" (data_endhi)
 		: [start] "p" (__data_start),
@@ -389,12 +389,12 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		"ldi	%[endhi],hi8(%[end])"	"\n\t"
 		"rjmp	2f"			"\n\t"
 	"1:"					"\n\t"
-		"st	X+,__zero_reg__"	"\n\t"
+		"st	%a[ptr]+,__zero_reg__"	"\n\t"
 	"2:"					"\n\t"
 		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
 		"cpc	%B[ptr],%[endhi]"	"\n\t"
 		"brne	1b"			"\n\t"
-		: [ptr] "+x" (bss_ptr),
+		: [ptr] "+e" (bss_ptr),
 		  [endhi] "=d" (bss_endhi)
 		: [end] "i" (__bss_end)
 		: "memory"
