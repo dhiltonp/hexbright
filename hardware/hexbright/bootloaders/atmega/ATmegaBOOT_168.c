@@ -179,6 +179,23 @@
 
 #define noreturn __attribute__((noreturn))
 
+/* data type for word/byte access */
+union byte_word_union {
+	uint16_t word;
+	uint8_t  byte[2];
+};
+union byte_word_dword_union {
+	uint32_t dword;
+	uint16_t word;
+	uint8_t  byte[4];
+};
+#ifdef RAMPZ
+typedef union byte_word_dword_union address_t;
+#else
+typedef union byte_word_union address_t;
+#endif
+typedef union byte_word_union length_t;
+
 /* pgmptr_t is just enough big to serve as a pointer for reading
  * PROGMEM bytes from the bootloader area.
  */
@@ -193,6 +210,7 @@ typedef uintptr_t pgmptr_t;
 #endif
 
 /* function prototypes */
+static void load_address(address_t *address);
 static void universal_command(void);
 static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
@@ -262,23 +280,6 @@ do {								\
 # define LOAD_SPM_CREG_TO_TMP	"in	%[tmp],%[creg]"
 # define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
 #endif
-
-/* data type for word/byte access */
-union byte_word_union {
-	uint16_t word;
-	uint8_t  byte[2];
-};
-union byte_word_dword_union {
-	uint32_t dword;
-	uint16_t word;
-	uint8_t  byte[4];
-};
-#ifdef RAMPZ
-typedef union byte_word_dword_union address_t;
-#else
-typedef union byte_word_union address_t;
-#endif
-typedef union byte_word_union length_t;
 
 /* some variables */
 static prog_char signature_response[] = {
@@ -616,39 +617,15 @@ int noreturn main(void)
 #endif
 	}
 
-
-	/* Set address, little endian. EEPROM in bytes, FLASH in words  */
-	/* Perhaps extra address bytes may be added in future to support > 128kB FLASH.  */
-	/* This might explain why little endian was used here, big endian used everywhere else.  */
+	/* Set address. */
 	else if(ch == Cmnd_STK_LOAD_ADDRESS) {
-		address.byte[0] = getch();
-		address.byte[1] = getch();
-
-		/* Both memory types are word-addressable, but byte addresses
-		 * are used for EEAR and the Z register in lpm/spm, so convert
-		 * the word address into a byte address here.
-		 */
-		asm (
-			"lsl	%A[addr]"	"\n\t"
-			"rol	%B[addr]"	"\n\t"
-#ifdef RAMPZ
-			"clr	%C[addr]"	"\n\t"
-			"rol	%C[addr]"	"\n\t"
-			"clr	%D[addr]"	"\n\t"
-			: [addr] "+r" (address.dword)
-#else
-			: [addr] "+r" (address.word)
-#endif
-		);
-		nothing_response();
+		load_address(&address);
 	}
 
-
-	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
+	/* Universal SPI programming command.  */
 	else if(ch == Cmnd_STK_UNIVERSAL) {
 		universal_command();
 	}
-
 
 	/* Write memory, length is big endian and is in bytes  */
 	else if(ch == Cmnd_STK_PROG_PAGE) {
@@ -848,6 +825,33 @@ int noreturn main(void)
 
 	} /* end of forever loop */
 
+}
+
+// Perhaps extra address bytes may be added in future to support > 128kB FLASH.
+// This might explain why little endian was used here, although big endian
+// is used everywhere else.
+static void load_address(address_t *address)
+{
+	address->byte[0] = getch();
+	address->byte[1] = getch();
+
+	/* Both memory types are word-addressable, but byte addresses
+	 * are used for EEAR and the Z register in lpm/spm, so convert
+	 * the word address into a byte address here.
+	 */
+	asm (
+		"lsl	%A[addr]"	"\n\t"
+		"rol	%B[addr]"	"\n\t"
+#ifdef RAMPZ
+		"clr	%C[addr]"	"\n\t"
+		"rol	%C[addr]"	"\n\t"
+		"clr	%D[addr]"	"\n\t"
+		: [addr] "+r" (address->dword)
+#else
+		: [addr] "+r" (address->word)
+#endif
+	);
+	nothing_response();
 }
 
 static void universal_command(void)
