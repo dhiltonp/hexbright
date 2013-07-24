@@ -53,7 +53,7 @@ OBJ        = $(PROGRAM).o
 LDS        = $(PROGRAM).lds
 OPTIMIZE   = -O2 -Os
 
-DEFS       = -DHAVE_DATA -DHAVE_BSS
+DEFS       =
 LIBS       =
 
 CC         = avr-gcc
@@ -157,7 +157,7 @@ hexbright_isp: isp
 
 hexbright_tiny: TARGET = hexbright_tiny
 hexbright_tiny: MCU_TARGET = atmega168p
-hexbright_tiny: DEFS = -UHAVE_DATA -UHAVE_BSS
+hexbright_tiny: DEFS = -DNO_DATA -DNO_BSS
 hexbright_tiny: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=1' '-DWATCHDOG_MODS' '-DHEXBRIGHT'
 hexbright_tiny: AVR_FREQ = 8000000L
 hexbright_tiny: LDSECTION  = --section-start=.text=0x3c00

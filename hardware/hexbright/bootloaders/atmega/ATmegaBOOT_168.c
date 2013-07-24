@@ -348,7 +348,7 @@ void __attribute__((naked, section(".vectors"))) init(void)
 	SREG = 0;
 	SP = RAMEND;
 
-#ifdef HAVE_DATA
+#ifndef NO_DATA
 	/* Copy initialized static data. */
 	extern char __data_start[], __data_end[], __data_load_start[];
 	register char *data_ptr = __data_start;
@@ -379,9 +379,9 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		  [load_start] "p" (__data_load_start)
 		: "r0", "memory"
 		);
-#endif	/* HAVE_DATA */
+#endif	/* NO_DATA */
 
-#ifdef HAVE_BSS
+#ifndef NO_BSS
 	/* Clear BSS.  */
 	extern char __bss_start[], __bss_end[];
 	register char *bss_ptr = __bss_start;
@@ -402,7 +402,7 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		: [end] "i" (__bss_end)
 		: "memory"
 		);
-#endif	/* HAVE_BSS */
+#endif	/* NO_BSS */
 
 	/* Call main().  */
 	asm volatile ("rjmp	main"	"\n\t");
