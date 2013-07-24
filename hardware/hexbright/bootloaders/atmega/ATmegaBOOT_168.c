@@ -130,6 +130,7 @@
 #define LED_PORT PORTD
 #define LED_PIN  PIND
 #define LED      PIND5
+#define RLED     PIND2
 
 #elif defined __AVR_ATmega128__ || defined __AVR_ATmega1280__
 /* Onboard LED is connected to pin PB7 (e.g. Crumb128, PROBOmega128, Savvy128, Arduino Mega) */
@@ -335,6 +336,21 @@ static inline int is_led(void)
 #endif
 }
 
+// If there is no red LED, use the standard LED instead
+#ifndef RLED
+# define RLED	LED
+#endif
+
+static inline void rled_on(void)
+{
+	LED_PORT |= _BV(RLED);
+}
+
+static inline void rled_off(void)
+{
+	LED_PORT &= ~_BV(RLED);
+}
+
 static inline void __attribute__((naked)) noreturn app_start(void)
 {
 	asm volatile ("jmp	0");
@@ -534,6 +550,11 @@ int noreturn main(void)
 	/* flash onboard LED to signal entering of bootloader */
 	flash_led(NUM_LED_FLASHES + bootuart);
 
+#ifdef HEXBRIGHT
+	/* set red LED pin as output */
+	LED_DDR |= _BV(RLED);
+#endif
+
 	/* 20050803: by DojoCorp, this is one of the parts provoking the
 		 system to stop listening, cancelled from the original */
 	//putch('\0');
@@ -648,6 +669,7 @@ int noreturn main(void)
 		if (check_sync())
 			continue;
 
+		rled_on();
 		if (memtype == 'E') {		                //Write to EEPROM one byte at a time
 			while (length.word) {
 				eeprom_write_byte((void *)address.word,buff[w]);
@@ -665,6 +687,7 @@ int noreturn main(void)
 			/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
 			/* exit the bootloader without a power cycle anyhow */
 		}
+		rled_off();
 		putch(Resp_STK_INSYNC);
 		putch(Resp_STK_OK);
 	}
@@ -682,6 +705,7 @@ int noreturn main(void)
 			continue;
 
 		putch(Resp_STK_INSYNC);
+		led_on();
 		while (length.word) {
 			if (memtype == 'E') {
 				// Byte access EEPROM read
@@ -697,6 +721,7 @@ int noreturn main(void)
 			address.word++;
 			length.word--;
 		}
+		led_off();
 		putch(Resp_STK_OK);
 	}
 
