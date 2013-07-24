@@ -625,6 +625,10 @@ int noreturn main(void)
 		load_address(&address);
 	}
 
+	else if(ch == Cmnd_STK_CHECK_AUTOINC) {
+		nothing_response();
+	}
+
 	/* Universal SPI programming command.  */
 	else if(ch == Cmnd_STK_UNIVERSAL) {
 		universal_command();
