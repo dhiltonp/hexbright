@@ -214,6 +214,7 @@ static void load_address(address_t *address);
 static void universal_command(void);
 static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
+static char check_sync(void);
 static void putch(char);
 static char getch(void);
 static void getNch(uint8_t);
@@ -553,14 +554,14 @@ int noreturn main(void)
 
 	/* Request programmer ID */
 	else if(ch == Cmnd_STK_GET_SIGN_ON) {
-		if (getch() == Sync_CRC_EOP) {
-			static prog_char id[] = {
-				Resp_STK_INSYNC,
-				'A', 'V', 'R', ' ', 'I', 'S', 'P',
-				Resp_STK_OK, 0 };
-			putstr(id);
-		} else
-			error();
+		if (check_sync())
+			continue;
+
+		static prog_char id[] = {
+			Resp_STK_INSYNC,
+			'A', 'V', 'R', ' ', 'I', 'S', 'P',
+			Resp_STK_OK, 0 };
+		putstr(id);
 	}
 
 
@@ -639,28 +640,29 @@ int noreturn main(void)
 		for (w=0;w<length.word;w++) {
 			buff[w] = getch();	                        // Store data in buffer, can't keep up with serial data stream whilst programming pages
 		}
-		if (getch() == Sync_CRC_EOP) {
-			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
-				while (length.word) {
-					eeprom_write_byte((void *)address.word,buff[w]);
-					address.word++;
-					length.word--;
-				}			
+
+		if (check_sync())
+			continue;
+
+		if (memtype == 'E') {		                //Write to EEPROM one byte at a time
+			while (length.word) {
+				eeprom_write_byte((void *)address.word,buff[w]);
+				address.word++;
+				length.word--;
 			}
-			else {					        //Write to FLASH one page at a time
+		} else {
+			//Write to FLASH one page at a time
 #ifdef RAMPZ
-				RAMPZ = address.byte[2];
+			RAMPZ = address.byte[2];
 #endif
-				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
-				eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
-				prog_buffer(&address.word, buff, length.word);
-				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
-				/* exit the bootloader without a power cycle anyhow */
-			}
-			putch(Resp_STK_INSYNC);
-			putch(Resp_STK_OK);
-		} else
-			error();
+			if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
+			eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
+			prog_buffer(&address.word, buff, length.word);
+			/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
+			/* exit the bootloader without a power cycle anyhow */
+		}
+		putch(Resp_STK_INSYNC);
+		putch(Resp_STK_OK);
 	}
 
 
@@ -671,36 +673,35 @@ int noreturn main(void)
 		length.byte[1] = getch();
 		length.byte[0] = getch();
 		memtype = getch();
-		if (getch() == Sync_CRC_EOP) {	                // Command terminator
-			putch(Resp_STK_INSYNC);
-			while (length.word) {
-				if (memtype == 'E') {
-					// Byte access EEPROM read
-					putch(eeprom_read_byte((void *)address.word));
-				}
-				else {
 
-#ifdef RAMPZ
-					putch(pgm_read_byte_far(address.dword));
-#else
-					putch(pgm_read_byte_near(address.word));
-#endif
-				}
-				address.word++;
-				length.word--;
+		if (check_sync())
+			continue;
+
+		putch(Resp_STK_INSYNC);
+		while (length.word) {
+			if (memtype == 'E') {
+				// Byte access EEPROM read
+				putch(eeprom_read_byte((void *)address.word));
 			}
-			putch(Resp_STK_OK);
-		} else
-			error();
+			else {
+#ifdef RAMPZ
+				putch(pgm_read_byte_far(address.dword));
+#else
+				putch(pgm_read_byte_near(address.word));
+#endif
+			}
+			address.word++;
+			length.word--;
+		}
+		putch(Resp_STK_OK);
 	}
-
 
 	/* Get device signature bytes  */
 	else if(ch == Cmnd_STK_READ_SIGN) {
-		if (getch() == Sync_CRC_EOP) {
-			putstr(signature_response);
-		} else
-			error();
+		if (check_sync())
+			continue;
+
+		putstr(signature_response);
 	}
 
 
@@ -823,7 +824,7 @@ int noreturn main(void)
 	}
 	/* end of monitor */
 #endif
-	else 
+	else
 		error();
 
 	} /* end of forever loop */
@@ -1035,6 +1036,14 @@ static void error(void) {
 		app_start();
 }
 
+static char check_sync(void)
+{
+	if (getch() != Sync_CRC_EOP) {
+		error();
+		return 1;
+	}
+	return 0;
+}
 
 static void putch(char ch)
 {
@@ -1143,22 +1152,22 @@ static void _putstr(pgmptr_t s)
 
 static void byte_response(uint8_t val)
 {
-	if (getch() == Sync_CRC_EOP) {
-		putch(Resp_STK_INSYNC);
-		putch(val);
-		putch(Resp_STK_OK);
-	} else
-		error();
+	if (check_sync())
+		return;
+
+	putch(Resp_STK_INSYNC);
+	putch(val);
+	putch(Resp_STK_OK);
 }
 
 
 static void nothing_response(void)
 {
-	if (getch() == Sync_CRC_EOP) {
-		putch(Resp_STK_INSYNC);
-		putch(Resp_STK_OK);
-	} else
-		error();
+	if (check_sync())
+		return;
+
+	putch(Resp_STK_INSYNC);
+	putch(Resp_STK_OK);
 }
 
 static void flash_led(uint8_t count)
