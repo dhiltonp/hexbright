@@ -307,8 +307,6 @@ static uint8_t bootuart = 0;
 
 static uint8_t timeout_on_getch = 1;
 
-static void noreturn (*app_start)(void) = 0x0000;
-
 static inline void led_on(void)
 {
 #if LED_INVERTED
@@ -336,6 +334,10 @@ static inline int is_led(void)
 #endif
 }
 
+static inline void __attribute__((naked)) noreturn app_start(void)
+{
+	asm volatile ("jmp	0");
+}
 
 /* execution starts here after RESET */
 void __attribute__((naked, section(".vectors"))) init(void)
@@ -1056,7 +1058,7 @@ static void putch(char ch)
 }
 
 
-static char getch(void)
+static __attribute__((noinline)) char getch(void)
 {
 	uint32_t count = 0;
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
