@@ -1039,6 +1039,7 @@ static void error(void) {
 static char check_sync(void)
 {
 	if (getch() != Sync_CRC_EOP) {
+		putch(Resp_STK_NOSYNC);
 		error();
 		return 1;
 	}
