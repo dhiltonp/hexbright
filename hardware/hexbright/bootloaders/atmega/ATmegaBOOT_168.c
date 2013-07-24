@@ -1049,7 +1049,7 @@ static char check_sync(void)
 	return 0;
 }
 
-static void putch(char ch)
+static __attribute__((noinline)) void putch(char ch)
 {
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 	if(bootuart == 1) {
