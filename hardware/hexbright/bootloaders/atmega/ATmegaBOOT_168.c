@@ -824,8 +824,11 @@ int noreturn main(void)
 	}
 	/* end of monitor */
 #endif
-	else
+	else {
+		if (!check_sync())
+			putch(Resp_STK_UNKNOWN);
 		error();
+	}
 
 	} /* end of forever loop */
 
