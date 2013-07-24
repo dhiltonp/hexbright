@@ -688,7 +688,8 @@ int noreturn main(void)
 				length.word--;
 			}
 			putch(Resp_STK_OK);
-		}
+		} else
+			error();
 	}
 
 
