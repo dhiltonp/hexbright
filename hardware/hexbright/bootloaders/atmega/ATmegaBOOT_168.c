@@ -130,6 +130,7 @@
 #define LED_PORT PORTD
 #define LED_PIN  PIND
 #define LED      PIND5
+#define RLED     PIND2
 
 #elif defined __AVR_ATmega128__ || defined __AVR_ATmega1280__
 /* Onboard LED is connected to pin PB7 (e.g. Crumb128, PROBOmega128, Savvy128, Arduino Mega) */
@@ -179,6 +180,23 @@
 
 #define noreturn __attribute__((noreturn))
 
+/* data type for word/byte access */
+union byte_word_union {
+	uint16_t word;
+	uint8_t  byte[2];
+};
+union byte_word_dword_union {
+	uint32_t dword;
+	uint16_t word;
+	uint8_t  byte[4];
+};
+#ifdef RAMPZ
+typedef union byte_word_dword_union address_t;
+#else
+typedef union byte_word_union address_t;
+#endif
+typedef union byte_word_union length_t;
+
 /* pgmptr_t is just enough big to serve as a pointer for reading
  * PROGMEM bytes from the bootloader area.
  */
@@ -193,9 +211,11 @@ typedef uintptr_t pgmptr_t;
 #endif
 
 /* function prototypes */
+static void load_address(address_t *address);
 static void universal_command(void);
 static void prog_buffer(uintptr_t *, uint8_t *, uint16_t);
 static void error(void);
+static char check_sync(void);
 static void putch(char);
 static char getch(void);
 static void getNch(uint8_t);
@@ -263,23 +283,6 @@ do {								\
 # define STORE_TMP_TO_SPM_CREG	"out	%[creg],%[tmp]"
 #endif
 
-/* data type for word/byte access */
-union byte_word_union {
-	uint16_t word;
-	uint8_t  byte[2];
-};
-union byte_word_dword_union {
-	uint32_t dword;
-	uint16_t word;
-	uint8_t  byte[4];
-};
-#ifdef RAMPZ
-typedef union byte_word_dword_union address_t;
-#else
-typedef union byte_word_union address_t;
-#endif
-typedef union byte_word_union length_t;
-
 /* some variables */
 static prog_char signature_response[] = {
 	Resp_STK_INSYNC,
@@ -305,8 +308,6 @@ static uint8_t bootuart = 0;
 #endif
 
 static uint8_t timeout_on_getch = 1;
-
-static void noreturn (*app_start)(void) = 0x0000;
 
 static inline void led_on(void)
 {
@@ -335,28 +336,35 @@ static inline int is_led(void)
 #endif
 }
 
+// If there is no red LED, use the standard LED instead
+#ifndef RLED
+# define RLED	LED
+#endif
+
+static inline void rled_on(void)
+{
+	LED_PORT |= _BV(RLED);
+}
+
+static inline void rled_off(void)
+{
+	LED_PORT &= ~_BV(RLED);
+}
+
+static inline void __attribute__((naked)) noreturn app_start(void)
+{
+	asm volatile ("jmp	0");
+}
 
 /* execution starts here after RESET */
 void __attribute__((naked, section(".vectors"))) init(void)
 {
-	/* Clear __zero_reg__, set up stack pointer.  */
-	uint16_t register ptr;
-	asm volatile (
-		"clr	__zero_reg__"		"\n\t"
-		"out	%[sreg],__zero_reg__"	"\n\t"
-		"ldi	%B[ptr],hi8(%[ramend])"	"\n\t"
-		"ldi	%A[ptr],lo8(%[ramend])"	"\n\t"
-		"out	%[sph],%B[ptr]"		"\n\t"
-		"out	%[spl],%A[ptr]"		"\n\t"
-		: [ptr] "=d" (ptr)
-		: [ramend] "i" (RAMEND),
-		  [sreg] "i" (_SFR_IO_ADDR(SREG)),
-		  [sph] "i" (_SFR_IO_ADDR(SPH)),
-		  [spl] "i" (_SFR_IO_ADDR(SPL))
-		: "memory"
-		);
+	asm volatile ("clr __zero_reg__");
 
-#ifdef HAVE_DATA
+	SREG = 0;
+	SP = RAMEND;
+
+#ifndef NO_DATA
 	/* Copy initialized static data. */
 	extern char __data_start[], __data_end[], __data_load_start[];
 	register char *data_ptr = __data_start;
@@ -369,17 +377,17 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		"rjmp	2f"			"\n\t"
 	"1:"					"\n\t"
 #if defined (__AVR_HAVE_LPMX__)
-		"lpm	r0,Z+"			"\n\t"
+		"lpm	r0,%a[lptr]+"		"\n\t"
 #else
 		"lpm"				"\n\t"
-		"adiw	%[ptr],1"		"\n\t"
+		"adiw	%[lptr],1"		"\n\t"
 #endif
-		"st	X+,r0"			"\n\t"
+		"st	%a[ptr]+,r0"		"\n\t"
 	"2:"					"\n\t"
 		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
 		"cpc	%B[ptr],%[endhi]"	"\n\t"
 		"brne	1b"			"\n\t"
-		: [ptr] "+x" (data_ptr),
+		: [ptr] "+e" (data_ptr),
 		  [lptr] "+z" (data_load_ptr),
 		  [endhi] "=d" (data_endhi)
 		: [start] "p" (__data_start),
@@ -387,9 +395,9 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		  [load_start] "p" (__data_load_start)
 		: "r0", "memory"
 		);
-#endif	/* HAVE_DATA */
+#endif	/* NO_DATA */
 
-#ifdef HAVE_BSS
+#ifndef NO_BSS
 	/* Clear BSS.  */
 	extern char __bss_start[], __bss_end[];
 	register char *bss_ptr = __bss_start;
@@ -400,17 +408,17 @@ void __attribute__((naked, section(".vectors"))) init(void)
 		"ldi	%[endhi],hi8(%[end])"	"\n\t"
 		"rjmp	2f"			"\n\t"
 	"1:"					"\n\t"
-		"st	X+,__zero_reg__"	"\n\t"
+		"st	%a[ptr]+,__zero_reg__"	"\n\t"
 	"2:"					"\n\t"
 		"cpi	%A[ptr],lo8(%[end])"	"\n\t"
 		"cpc	%B[ptr],%[endhi]"	"\n\t"
 		"brne	1b"			"\n\t"
-		: [ptr] "+x" (bss_ptr),
+		: [ptr] "+e" (bss_ptr),
 		  [endhi] "=d" (bss_endhi)
 		: [end] "i" (__bss_end)
 		: "memory"
 		);
-#endif	/* HAVE_BSS */
+#endif	/* NO_BSS */
 
 	/* Call main().  */
 	asm volatile ("rjmp	main"	"\n\t");
@@ -542,6 +550,11 @@ int noreturn main(void)
 	/* flash onboard LED to signal entering of bootloader */
 	flash_led(NUM_LED_FLASHES + bootuart);
 
+#ifdef HEXBRIGHT
+	/* set red LED pin as output */
+	LED_DDR |= _BV(RLED);
+#endif
+
 	/* 20050803: by DojoCorp, this is one of the parts provoking the
 		 system to stop listening, cancelled from the original */
 	//putch('\0');
@@ -562,14 +575,14 @@ int noreturn main(void)
 
 	/* Request programmer ID */
 	else if(ch == Cmnd_STK_GET_SIGN_ON) {
-		if (getch() == Sync_CRC_EOP) {
-			static prog_char id[] = {
-				Resp_STK_INSYNC,
-				'A', 'V', 'R', ' ', 'I', 'S', 'P',
-				Resp_STK_OK, 0 };
-			putstr(id);
-		} else
-			error();
+		if (check_sync())
+			continue;
+
+		static prog_char id[] = {
+			Resp_STK_INSYNC,
+			'A', 'V', 'R', ' ', 'I', 'S', 'P',
+			Resp_STK_OK, 0 };
+		putstr(id);
 	}
 
 
@@ -628,39 +641,19 @@ int noreturn main(void)
 #endif
 	}
 
-
-	/* Set address, little endian. EEPROM in bytes, FLASH in words  */
-	/* Perhaps extra address bytes may be added in future to support > 128kB FLASH.  */
-	/* This might explain why little endian was used here, big endian used everywhere else.  */
+	/* Set address. */
 	else if(ch == Cmnd_STK_LOAD_ADDRESS) {
-		address.byte[0] = getch();
-		address.byte[1] = getch();
+		load_address(&address);
+	}
 
-		/* Both memory types are word-addressable, but byte addresses
-		 * are used for EEAR and the Z register in lpm/spm, so convert
-		 * the word address into a byte address here.
-		 */
-		asm (
-			"lsl	%A[addr]"	"\n\t"
-			"rol	%B[addr]"	"\n\t"
-#ifdef RAMPZ
-			"clr	%C[addr]"	"\n\t"
-			"rol	%C[addr]"	"\n\t"
-			"clr	%D[addr]"	"\n\t"
-			: [addr] "+r" (address.dword)
-#else
-			: [addr] "+r" (address.word)
-#endif
-		);
+	else if(ch == Cmnd_STK_CHECK_AUTOINC) {
 		nothing_response();
 	}
 
-
-	/* Universal SPI programming command, disabled.  Would be used for fuses and lock bits.  */
+	/* Universal SPI programming command.  */
 	else if(ch == Cmnd_STK_UNIVERSAL) {
 		universal_command();
 	}
-
 
 	/* Write memory, length is big endian and is in bytes  */
 	else if(ch == Cmnd_STK_PROG_PAGE) {
@@ -672,27 +665,31 @@ int noreturn main(void)
 		for (w=0;w<length.word;w++) {
 			buff[w] = getch();	                        // Store data in buffer, can't keep up with serial data stream whilst programming pages
 		}
-		if (getch() == Sync_CRC_EOP) {
-			if (memtype == 'E') {		                //Write to EEPROM one byte at a time
-				for(w=0;w<length.word;w++) {
-					eeprom_write_byte((void *)address.word,buff[w]);
-					address.word++;
-				}			
+
+		if (check_sync())
+			continue;
+
+		rled_on();
+		if (memtype == 'E') {		                //Write to EEPROM one byte at a time
+			while (length.word) {
+				eeprom_write_byte((void *)address.word,buff[w]);
+				address.word++;
+				length.word--;
 			}
-			else {					        //Write to FLASH one page at a time
+		} else {
+			//Write to FLASH one page at a time
 #ifdef RAMPZ
-				RAMPZ = address.byte[2];
+			RAMPZ = address.byte[2];
 #endif
-				if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
-				eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
-				prog_buffer(&address.word, buff, length.word);
-				/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
-				/* exit the bootloader without a power cycle anyhow */
-			}
-			putch(Resp_STK_INSYNC);
-			putch(Resp_STK_OK);
-		} else
-			error();
+			if ((length.byte[0] & 0x01)) length.word++;	//Even up an odd number of bytes
+			eeprom_busy_wait();			//Wait for previous EEPROM writes to complete
+			prog_buffer(&address.word, buff, length.word);
+			/* Should really add a wait for RWW section to be enabled, don't actually need it since we never */
+			/* exit the bootloader without a power cycle anyhow */
+		}
+		rled_off();
+		putch(Resp_STK_INSYNC);
+		putch(Resp_STK_OK);
 	}
 
 
@@ -703,34 +700,37 @@ int noreturn main(void)
 		length.byte[1] = getch();
 		length.byte[0] = getch();
 		memtype = getch();
-		if (getch() == Sync_CRC_EOP) {	                // Command terminator
-			putch(Resp_STK_INSYNC);
-			for (w=0;w < length.word;w++) {		        // Can handle odd and even lengths okay
-				if (memtype == 'E') {			// Byte access EEPROM read
-					putch(eeprom_read_byte((void *)address.word));
-					address.word++;
-				}
-				else {
 
-#ifdef RAMPZ
-					putch(pgm_read_byte_far(address.dword));
-#else
-					putch(pgm_read_byte_near(address.word));
-#endif
-					address.word++;
-				}
+		if (check_sync())
+			continue;
+
+		putch(Resp_STK_INSYNC);
+		led_on();
+		while (length.word) {
+			if (memtype == 'E') {
+				// Byte access EEPROM read
+				putch(eeprom_read_byte((void *)address.word));
 			}
-			putch(Resp_STK_OK);
+			else {
+#ifdef RAMPZ
+				putch(pgm_read_byte_far(address.dword));
+#else
+				putch(pgm_read_byte_near(address.word));
+#endif
+			}
+			address.word++;
+			length.word--;
 		}
+		led_off();
+		putch(Resp_STK_OK);
 	}
-
 
 	/* Get device signature bytes  */
 	else if(ch == Cmnd_STK_READ_SIGN) {
-		if (getch() == Sync_CRC_EOP) {
-			putstr(signature_response);
-		} else
-			error();
+		if (check_sync())
+			continue;
+
+		putstr(signature_response);
 	}
 
 
@@ -853,11 +853,41 @@ int noreturn main(void)
 	}
 	/* end of monitor */
 #endif
-	else 
+	else {
+		if (!check_sync())
+			putch(Resp_STK_UNKNOWN);
 		error();
+	}
 
 	} /* end of forever loop */
 
+}
+
+// Perhaps extra address bytes may be added in future to support > 128kB FLASH.
+// This might explain why little endian was used here, although big endian
+// is used everywhere else.
+static void load_address(address_t *address)
+{
+	address->byte[0] = getch();
+	address->byte[1] = getch();
+
+	/* Both memory types are word-addressable, but byte addresses
+	 * are used for EEAR and the Z register in lpm/spm, so convert
+	 * the word address into a byte address here.
+	 */
+	asm (
+		"lsl	%A[addr]"	"\n\t"
+		"rol	%B[addr]"	"\n\t"
+#ifdef RAMPZ
+		"clr	%C[addr]"	"\n\t"
+		"rol	%C[addr]"	"\n\t"
+		"clr	%D[addr]"	"\n\t"
+		: [addr] "+r" (address->dword)
+#else
+		: [addr] "+r" (address->word)
+#endif
+	);
+	nothing_response();
 }
 
 static void universal_command(void)
@@ -1038,8 +1068,17 @@ static void error(void) {
 		app_start();
 }
 
+static char check_sync(void)
+{
+	if (getch() != Sync_CRC_EOP) {
+		putch(Resp_STK_NOSYNC);
+		error();
+		return 1;
+	}
+	return 0;
+}
 
-static void putch(char ch)
+static __attribute__((noinline)) void putch(char ch)
 {
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
 	if(bootuart == 1) {
@@ -1061,7 +1100,7 @@ static void putch(char ch)
 }
 
 
-static char getch(void)
+static __attribute__((noinline)) char getch(void)
 {
 	uint32_t count = 0;
 #if defined(__AVR_ATmega128__) || defined(__AVR_ATmega1280__)
@@ -1146,22 +1185,22 @@ static void _putstr(pgmptr_t s)
 
 static void byte_response(uint8_t val)
 {
-	if (getch() == Sync_CRC_EOP) {
-		putch(Resp_STK_INSYNC);
-		putch(val);
-		putch(Resp_STK_OK);
-	} else
-		error();
+	if (check_sync())
+		return;
+
+	putch(Resp_STK_INSYNC);
+	putch(val);
+	putch(Resp_STK_OK);
 }
 
 
 static void nothing_response(void)
 {
-	if (getch() == Sync_CRC_EOP) {
-		putch(Resp_STK_INSYNC);
-		putch(Resp_STK_OK);
-	} else
-		error();
+	if (check_sync())
+		return;
+
+	putch(Resp_STK_INSYNC);
+	putch(Resp_STK_OK);
 }
 
 static void flash_led(uint8_t count)
