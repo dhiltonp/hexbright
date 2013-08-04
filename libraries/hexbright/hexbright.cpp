@@ -93,17 +93,8 @@ void hexbright::init_hardware() {
   Wire.begin();
   Serial.println("DEBUG MODE ON");
 #endif
+
 #if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
-  if(DEBUG==DEBUG_LIGHT) {
-    // do a full light range sweep, (printing all light intensity info)
-    set_light(0,1000,update_delay*1002);
-  } else if (DEBUG==DEBUG_TEMP) {
-    set_light(0, MAX_LEVEL, NOW);
-  } else if (DEBUG==DEBUG_LOOP) {
-    // note the use of TIME_MS/update_delay.
-    set_light(0, MAX_LEVEL, 2500/update_delay);
-  }
-  
 #ifdef FREE_RAM
   Serial.print("Ram available: ");
   Serial.print(freeRam());
@@ -113,8 +104,7 @@ void hexbright::init_hardware() {
   Serial.print("Flash checksum: ");
   Serial.println(flash_checksum());
 #endif
-
-#endif // DEBUG!=DEBUG_OFF
+#endif //(DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
   
 #ifdef ACCELEROMETER
   enable_accelerometer();
