@@ -234,6 +234,8 @@ int hexbright::freeRam () {
 ///////////////////Filters/////////////////////
 ///////////////////////////////////////////////
 
+#ifdef ACCELEROMETER
+
 inline int hexbright::low_pass_filter(int last_estimate, int current_reading) {
   // The sum of these two constant multipliers (which equals the divisor), 
   //  should not exceed 210 (to avoid integer overflow)
@@ -279,6 +281,7 @@ inline int hexbright::stdev_filter3(int last_estimate, int current_reading) {
   return (probability*last_estimate + (100-probability)*current_reading)/100;
 }
 
+#endif // ACCELEROMETER
 
 ///////////////////////////////////////////////
 ////////////////LIGHT CONTROL//////////////////
@@ -1068,7 +1071,7 @@ void hexbright::print_number(long number) {
 }
 
 
-
+#ifdef ACCELEROMETER
 //// Numeric entry
 static unsigned int read_value = 0;
 
@@ -1089,7 +1092,8 @@ void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
   }
   read_value = tmp2; 
 }
-#endif
+#endif // ACCELEROMETER
+#endif // (defined(LED) && defined(PRINT_NUMBER))
 
 void hexbright::print_power() {
   print_charge(GLED);
@@ -1265,7 +1269,7 @@ void hexbright::shutdown() {
 ///////////////////////////////////////////////
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
-
+#ifdef ACCELEROMETER
 void hexbright::fake_read_accelerometer(int* new_vector) {
   next_vector();
   for(int i=0; i<3; i++) {
@@ -1273,4 +1277,4 @@ void hexbright::fake_read_accelerometer(int* new_vector) {
     //vector(0)[i] = new_vector[i];
   }
 }
-
+#endif // ACCELEROMETER
