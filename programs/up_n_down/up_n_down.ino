@@ -162,6 +162,11 @@ void loop() {
 	hb.set_light(CURRENT_LEVEL, 0, NOW);
       else
 	hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
+
+      if(mode==MODE_NIGHTLIGHT) {
+	DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
+	updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
+      }
       break;
     case MODE_LEVEL:
       DBG(Serial.println("Mode = level"));
@@ -250,10 +255,6 @@ void loop() {
     if(i>0) {
       DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
       nightlight_brightness = i;
-    }
-    if(hb.button_just_released()) {
-      DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
-      updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
     }
     break; }
   case MODE_BLINK:

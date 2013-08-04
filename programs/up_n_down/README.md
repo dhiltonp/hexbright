@@ -27,7 +27,7 @@ Basic Operation
 *   3 Clicks-Nightlight mode
     *   When sitting still, the tailcap glows red.  When picked up, the light turns on to the brightest setting.  
     *   If not moved for 10 seconds it dims and the tailcap glows red again.
-    *   Holding the button will allow adjustment of the brightness of the light. This brightness will be saved in EEPROM and be remembered.
+    *   Holding the button will allow adjustment of the brightness of the light. This brightness will be saved in EEPROM and be remembered when the light is turned off.
 
 *   4 Clicks-SOS mode
     *   Light blinks SOS repeatededly in morse code
