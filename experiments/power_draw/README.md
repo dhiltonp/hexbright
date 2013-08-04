@@ -8,9 +8,11 @@ about 1/3rd of the time one of the rear leds is on, for whatever reason.
 
 ((9.9+3.8)/2)/3 = 2.283 milliamps consumed by the rear leds.
 
-So, the power draw is about 32.3 mA.
+So, the power draw is about 32.3 mA:<br>
+2400 mA-hours/32.3 mA = 74.30 hours, or about 3 days.
 
-2400 mA-hours/32.3 mA = 74.3 hours, or about 3 days.
+If you explicitly disable the accelerometer, you will save .25 milliamps:<br>
+2400 mA-hours/32.05 mA = 74.88 hours, or... about 3 days.
 
 
 If your battery is in perfect shape, your light should work for 3 days
@@ -78,9 +80,12 @@ OFF_LEVEL, .2<br>
 
 
 led, milliamps (led only, add to the power consumption of your
-brightness level)
-GLED, 9.9
-RLED, 3.8
+brightness level)<br>
+GLED, 9.9<br>
+RLED, 3.8<br>
+
+The accelerometer adds about .25 milliamps (it can be disabled by commenting out ACCELEROMETER in hexbright.h).<br>
+
 
 So, the power consumed with the green led active, with the front led
 at brightness level 1 is 9.9+8.4=18.3 mA, equivalent to just having the front
