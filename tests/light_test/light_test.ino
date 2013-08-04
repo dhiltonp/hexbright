@@ -4,7 +4,7 @@
 hexbright hb;
 
 #define OFF_MODE   0
-#define SWEEP_MODEMODE 1
+#define SWEEP_MODE 1
 char mode = OFF_MODE;
 
 void setup() {
