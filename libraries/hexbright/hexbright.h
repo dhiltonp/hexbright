@@ -42,7 +42,7 @@ either expressed or implied, of the FreeBSD Project.
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 #define FLASH_CHECKSUM // comment out to save 56 bytes when in debug mode
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
-//#define STROBE // comment out to save 260 bytes (strobe is designed for high-precision
+//#define STROBE // comment out to save 260 bytes (strobe is designed for higher-precision
 //               //  stroboscope code, not general periodic flashing)
 
 
