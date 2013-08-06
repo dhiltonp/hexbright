@@ -69,7 +69,7 @@ Overview
 
 *   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
 
-*   ['down_light'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) contains an example of using the accelerometer.
+*   ['down_light'](https://github.com/dhiltonp/hexbright/blob/master/hb-examples/down_light/down_light.ino) contains an example of using the accelerometer.
 
 I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
 
