@@ -1,7 +1,7 @@
 hexbright
 =========
 
-This is the easiest way to get started with programming your hexbright.
+This is the easiest way to get started with programming your [hexbright](http://hexbright.com/).
 
 Key Features
 ------------
