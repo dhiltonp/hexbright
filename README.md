@@ -14,6 +14,28 @@ Key Features
 
 *   Multiple debug modes to help diagnose problems ([DEBUG in hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71))
 
+Overview
+-----------------
+
+*   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
+    <br>(also use it to set [DEBUG modes](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71), [enable printing](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L75), or to [save space](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L39))
+
+*   ['temperature_calibration'](https://github.com/dhiltonp/hexbright/tree/master/programs/temperature_calibration) is one of the simplest programs you could write.
+
+*   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
+
+*   ['down_light'](https://github.com/dhiltonp/hexbright/blob/master/hb-examples/down_light/down_light.ino) contains an example of using the accelerometer.
+
+
+I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
+
+---
+
+   Be aware that this library is a work in progress.  In particular,<br>
+*  the accelerometer api will change
+*  power consumption ~~has not been optimized~~ [is about as good as it is going to get](https://github.com/dhiltonp/hexbright/tree/master/experiments/power_draw#optimizing-power-draw).
+
+Enjoy!
 
 Video Instructions
 ------------------
@@ -57,27 +79,3 @@ Text Instructions
     *  All firmwares in the programs directory have a readme describing their operation.  Arduino doesn't have an integrated method of viewing associated files, so you will need to open README.md in the corresponding folder for notes on operation.
 
 10. Under 'Edit', there is a right arrow.  Click it to upload the program.
-
-
-Overview
------------------
-
-*   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
-    <br>(also use it to set [DEBUG modes](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71), [enable printing](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L75), or to [save space](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L39))
-
-*   ['temperature_calibration'](https://github.com/dhiltonp/hexbright/tree/master/programs/temperature_calibration) is one of the simplest programs you could write.
-
-*   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
-
-*   ['down_light'](https://github.com/dhiltonp/hexbright/blob/master/hb-examples/down_light/down_light.ino) contains an example of using the accelerometer.
-
-I have translated most of the original sample programs to the library here: https://github.com/dhiltonp/samples
-
----
-
-   Be aware that this library is a work in progress.  In particular,<br>
-*  the accelerometer api will change
-*  power consumption ~~has not been optimized~~ [is about as good as it is going to get](https://github.com/dhiltonp/hexbright/tree/master/experiments/power_draw#optimizing-power-draw).
-
-Enjoy!
-
