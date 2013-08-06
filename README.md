@@ -20,6 +20,8 @@ Overview
 *   [libraries/hexbright/hexbright.h](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h) has a list of all available methods in the api, and is fairly well commented.
     <br>(also use it to set [DEBUG modes](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L71), [enable printing](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L75), or to [save space](https://github.com/dhiltonp/hexbright/blob/master/libraries/hexbright/hexbright.h#L39))
 
+*   ['up_n_down'](https://github.com/dhiltonp/hexbright/tree/master/programs/up_n_down) and ['tactical'](https://github.com/dhiltonp/hexbright/tree/master/programs/tactical) are probably the two most popular programs for daily use.
+
 *   ['temperature_calibration'](https://github.com/dhiltonp/hexbright/tree/master/programs/temperature_calibration) is one of the simplest programs you could write.
 
 *   ['functional'](https://github.com/dhiltonp/hexbright/tree/master/programs/functional) is a basic example of how a program might have multiple modes.
