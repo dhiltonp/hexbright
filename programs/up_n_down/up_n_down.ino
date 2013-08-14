@@ -61,6 +61,7 @@ const unsigned QUICKSTROBE=3;
 
 static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
+static char submode;
 
 static word nightlight_brightness;
 
@@ -92,7 +93,7 @@ byte updateEEPROM(word location, byte value) {
   byte c = EEPROM.read(location);
   DBG(Serial.print("Read "); Serial.print(c); Serial.print(" from EEPROM location: "); Serial.println(location));
   if(c!=value) {
-    DBG(Serial.print("Writing new value: "); Serial.println(value));
+    //DBG(Serial.print("Writing new value: "); Serial.println(value));
     EEPROM.write(location, value);
   }
   return value;
@@ -105,12 +106,12 @@ void setup() {
   hb.init_hardware();
 
 
-  DBG(Serial.println("Reading defaults from EEPROM"));
+  //DBG(Serial.println("Reading defaults from EEPROM"));
   locked = EEPROM.read(EEPROM_LOCKED);
-  DBG(Serial.print("Locked: "); Serial.println(locked));
+  //DBG(Serial.print("Locked: "); Serial.println(locked));
   nightlight_brightness = EEPROM.read(EEPROM_NIGHTLIGHT_BRIGHTNESS)*4;
   nightlight_brightness = nightlight_brightness==0 ? 1000 : nightlight_brightness;
-  DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
+  //DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
   
   DBG(Serial.println("Powered up!"));
 
@@ -138,7 +139,7 @@ void loop() {
   // Get the click count
   new_mode = hb.click_count();
   if(new_mode>=MODE_OFF) {
-    DBG(Serial.print("Clicks received: "); Serial.println((int)new_mode));
+    DBG(Serial.print("New mode: "); Serial.println((int)new_mode));
     if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
@@ -157,19 +158,17 @@ void loop() {
       new_mode=MODE_OFF;
       /* fall through */
     case MODE_OFF:
-      DBG(Serial.println("Mode = off"));
       if(BIT_CHECK(bitreg,GLOW_MODE))
 	hb.set_light(CURRENT_LEVEL, 0, NOW);
       else
 	hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
 
       if(mode==MODE_NIGHTLIGHT) {
-	DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
+	//DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
 	updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
       }
       break;
     case MODE_LEVEL:
-      DBG(Serial.println("Mode = level"));
       d = hb.difference_from_down();
       i = MAX_LEVEL;
       if(d <= 0.40) {
@@ -181,7 +180,6 @@ void loop() {
       hb.set_light(CURRENT_LEVEL, i, NOW); 
       break;
     case MODE_NIGHTLIGHT:
-      DBG(Serial.println("Mode = nightlight"));
       DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
@@ -189,7 +187,6 @@ void loop() {
 	hb.set_led(RLED, 100, 0, 1);
       break;
     case MODE_BLINK:
-      DBG(Serial.println("Mode = blink"));
       d = hb.difference_from_down();
       blink_frequency = blink_freq_map[0];
       if(d <= 0.40) {
@@ -226,10 +223,10 @@ void loop() {
 	  BIT_TOGGLE(bitreg,GLOW_MODE);
 	  BIT_SET(bitreg,GLOW_MODE_SET);
 	  if(!BIT_CHECK(bitreg,GLOW_MODE)) {
-	    DBG(Serial.println("Glow mode off"));
+	    //DBG(Serial.println("Glow mode off"));
 	    hb.set_led(GLED, 100); // work around a bug that keeps the light from shutting off
 	  } else {
-	    DBG(Serial.println("Glow mode"));
+	    //DBG(Serial.println("Glow mode"));
 	  }
 	} 
     }
