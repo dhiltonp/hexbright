@@ -485,7 +485,10 @@ inline void hexbright::_led_off(unsigned char led) {
     digitalWriteFast(DPIN_RLED_SW, LOW);
     pinModeFast(DPIN_RLED_SW, INPUT);
   } else { // DPIN_GLED
-    digitalWriteFast(DPIN_GLED, LOW);
+    // digitalWriteFast doesn't work when set to a non-digital value, 
+	//  using analogWrite. digitalWrite could be used, but would increase 
+	//  complexity in porting to straight AVR.
+    analogWrite(DPIN_GLED, LOW);
   }
 }
 
