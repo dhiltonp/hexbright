@@ -56,7 +56,7 @@ static unsigned long treg1=0;
 static int bitreg=0;
 const unsigned BLOCK_TURNING_OFF=0;
 const unsigned GLOW_MODE=1;
-const unsigned GLOW_MODE_SET=2;
+const unsigned GLOW_MODE_JUST_CHANGED=2;
 const unsigned QUICKSTROBE=3;
 
 static char mode = MODE_OFF;
@@ -91,9 +91,8 @@ int adjustLED() {
 
 byte updateEEPROM(word location, byte value) {
   byte c = EEPROM.read(location);
-  DBG(Serial.print("Read "); Serial.print(c); Serial.print(" from EEPROM location: "); Serial.println(location));
   if(c!=value) {
-    //DBG(Serial.print("Writing new value: "); Serial.println(value));
+    DBG(Serial.print("Write to EEPROM:"); Serial.print(value); Serial.print("to loc: "); Serial.println(location));
     EEPROM.write(location, value);
   }
   return value;
@@ -158,10 +157,13 @@ void loop() {
       new_mode=MODE_OFF;
       /* fall through */
     case MODE_OFF:
-      if(BIT_CHECK(bitreg,GLOW_MODE))
+      if(BIT_CHECK(bitreg,GLOW_MODE)) {
 	hb.set_light(CURRENT_LEVEL, 0, NOW);
-      else
+	DBG(Serial.println("Stay alive"));      
+      } else {
 	hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
+	DBG(Serial.println("Shut down"));
+      }
 
       if(mode==MODE_NIGHTLIGHT) {
 	//DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
@@ -205,9 +207,13 @@ void loop() {
   switch(mode) {
   case MODE_OFF:
     // glow mode
-    if(BIT_CHECK(bitreg,GLOW_MODE))
+    if(BIT_CHECK(bitreg,GLOW_MODE)) {
       hb.set_led(GLED, 100, 100, 64);
-    
+      hb.set_light(CURRENT_LEVEL, 0, NOW);
+    } else if(BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED)) {
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
+    }
+
     // holding the button
     if(hb.button_pressed() && !locked) {
 	double d = hb.difference_from_down();
@@ -219,19 +225,14 @@ void loop() {
 	  }
 	}
 	if(hb.button_pressed_time() >= glow_mode_time && d <= 0.1 && 
-	   !BIT_CHECK(bitreg,GLOW_MODE_SET) && !BIT_CHECK(bitreg,QUICKSTROBE) ) {
+	   !BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED) && !BIT_CHECK(bitreg,QUICKSTROBE) ) {
 	  BIT_TOGGLE(bitreg,GLOW_MODE);
-	  BIT_SET(bitreg,GLOW_MODE_SET);
-	  if(!BIT_CHECK(bitreg,GLOW_MODE)) {
-	    //DBG(Serial.println("Glow mode off"));
-	    hb.set_led(GLED, 100); // work around a bug that keeps the light from shutting off
-	  } else {
-	    //DBG(Serial.println("Glow mode"));
-	  }
+	  BIT_SET(bitreg,GLOW_MODE_JUST_CHANGED);
 	} 
+	
     }
     if(hb.button_just_released()) {
-      BIT_CLEAR(bitreg,GLOW_MODE_SET);
+      BIT_CLEAR(bitreg,GLOW_MODE_JUST_CHANGED);
       BIT_CLEAR(bitreg,QUICKSTROBE);
     }
     break;
@@ -250,7 +251,7 @@ void loop() {
    }
     int i = adjustLED();
     if(i>0) {
-      DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
+      //DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
       nightlight_brightness = i;
     }
     break; }
@@ -265,7 +266,7 @@ void loop() {
 	  } else {
 	    blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
 	  }
-	  DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
+	  //DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
 	  BIT_SET(bitreg,BLOCK_TURNING_OFF);
 	}
       }
