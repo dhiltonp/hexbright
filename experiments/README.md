@@ -1,10 +1,10 @@
 Some notes on hardware quirks (nearly all of this is handled internal to the library):
 
  * Don't read the button too frequently:
-  * you have to turn off the rear led and wait a little for voltage to stabilize
-  * bounce duration can be as high as 5ms, and our debouncing code only allows for one bounce (so... 6ms/2 would be the most frequent reads possible).
+  * You have to turn off the rear led and wait a little for voltage to stabilize
+  * Bounce duration can be as high as 5 milliseconds, and our debouncing code only allows for one bounce (so... 6ms/2 would be the most frequent reads possible).
  * When reading the current voltage (band gap reading):
-  * you need to pause for 150-250 microseconds for the reading to stabilize (the workaround is built into read_adc).
+  * You need to pause for 150-250 microseconds for the reading to stabilize (the workaround is built into read_adc).
  * When you run out of RAM you will get very weird errors (reboot loops, etc.). 
   * This cannot be fixed by the library, but it is a pain to debug. 
   * Use freeRam (or DEBUG_ON, which enables it automatically.)
