@@ -154,7 +154,7 @@ void hexbright::update() {
 #else
     do {
       now = micros();
-    } while (continue_time > now); // not ready for update
+    } while ((signed long)(continue_time - now) > 0); // not ready for update
 #endif  
 
   // if we're in debug mode, let us know if our loops are too large
