@@ -52,8 +52,8 @@ int action_mode = OFF_MODE;
 #define PLACES 3
 const int time[] = {12, 6, 10}; // 0-11 hours, 0-50 minutes, 0-9 minutes
 char place = 0; // hours, minutes or seconds?
-unsigned int action_time = 0; // HHMM
-unsigned int previous_action_time = 0; // HHMM
+unsigned int action_time = 0; // set a default (accessible via short clicks) in HHMM
+unsigned int previous_action_time = 0;
 int action_light_level = 0;
 
 int brightness_level = 0;
@@ -141,10 +141,10 @@ void loop() {
         action_time = (previous_action_time/100)*100;
         break;
       case 1: // greater minutes
-        action_time = (previous_action_time/10)*10 % 100;
+        action_time += (previous_action_time/10)*10 % 100;
         break;
       case 2: // lesser minutes
-        action_time = previous_action_time % 10;
+        action_time += previous_action_time % 10;
         break;
       }
       
