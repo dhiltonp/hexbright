@@ -720,32 +720,44 @@ void hexbright::enable_accelerometer() {
   // pinModeFast(DPIN_ACC_INT,  INPUT);
   // digitalWriteFast(DPIN_ACC_INT,  HIGH);
 }
+void print_binary(byte value) {
+  String s = String(value, BIN);
 
+  while(s.length()<8) {
+    s = "0"+s;
+  }
+  Serial.println(s);
+}
 void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
     if((millis()-init_time)>*/
   // advance which vector is considered the first
   next_vector();
-  while(1) {
+  char read=0;
+  while(read!=4) {
     Wire.beginTransmission(ACC_ADDRESS);
     Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT,
     Wire.endTransmission(false);
-    Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT
-    for(int i=0; i<4; i++) {
+    Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT // this is a blocking call
+    read = 0;
+    int i = 0;
+    for(i; i<4; i++) {
       if (!Wire.available())
-        continue;
+        continue; // something very weird has happened... we probably don't even have to check this
       char tmp = Wire.read();
-      if(tmp & 0x40) // Bx1xxxxxx, re-read per data sheet page 14
-        continue;
+	  if (tmp & 0x40) { // Bx1xxxxxx,
+		// invalid data, re-read per data sheet page 14
+		continue; // continue, so we finish flushing the read buffer.
+	  }
       if(i==3){ //read tilt register
         tilt = tmp;
       } else { // read vector
         if(tmp & 0x20) // Bxx1xxxxx, it's negative
           tmp |= 0xC0; // extend to B111xxxxx
-	vectors[current_vector+i] = stdev_filter3(vector(1)[i], tmp*(100/21.3));
+		vectors[current_vector+i] = stdev_filter3(vector(1)[i], tmp*(100/21.3));
       }
+	  read++; // successfully read.
     }
-    break;
   }
 }
 
