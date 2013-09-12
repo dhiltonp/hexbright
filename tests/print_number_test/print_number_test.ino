@@ -35,6 +35,7 @@ hexbright hb;
 
 void setup() {
   hb.init_hardware();
+  hb.set_light(0,0,NOW); // stay on when unplugged
 }
 
 #define COUNT 7
