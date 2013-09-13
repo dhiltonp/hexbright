@@ -90,7 +90,7 @@ void hexbright::init_hardware() {
 #if (DEBUG!=DEBUG_OFF)
   // Initialize serial busses
   Serial.begin(9600);
-  Wire.begin();
+  twi_init(); // for accelerometer
   Serial.println("DEBUG MODE ON");
 #endif
 
@@ -699,7 +699,7 @@ int down_vector[] = {0,0,0};
 
 void hexbright::enable_accelerometer() {
   // Configure accelerometer
-  unsigned char config[] = {
+  byte config[] = {
     ACC_REG_INTS,  // First register (see next line)
     0xE4,  // Interrupts: shakes, taps
     0x00,  // Mode: not enabled yet
@@ -707,15 +707,11 @@ void hexbright::enable_accelerometer() {
     0x0F,  // Tap threshold
     0x05   // Tap debounce samples
   };
-  Wire.beginTransmission(ACC_ADDRESS);
-  Wire.write(config, sizeof(config));
-  Wire.endTransmission();
+  twi_writeTo(ACC_ADDRESS, config, sizeof(config), true /*wait*/, true /*send stop*/);
   
   // Enable accelerometer
-  unsigned char enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
-  Wire.beginTransmission(ACC_ADDRESS);
-  Wire.write(enable, sizeof(enable));
-  Wire.endTransmission();
+  byte enable[] = {ACC_REG_MODE, 0x01};  // Mode: active!
+  twi_writeTo(ACC_ADDRESS, enable, sizeof(enable), true /*wait*/, true /*send stop*/);
   
   // pinModeFast(DPIN_ACC_INT,  INPUT);
   // digitalWriteFast(DPIN_ACC_INT,  HIGH);
@@ -735,16 +731,14 @@ void hexbright::read_accelerometer() {
   next_vector();
   char read=0;
   while(read!=4) {
-    Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(ACC_REG_XOUT);          // starting with ACC_REG_XOUT,
-    Wire.endTransmission(false);
-    Wire.requestFrom(ACC_ADDRESS, 4);  // read 4 registers (X,Y,Z), TILT // this is a blocking call
+    byte reg = ACC_REG_XOUT;
+    twi_writeTo(ACC_ADDRESS, &reg, sizeof(reg), true /*wait*/, true /*send stop*/);
+	byte acc_data[4];
+	twi_readFrom(ACC_ADDRESS, acc_data, sizeof(acc_data), true /*send stop*/);
     read = 0;
     int i = 0;
     for(i; i<4; i++) {
-      if (!Wire.available())
-        continue; // something very weird has happened... we probably don't even have to check this
-      char tmp = Wire.read();
+      char tmp = acc_data[i];
 	  if (tmp & 0x40) { // Bx1xxxxxx,
 		// invalid data, re-read per data sheet page 14
 		continue; // continue, so we finish flushing the read buffer.
@@ -763,11 +757,10 @@ void hexbright::read_accelerometer() {
 
 unsigned char hexbright::read_accelerometer(unsigned char acc_reg) {
   if (!digitalReadFast(DPIN_ACC_INT)) {
-    Wire.beginTransmission(ACC_ADDRESS);
-    Wire.write(acc_reg);
-    Wire.endTransmission(false);       // End, but do not stop!
-    Wire.requestFrom(ACC_ADDRESS, 1);
-    return Wire.read();
+    byte acc_data;
+    twi_writeTo(ACC_ADDRESS, &acc_reg, sizeof(acc_reg), true /*wait*/, true /*send stop*/);
+    twi_readFrom(ACC_ADDRESS, &acc_data, sizeof(acc_data), true /*send stop*/);
+    return acc_data;
   }
   return 0;
 }

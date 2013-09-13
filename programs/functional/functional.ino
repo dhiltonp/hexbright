@@ -29,7 +29,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <hexbright.h>
 
-#include <Wire.h>
+#include <twi.h>
 
 #define OFF_MODE 0
 #define BLINKY_MODE 1

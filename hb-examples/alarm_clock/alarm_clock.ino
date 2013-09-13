@@ -1,5 +1,5 @@
 #include <hexbright.h>
-#include <Wire.h>
+#include <twi.h>
 #include <Time.h>
 
 hexbright hb;

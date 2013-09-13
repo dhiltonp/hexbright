@@ -1,4 +1,4 @@
-#include <Wire.h>
+#include <twi.h>
 
 // uncomment #ACCELEROMETER in hexbright.h
 #include <hexbright.h>

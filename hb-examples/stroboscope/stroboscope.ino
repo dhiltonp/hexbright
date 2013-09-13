@@ -1,6 +1,6 @@
 // uncomment (delete // before) '#define STROBE' in hexbright.h
 #include <hexbright.h>
-#include <Wire.h>
+#include <twi.h>
 
 hexbright hb;
 

@@ -1,4 +1,4 @@
-#include <Wire.h>
+#include <twi.h>
 
 #include <hexbright.h>
 

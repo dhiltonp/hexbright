@@ -29,7 +29,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <hexbright.h>
 
-#include <Wire.h>
+#include <twi.h>
 
 // number of milliseconds between updates
 #define OFF_MODE 0
