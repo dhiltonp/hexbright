@@ -34,7 +34,7 @@ extern "C"
   #endif
 
   #ifndef TWI_BUFFER_LENGTH
-  #define TWI_BUFFER_LENGTH 32
+  #define TWI_BUFFER_LENGTH 6 // for hexbright, our maximum rx/tx buffer size is 6
   #endif
 
   #define TWI_READY 0
