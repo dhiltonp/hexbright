@@ -27,6 +27,9 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <print_number.h>
+
+#define BUILD_HACK // always put this right before including hexbright.h, after including libraries
 #include <hexbright.h>
 #include <twi.h>
 
@@ -48,8 +51,8 @@ void loop() {
     hb.set_light(CURRENT_LEVEL, brightness, 50);
   }
   
-  if(!hb.printing_number()) {
-    hb.print_number(hb.get_thermal_sensor());
+  if(!printing_number()) {
+    print_number(hb.get_thermal_sensor());
 //    hb.print_number(hb.get_fahrenheit());
   }
 }

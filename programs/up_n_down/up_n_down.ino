@@ -23,6 +23,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <click_counter.h>
+#include <utilities.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 #include <twi.h>
 #include <EEPROM.h>
@@ -114,7 +118,7 @@ void setup() {
   
   DBG(Serial.println("Powered up!"));
 
-  hb.config_click_count(click);
+  config_click_count(click);
 } 
 
 void loop() {
@@ -127,7 +131,7 @@ void loop() {
 #endif
   {
     // Charging
-    hb.print_charge(GLED);
+    print_charge(GLED);
 
     // Low battery
     if(mode != MODE_OFF && hb.low_voltage_state())
@@ -136,7 +140,7 @@ void loop() {
   }
 
   // Get the click count
-  new_mode = hb.click_count();
+  new_mode = click_count();
   if(new_mode>=MODE_OFF) {
     DBG(Serial.print("New mode: "); Serial.println((int)new_mode));
     if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {

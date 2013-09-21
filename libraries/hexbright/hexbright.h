@@ -41,7 +41,6 @@ either expressed or implied, of the FreeBSD Project.
 
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
-#define PRINT_NUMBER // comment out to save 626 bytes if you don't need to print numbers (but need the LEDs)
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 #define FLASH_CHECKSUM // comment out to save 56 bytes when in debug mode
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
@@ -92,6 +91,8 @@ either expressed or implied, of the FreeBSD Project.
 #else
 #define OVERHEAT_TEMPERATURE 320 // 340 in original code, 320 = 130* fahrenheit/55* celsius (with calibration)
 #endif
+
+#define UPDATE_DELAY 8.33333333
 
 
 ///////////////////////////////////
@@ -269,9 +270,6 @@ class hexbright {
   // returns LED_OFF, LED_WAIT, or LED_ON
   // Takes up 54 bytes.
   static unsigned char get_led_state(unsigned char led);
-  // returns the opposite color from the one passed in
-  // Takes up 12 bytes.
-  static unsigned char flip_color(unsigned char color);
   
   
   // Get the raw thermal sensor reading. Takes up 18 bytes.
@@ -295,55 +293,10 @@ class hexbright {
 
 
   
-  // A convenience function that will print the charge state over the led specified
-  //  CHARGING = 350 ms on, 350 ms off.
-  //  CHARGED = solid on
-  //  BATTERY = nothing.
-  // If you are using print_number, call it before this function if possible.
-  // I recommend the following (if using print_number()):
-  //  ...code that may call print number...
-  //  if(!printing_number())
-  //    print_charge(GLED);
-  //  ...end of loop...
-  // See also: print_power
-  static void print_charge(unsigned char led);
   // returns CHARGING, CHARGED, or BATTERY
   static unsigned char get_charge_state();
   
   
-  // prints a number through the rear leds
-  // 120 = 1 red flashes, 2 green flashes, one long red flash (0), 2 second delay.
-  // the largest printable value is +/-999,999,999, as the left-most digit is reserved.
-  // negative numbers begin with a leading long flash.
-  static void print_number(long number);
-  // currently printing a number
-  static BOOL printing_number();
-  // reset printing; this immediately terminates the currently printing number.
-  static void reset_print_number();
-
-  // reads a value between min_digit to max_digit-1, see hb-examples/numeric_input
-  //  Twist the light to change the value.  When the current value changes, 
-  //   the green LED will flash, and the number that is currently being printed 
-  //   will be reset.  Suppose you are at 2 and you want to go to 5.  Rotate 
-  //   clockwise 3 green flashes, and you'll be there.
-  //  The current value is printed through the rear leds.
-  // Get the result with get_input_digit.
-  static void input_digit(unsigned int min_digit, unsigned int max_digit);
-  // grab the value that is currently selected (based on twist orientation)
-  static unsigned int get_input_digit();
-
-  // prints charge state (using print_charge).
-  //  if in a low battery state, flashes red for 50 ms, followed by a 1 second delay
-  // If you are using print_number, call it before this function if possible.
-  // I recommend the following (if using print_number()):
-  //  ...code that may call print number...
-  //  if(!printing_number())
-  //    print_charge(GLED);
-  //  ...end of loop...
-  // see also print_charge for usage
-  static void print_power();
-
-
 #ifdef ACCELEROMETER
   // accepts things like ACC_REG_TILT
   // TILT is now read by default in the private method, at the cost of 12 bytes.
@@ -466,8 +419,6 @@ class hexbright {
   static void detect_overheating();
   static void detect_low_battery();
   
-  static void update_number();
-  
   // controls actual led hardware set.
   //  As such, state = HIGH or LOW
   static void _set_led(unsigned char led, unsigned char state);
@@ -532,7 +483,7 @@ class hexbright {
 /////////////HARDWARE INIT, UPDATE/////////////
 ///////////////////////////////////////////////
 
-const float update_delay = 8.3333333; // in lock-step with the accelerometer
+const float update_delay = UPDATE_DELAY; // in lock-step with the accelerometer
 unsigned long continue_time;
 
 #ifdef STROBE
@@ -671,7 +622,7 @@ void hexbright::update() {
   read_button();
   // turn on (or off) the leds, if appropriate
   adjust_leds();
-#ifdef PRINT_NUMBER
+#ifdef PRINT_NUMBER_H
   update_number();
 #endif
 #else
@@ -1423,123 +1374,6 @@ void hexbright::print_vector(int* vector, const char* label) {
 
 
 ///////////////////////////////////////////////
-//////////////////UTILITIES////////////////////
-///////////////////////////////////////////////
-
-long _number = 0;
-unsigned char _color = GLED;
-int print_wait_time = 0;
-
-#if (defined(LED) && defined(PRINT_NUMBER))
-BOOL hexbright::printing_number() {
-  return _number || print_wait_time;
-}
-
-void hexbright::reset_print_number() {
-  _number = 1;
-  print_wait_time = 0;
-}
-
-void hexbright::update_number() {
-  if(_number>0) { // we have something to do...
-#if (DEBUG==DEBUG_NUMBER)
-    static int last_printed = 0;
-    if(last_printed != _number) {
-      last_printed = _number;
-      Serial.print("number remaining (read from right to left): ");
-      Serial.println(_number);
-    }
-#endif
-    if(!print_wait_time) {
-      if(_number==1) { // minimum delay between printing numbers
-        print_wait_time = 2500/update_delay;
-        _number = 0;
-        return;
-      } else {
-        print_wait_time = 300/update_delay;
-      }
-      if(_number/10*10==_number) {
-#if (DEBUG==DEBUG_NUMBER)
-        Serial.println("zero");
-#endif
-        //        print_wait_time = 500/update_delay;
-        set_led(_color, 400);
-      } else {
-        set_led(_color, 120);
-        _number--;
-      }
-      if(_number && !(_number%10)) { // next digit?
-        print_wait_time = 600/update_delay;
-        _color = flip_color(_color);
-        _number = _number/10;
-      }
-    }
-  }
-  
-  if(print_wait_time) {
-    print_wait_time--;
-  }
-}
-
-unsigned char hexbright::flip_color(unsigned char color) {
-  return (color+1)%2;
-}
-
-
-void hexbright::print_number(long number) {
-  // reverse number (so it prints from left to right)
-  BOOL negative = false;
-  if(number<0) {
-    number = 0-number;
-    negative = true;
-  }
-  _color = GLED;
-  _number=1; // to guarantee printing when dealing with trailing zeros (100 can't be stored as 001, use 1001)
-  do {
-    _number = _number * 10 + (number%10);
-    number = number/10;
-    _color = flip_color(_color);
-  }  while(number>0);
-  if(negative) {
-    set_led(flip_color(_color), 500);
-    print_wait_time = 600/update_delay;
-  }
-}
-
-
-#ifdef ACCELEROMETER
-//// Numeric entry
-static unsigned int read_value = 0;
-
-unsigned int hexbright::get_input_digit() {
-  return read_value;
-}
-
-void hexbright::input_digit(unsigned int min_digit, unsigned int max_digit) {
-  unsigned int tmp2 = 999 - atan2(vector(0)[0], vector(0)[2])*159 - 500; // scale from 0-999, counterclockwise = higher
-  tmp2 = (tmp2*(max_digit-min_digit))/1000+min_digit;
-  if(tmp2 == read_value) {
-    if(!printing_number()) {
-      print_number(tmp2);
-    }
-  } else {
-    reset_print_number();
-    set_led(GLED,100);
-  }
-  read_value = tmp2; 
-}
-#endif // ACCELEROMETER
-#endif // (defined(LED) && defined(PRINT_NUMBER))
-
-void hexbright::print_power() {
-  print_charge(GLED);
-  if (low_voltage_state() && get_led_state(RLED) == LED_OFF) {
-    set_led(RLED,50,1000);
-  }
-}
-
-
-///////////////////////////////////////////////
 ////////////////TEMPERATURE////////////////////
 ///////////////////////////////////////////////
 
@@ -1678,15 +1512,6 @@ void hexbright::read_charge_state() {
 unsigned char hexbright::get_charge_state() {
   // see more details on how this works at the top of this section
   return charge_state & (charge_state>>4);
-}
-
-void hexbright::print_charge(unsigned char led) {
-  unsigned char charge_state = get_charge_state();
-  if(charge_state == CHARGING && get_led_state(led) == LED_OFF) {
-    set_led(led, 350, 350);
-  } else if (charge_state == CHARGED) {
-    set_led(led,50);
-  }
 }
 
 
