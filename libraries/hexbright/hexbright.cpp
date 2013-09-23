@@ -32,9 +32,9 @@ either expressed or implied, of the FreeBSD Project.
 #include <limits.h>
 
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
-#include "includes/NotArduino.h"
+#include "pc_stubs.h"
 #else
-#include "includes/pin_interface.h"
+#include "read_adc.h"
 #include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
