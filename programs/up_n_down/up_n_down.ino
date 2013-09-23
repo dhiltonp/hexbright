@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <click_counter.h>
-#include <utilities.h>
+#include <print_power.h>
 
 #define BUILD_HACK
 #include <hexbright.h>

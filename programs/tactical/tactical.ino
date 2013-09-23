@@ -27,7 +27,7 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-#include <utilities.h>
+#include <print_power.h>
 
 #define BUILD_HACK
 #include <hexbright.h>
