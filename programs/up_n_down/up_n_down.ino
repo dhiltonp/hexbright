@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define BUILD_HACK
 #include <hexbright.h>
-#include <twi.h>
 #include <EEPROM.h>
 
 #if (DEBUG==DEBUG_PROGRAM)

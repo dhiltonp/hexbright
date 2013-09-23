@@ -29,8 +29,6 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <hexbright.h>
 
-#include <twi.h>
-
 hexbright hb;
 
 void setup() {

@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #ifdef __AVR // we're compiling for arduino
 #include <Arduino.h>
-#include "../twi/twi.h"
+#include "twi.h"
 #include "../digitalWriteFast/digitalWriteFast.h"
 #define BOOL boolean
 #else

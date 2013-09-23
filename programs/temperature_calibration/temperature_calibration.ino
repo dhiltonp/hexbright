@@ -31,7 +31,6 @@ either expressed or implied, of the FreeBSD Project.
 
 #define BUILD_HACK // always put this right before including hexbright.h, after including libraries
 #include <hexbright.h>
-#include <twi.h>
 
 // Usage notes are in the readme file in this same directory.
 hexbright hb;

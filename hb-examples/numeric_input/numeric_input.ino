@@ -1,5 +1,4 @@
 #include <hexbright.h>
-#include <twi.h>
 
 hexbright hb;
 
