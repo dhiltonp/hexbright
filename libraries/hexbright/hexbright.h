@@ -39,13 +39,23 @@ either expressed or implied, of the FreeBSD Project.
 #define BOOL bool
 #endif
 
+
+// Pin assignments
+#define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
+#define DPIN_GLED 5
+#define DPIN_PWR 8
+#define DPIN_DRV_MODE 9
+#define DPIN_DRV_EN 10
+#define APIN_TEMP 0
+#define APIN_CHARGE 3
+#define APIN_BAND_GAP 14
+
+
 /// Some space-saving options
 #define LED // comment out save 786 bytes if you don't use the rear LEDs
 #define ACCELEROMETER //comment out to save 1500 bytes if you don't need the accelerometer
 #define FLASH_CHECKSUM // comment out to save 56 bytes when in debug mode
 #define FREE_RAM // comment out to save 146 bytes when in debug mode
-//#define STROBE // comment out to save 260 bytes (strobe is designed for higher-precision
-//               //  stroboscope code, not general periodic flashing)
 
 
 // The above #defines can help if you are running out of flash.  If you are having weird lockups,
@@ -109,9 +119,6 @@ either expressed or implied, of the FreeBSD Project.
 
 #define NOW 1
 
-// turn off strobe... (aka max unsigned long)
-// this is only valid for STROBE, which is disabled by default (see above)
-#define STROBE_OFF -1
 
 // led constants
 #define RLED 0
@@ -196,47 +203,6 @@ class hexbright {
   //    hb.set_light(...)
   static int light_change_remaining();
 
-#ifdef STROBE
-/////// STROBING ///////
-
-  // Strobing features, limitations, and usage notes:
-  //  - not compatible with set_light
-  //    (turn off light with set_light(0,0,NOW) before using strobes
-  //     turn off strobe with set_strobe_delay(STROBE_OFF) before using set_light)
-  //  - the strobe will not drift over time (hooray!)
-  //  - strobes will occur within a 25 microsecond window of their update time or not at all
-  //     (flicker indicates that we missed our 25 microsecond window)
-  //  - strobes occur during the update function; the longer your code takes to execute, the less strobes will occur.
-  //  - strobes close to a multiple of 8333 will cause update() to occasionally take slightly 
-  //     longer to execute, eventually snap back to the start time, something like this:
-  //       8.33 8.33 8.33 8.7 9.4 9.4 9.4 4.83 8.33 (9.4 = 9400 microsecond delay).
-  //  - strobe code ignores overheating.  Under most circumstances this should be ok.
-  
-  // delay between strobes in microseconds.
-  //  STROBE_OFF turns off strobing.
-  void set_strobe_delay(unsigned long delay);
-  // set duration to a value between 50 and 3000.
-  //  below 50, you will not see the light
-  // 75-400 work well for strobing; 
-  //  above 3000 you will lose some accelerometer samples.
-  void set_strobe_duration(int duration);
-  
-  // convenience functions:
-  //  example usage: 
-  //  set_strobe_fpm(59500);
-  //  get_strobe_fpm(); // returns 59523
-  //  get_strobe_error(); // returns 703
-  //  you are strobing at 59523 fpm, +- 703 fpm.
-  // This code requires calibration/tuning
-  
-  //  fpm accepted is from 0-65k
-  //  the higher the fpm, the higher the error.
-  void set_strobe_fpm(unsigned int fpm);
-  // returns the actual fpm you can currently expect
-  unsigned int get_strobe_fpm();
-  // returns the current margin of error in fpm
-  unsigned int get_strobe_error();
-#endif // STROBE
 
   // Button debouncing is handled inside the library.
   // Returns true if the button is being pressed.
@@ -457,8 +423,10 @@ class hexbright {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+
 #ifdef BUILD_HACK
 
+#include "update_spin.h"
 #include <limits.h>
 
 #ifndef __AVR // we're not compiling for arduino (probably testing), use these stubs
@@ -468,15 +436,6 @@ class hexbright {
 #include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
-// Pin assignments
-#define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch
-#define DPIN_GLED 5
-#define DPIN_PWR 8
-#define DPIN_DRV_MODE 9
-#define DPIN_DRV_EN 10
-#define APIN_TEMP 0
-#define APIN_CHARGE 3
-#define APIN_BAND_GAP 14
 
 
 ///////////////////////////////////////////////
@@ -484,13 +443,7 @@ class hexbright {
 ///////////////////////////////////////////////
 
 const float update_delay = UPDATE_DELAY; // in lock-step with the accelerometer
-unsigned long continue_time;
 
-#ifdef STROBE
-unsigned long next_strobe = STROBE_OFF;
-unsigned long strobe_delay = 0;
-int strobe_duration = 100;
-#endif
 
 hexbright::hexbright() {
 }
@@ -544,74 +497,14 @@ void hexbright::init_hardware() {
   read_charge_state();
   if(get_charge_state()==BATTERY)
     press_button();
-  
-  continue_time = micros();
 }
 
 word loopCount;
 void hexbright::update() {
-  unsigned long now;
   loopCount++;
 
-#if (DEBUG==DEBUG_LOOP)
-  unsigned long start_time=micros();
-#endif
-
-
-#ifdef STROBE  
-  while (true) {
-    do {
-      now = micros();
-    } while (next_strobe > now && // not ready for strobe
-	     continue_time > now); // not ready for update
-
-    if (next_strobe <= now) {
-      if (now - next_strobe <26) {
-	digitalWriteFast(DPIN_DRV_EN, HIGH);
-	delayMicroseconds(strobe_duration);
-	digitalWriteFast(DPIN_DRV_EN, LOW);
-      }
-      next_strobe += strobe_delay;
-    }
-    if(continue_time <= now) {
-      if(strobe_delay>update_delay && // we strobe less than once every 8333 microseconds
-	 next_strobe-continue_time < 4000) // and the next strobe is within 4000 microseconds (may occur before we return)
-	continue;
-      else
-	break;
-    }
-  } // do nothing... (will short circuit once every 70 minutes (micros maxint))
-#else
-    do {
-      now = micros();
-    } while ((signed long)(continue_time - now) > 0); // not ready for update
-#endif  
-
-  // if we're in debug mode, let us know if our loops are too large
-#if (DEBUG!=DEBUG_OFF && DEBUG!=DEBUG_PRINT)
-  static int i=0;
-#if (DEBUG==DEBUG_LOOP)
-  static unsigned long last_time = 0;
-  if(!i) {
-    Serial.print("Time used: ");
-    Serial.print(start_time-last_time);
-    Serial.println("/8333");
-  }
-  last_time = now;
-#endif
-  if(now-continue_time>5000 && !i) {
-    // This may be caused by too much processing for our update_delay, or by too many print statements)
-    //  If you're triggering this, your button and light will react more slowly, and some accelerometer
-    //  data is being missed.
-    Serial.println("WARNING: code is too slow");
-  }
-  if (!i)
-    i=1000/update_delay; // display loop output every second
-  else
-    i--;
-#endif
-  
-  
+  update_spin();
+ 
   // power saving modes described here: http://www.atmel.com/Images/2545s.pdf
   //run overheat protection, time display, track battery usage
   
@@ -644,11 +537,8 @@ void hexbright::update() {
   // change light levels as requested
   adjust_light();
 
-  // advance time at the same rate as values are changed in the accelerometer.
-  //  advance continue_time here, so the first run through short-circuits, 
-  //  meaning we will read hardware immediately after power on.
-  continue_time = continue_time+(int)(1000*update_delay);
 }
+
 
 #ifdef FREE_RAM
 //// freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
@@ -832,34 +722,6 @@ void hexbright::apply_max_light_level() {
   }
 }
 
-
-#ifdef STROBE
-
-///////////////STROBE CONTROL//////////////////
-
-void hexbright::set_strobe_delay(unsigned long delay) {
-  strobe_delay = delay;
-  next_strobe = micros()+strobe_delay;
-}
-
-void hexbright::set_strobe_duration(int duration) {
-  strobe_duration = duration;
-}
-
-void hexbright::set_strobe_fpm(unsigned int fpm) {
-  set_strobe_delay(60000000/fpm);
-}
-
-unsigned int hexbright::get_strobe_fpm() {
-  return 60000000 / (strobe_delay/8*8);
-}
-
-unsigned int hexbright::get_strobe_error() {
-  // 90000000 because we have an error of 3*8 microseconds; 1.5 above, 1.5 below
-  return 90000000 / ((strobe_delay/8)*8) - 90000000 / ((strobe_delay/8+1)*8);
-}
-
-#endif
 
 ///////////////////////////////////////////////
 ///////////////////LED CONTROL/////////////////
