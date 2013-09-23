@@ -30,8 +30,6 @@ either expressed or implied, of the FreeBSD Project.
 
 
 #include <math.h>
-#include <Wire.h>
-
 
 // Pin assignments
 #define DPIN_RLED_SW 2 // both red led and switch.  pinMode OUTPUT = led, pinMode INPUT = switch

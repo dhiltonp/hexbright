@@ -1,6 +1,3 @@
-#include <twi.h>
-
-// uncomment #ACCELEROMETER in hexbright.h
 #include <hexbright.h>
 
 hexbright hb;
