@@ -1,5 +1,5 @@
-#ifndef UTILITIES_H
-#define UTILITIES_H
+#ifndef PRINT_POWER_H
+#define PRINT_POWER_H
 
 #include "hexbright.h"
 
@@ -32,4 +32,4 @@ extern void print_charge(unsigned char led);
 extern void print_power();
 
 
-#endif // UTILITIES_H
+#endif // PRINT_POWER_H
