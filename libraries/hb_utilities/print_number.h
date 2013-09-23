@@ -1,8 +1,11 @@
 #ifndef PRINT_NUMBER_H
 #define PRINT_NUMBER_H
 
-#include "utilities.h"
 #include "hexbright.h"
+
+// returns the opposite color from the one passed in
+// Takes up 12 bytes.
+extern unsigned char flip_color(unsigned char color);
 
 // prints a number through the rear leds
 // 120 = 1 red flashes, 2 green flashes, one long red flash (0), 2 second delay.

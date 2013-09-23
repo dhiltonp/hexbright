@@ -1,9 +1,5 @@
 #include "print_power.h"
 
-unsigned char flip_color(unsigned char color) {
-  return (color+1)%2;
-}
-
 void print_power() {
   print_charge(GLED);
   if (hexbright::low_voltage_state() && hexbright::get_led_state(RLED) == LED_OFF) {

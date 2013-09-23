@@ -3,10 +3,6 @@
 
 #include "hexbright.h"
 
-// returns the opposite color from the one passed in
-// Takes up 12 bytes.
-extern unsigned char flip_color(unsigned char color);
-
 // A convenience function that will print the charge state over the led specified
 //  CHARGING = 350 ms on, 350 ms off.
 //  CHARGED = solid on

@@ -5,6 +5,10 @@ unsigned char _color = GLED;
 int print_wait_time = 0;
 
 
+unsigned char flip_color(unsigned char color) {
+  return (color+1)%2;
+}
+
 BOOL printing_number() {
   return _number || print_wait_time;
 }
