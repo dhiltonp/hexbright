@@ -30,6 +30,18 @@ consumes 80-90% of the 5.4 mA in standby. This would vary based on the differenc
 I believe Christian put the power regulator at its point in order to prevent any power draw when the light is off,
 but as a consequence the standby time is 5-10x shorter than it would otherwise be.
 
+I need to run some numbers, calculating the difference between expected and observed power loss.
+
+Formula for power loss in the voltage regulator: [(4.2 - 3.3) * .500 + (4.2*.09)](http://en.wikipedia.org/wiki/Low-dropout_regulator#Efficiency_and_Heat_Dissipation)<br>
+.5 milliamps consumed by other components would cause a power loss of .83 milliamps, with 1.33 milliamps used<br>
+1 milliamp consumed, loss of 1.27 milliamps, 2.27 milliamps used<br>
+2 milliamps consumed, loss of 2.178, 4.178 milliamps used<br>
+3 milliamps consumed, loss of 3.078, 6.078 milliamps used<br>
+
+2.64 milliamps consumed, loss of 2.75 milliamps would be 5.4 milliamps used.
+We are probably powering about 2.64 milliamps. Lowering the power used for each device will roughly double the savings listed on the data sheet.
+
+
 Raw Data
 --------
 Recorded with a Fluke 287
