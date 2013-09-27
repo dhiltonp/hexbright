@@ -1,3 +1,6 @@
+#include <print_power.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 
 hexbright hb;
@@ -37,7 +40,7 @@ void loop() {
       mode=AUTO_OFF_MODE;
       auto_off_start_time=millis();
     } else { // flash LED because we're plugged in
-      hb.print_charge(GLED);
+      print_charge(GLED);
     }
   } else if (mode==AUTO_OFF_MODE) {
     if(millis()-auto_off_start_time > AUTO_OFF_WAIT) {

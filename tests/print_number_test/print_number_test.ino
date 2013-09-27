@@ -27,6 +27,9 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <print_number.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 
 // Usage notes are in the readme file in this same directory.
@@ -43,8 +46,8 @@ int number = 0;
 
 void loop() {
   hb.update();
-  if(!hb.printing_number()) {
-    hb.print_number(numbers[number]);
+  if(!printing_number()) {
+    print_number(numbers[number]);
     number = (number+1)%COUNT;
   }
 }

@@ -1,3 +1,6 @@
+#include <print_power.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 
 hexbright hb;
@@ -45,6 +48,6 @@ void loop() {
     }
     last_dp = dp;
   } else if (mode==OFF_MODE) {
-    hb.print_power();
+    print_power();
   } 
 }

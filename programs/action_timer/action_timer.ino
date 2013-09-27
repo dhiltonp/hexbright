@@ -27,6 +27,11 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <print_power.h>
+#include <print_number.h>
+#include <input_digit.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 #include <Time.h>
 
@@ -68,8 +73,8 @@ void loop() {
       // nothing's happening, turn off
       hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       // or print charge state if we're plugged in
-      if(!hb.printing_number()) {
-        hb.print_charge(GLED);
+      if(!printing_number()) {
+        print_charge(GLED);
       }
     } else if (action_mode == WAIT_MODE) {
       // we are waiting to do something
@@ -78,9 +83,9 @@ void loop() {
         action_mode=OFF_MODE;
       } else {
         // display our current wait time...
-        if(!hb.printing_number()) {
+        if(!printing_number()) {
           // print hours and minutes remaining
-          hb.print_number(action_time_remaining(action_time));
+          print_number(action_time_remaining(action_time));
         }
       }
     }
@@ -129,9 +134,9 @@ void loop() {
     }
     break;
   case SET_ACTION_MODE:
-    hb.input_digit(action_time*10, action_time*10+time[place]);
+    input_digit(action_time*10, action_time*10+time[place]);
     if(hb.button_just_released() && hb.button_pressed_time()>300) {
-      action_time = hb.get_input_digit();
+      action_time = get_input_digit();
       place++;
     } else if (hb.button_just_released() && hb.button_pressed_time()<300) {
       // use the value from the last timer (0 on the first run)

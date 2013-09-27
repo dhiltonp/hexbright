@@ -1,3 +1,8 @@
+#include <print_power.h>
+#include <print_number.h>
+#include <input_digit.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 #include <Time.h>
 
@@ -34,14 +39,14 @@ void loop() {
       mode = SET_MODE;
       hb.set_light(0, 150, 300);
     }
-    if(!hb.printing_number()) {
-      hb.print_charge(GLED); 
+    if(!printing_number()) {
+      print_charge(GLED); 
     }
     break;
   case SET_MODE:
-    hb.input_digit(duration*10, duration*10+time[place]);
+    input_digit(duration*10, duration*10+time[place]);
     if(hb.button_just_released() && hb.button_pressed_time()<300) {
-      duration = hb.get_input_digit();
+      duration = get_input_digit();
       place++;
     }
     if(place==PLACES) {
@@ -59,9 +64,9 @@ void loop() {
       mode = WAKE_MODE;
     } else {
       // display our current wait time...
-      if(!hb.printing_number()) {
+      if(!printing_number()) {
         // print hours, and minutes remaining
-        hb.print_number(duration_remaining(duration));
+        print_number(duration_remaining(duration));
       } 
     }
     break;

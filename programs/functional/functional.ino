@@ -26,7 +26,10 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies, 
 either expressed or implied, of the FreeBSD Project.
 */
+#include <print_power.h>
+#include <print_number.h>
 
+#define BUILD_HACK
 #include <hexbright.h>
 
 #define OFF_MODE 0
@@ -74,12 +77,12 @@ void loop() {
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
-    if(!hb.printing_number()) {
-      hb.print_number(hb.get_fahrenheit());
+    if(!printing_number()) {
+      print_number(hb.get_fahrenheit());
     }
   } else if (mode == OFF_MODE) { // charging, or turning off
-    if(!hb.printing_number()) {
-      hb.print_charge(GLED);
+    if(!printing_number()) {
+      print_charge(GLED);
     }
   }
 }

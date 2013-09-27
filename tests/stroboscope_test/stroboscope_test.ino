@@ -1,3 +1,4 @@
+#define BUILD_HACK
 #include <hexbright.h>
 
 hexbright hb;

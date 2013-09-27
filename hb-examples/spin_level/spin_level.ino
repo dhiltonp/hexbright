@@ -27,6 +27,9 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <print_power.h>
+
+#define BUILD_HACK
 #include <hexbright.h>
 
 hexbright hb;
@@ -61,5 +64,5 @@ void loop() {
       hb.set_light(CURRENT_LEVEL, brightness_level, 100);
     }
   }
-  hb.print_power();
+  print_power();
 }
