@@ -151,20 +151,6 @@ class hexbright {
   // Put update in your loop().  It will block until update_delay has passed.
   static void update();
   
-  // When plugged in: turn off the light immediately,
-  //   leave the cpu running (as it cannot be stopped)
-  // When on battery power: turn off the light immediately,
-  //   turn off the cpu in about .5 seconds.
-  // Loop will run a few more times, and if your code turns
-  //  on the light, shutoff will be canceled. As a result,
-  //  if you do not reset your variables you may get weird
-  //  behavior after turning the light off and on again in
-  // less than .5 seconds.
-
-  // WARNING: deprecated, do not use
-  //   use set_light(,OFF_LEVEL,);
-  static void shutdown();
-  
   
 #ifdef FREE_RAM
   // freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
@@ -1367,18 +1353,6 @@ void hexbright::read_charge_state() {
 unsigned char hexbright::get_charge_state() {
   // see more details on how this works at the top of this section
   return charge_state & (charge_state>>4);
-}
-
-
-///////////////////////////////////////////////
-//////////////////SHUTDOWN/////////////////////
-///////////////////////////////////////////////
-
-void hexbright::shutdown() {
-#if (DEBUG!=DEBUG_OFF)
-  Serial.println("don't use shutdown, use set_light(,OFF_LEVEL,)");
-#endif
-  set_light(MAX_LOW_LEVEL, OFF_LEVEL, NOW);
 }
 
 
