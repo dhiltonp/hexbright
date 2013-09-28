@@ -139,22 +139,7 @@ class hexbright {
   
   // Put update in your loop().  It will block until update_delay has passed.
   static void update();
-  
-  // When plugged in: turn off the light immediately,
-  //   leave the cpu running (as it cannot be stopped)
-  // When on battery power: turn off the light immediately,
-  //   turn off the cpu in about .5 seconds.
-  // Loop will run a few more times, and if your code turns
-  //  on the light, shutoff will be canceled. As a result,
-  //  if you do not reset your variables you may get weird
-  //  behavior after turning the light off and on again in
-  // less than .5 seconds.
 
-  // WARNING: deprecated, do not use
-  //   use set_light(,OFF_LEVEL,);
-  static void shutdown();
-  
-  
 #ifdef FREE_RAM
   // freeRam function from: http://playground.arduino.cc/Code/AvailableMemory
   // Arduino uses ~400 bytes of ram, leaving us with 600 to play with
@@ -170,8 +155,7 @@ class hexbright {
   //     hb.print_number(hb.freeRam());
   static int freeRam ();
 #endif  
-  
-  
+
   // go from start_level to end_level over time (in milliseconds)
   // level is from -2 to 1000.
   // -2 = CURRENT_LEVEL (whatever the light is currently at), can be used as start_level or end_level

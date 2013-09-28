@@ -1254,19 +1254,6 @@ void hexbright::print_charge(unsigned char led) {
   }
 }
 
-
-///////////////////////////////////////////////
-//////////////////SHUTDOWN/////////////////////
-///////////////////////////////////////////////
-
-void hexbright::shutdown() {
-#if (DEBUG!=DEBUG_OFF)
-  Serial.println("don't use shutdown, use set_light(,OFF_LEVEL,)");
-#endif
-  set_light(MAX_LOW_LEVEL, OFF_LEVEL, NOW);
-}
-
-
 ///////////////////////////////////////////////
 //KLUDGE BECAUSE ARDUINO DOESN'T SUPPORT CLASS VARIABLES/INSTANTIATION
 ///////////////////////////////////////////////
