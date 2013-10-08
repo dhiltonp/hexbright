@@ -39,21 +39,33 @@ void setup() {
 #define SPIN_LEVEL_MODE 1
 int mode = OFF_MODE;
 
-static int brightness_level = 0;
+int brightness_level = 0;
+
+int press_time = 0;
+int press_used = false;
+
 
 void loop() {
   hb.update();
-  if(hb.button_just_released() && hb.button_pressed_time()<300) {
-    brightness_level = 1;
-    hb.set_light(CURRENT_LEVEL, brightness_level, NOW);
-    mode = SPIN_LEVEL_MODE; 
-  } else if (hb.button_pressed_time()>300) {
-    hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
-    mode = OFF_MODE; 
-  }
   
+  if(!hb.button_pressed())
+    press_used = false;
+    
+  if(!press_used && hb.button_pressed() && hb.button_pressed_time()>30) {
+    if(mode==OFF_MODE) {
+      brightness_level = 1;
+      hb.set_light(CURRENT_LEVEL, brightness_level, NOW);
+      mode = SPIN_LEVEL_MODE; 
+      press_used = true;
+    } else if (mode==SPIN_LEVEL_MODE) {
+      hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
+      mode = OFF_MODE;
+      press_used = true;
+    }
+  }
+
   if(mode==SPIN_LEVEL_MODE) {
-    if(abs(hb.difference_from_down()-.5)<.35) { // not pointing up or down
+    if(abs(hb.difference_from_down()-.5)<.35) { // acceleration is not along the light axis, where noise causes random fluctuations.
       char spin = hb.get_spin();
       brightness_level = brightness_level + spin;
       brightness_level = brightness_level>1000 ? 1000 : brightness_level;
