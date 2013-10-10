@@ -27,8 +27,11 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+
 #include <off_mode.h>
 #include <spin_mode.h>
+#include <sos_mode.h>
+
 #include <click_switcher.h>
 #include <print_power.h>
 
@@ -38,16 +41,15 @@ either expressed or implied, of the FreeBSD Project.
 hexbright hb;
 
 void setup() {
-  hb.init_hardware();
+  hexbright::init_hardware();
+  config_click_count(350);
 }
 
 
 void loop() {
-  hb.update();
+  hexbright::update();
   
-  switcher<class spin_mode, class off_mode> sw;
-  
-  sw.run();
+  switcher<class off_mode, class spin_mode, class sos_mode>::run();
   
   print_power();
 }

@@ -4,10 +4,15 @@
 #include "hexbright.h"
 
 
-static byte current_mode;
-static byte last_mode;
+#ifndef MODES
+#define MODES 6
+#endif
+
+static byte current_mode = 0;
+static byte last_mode = 0;
+
 // unused modes/cases are removed at compile time
-template<class A = mode, class B = mode, class C = mode, class D = mode, class E = mode> 
+template<class A = off_mode, class B = mode, class C = mode, class D = mode, class E = mode, class F = mode> 
 class switcher {
   public:
   static void run() {
@@ -28,6 +33,9 @@ class switcher {
       case 4:
         E::stop_mode();
         break;
+      case 5:
+        F::stop_mode();
+        break;
       }
       switch(get_current_mode()) {
       case 0:
@@ -44,6 +52,9 @@ class switcher {
         break;
       case 4:
         E::start_mode();
+        break;
+      case 5:
+        F::start_mode();
         break;
       }
     } else {
@@ -62,6 +73,9 @@ class switcher {
         break;
       case 4:
         E::continue_mode();
+        break;
+      case 5:
+        F::continue_mode();
         break;
       }
     }
