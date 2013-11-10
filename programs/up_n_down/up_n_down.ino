@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <click_counter.h>
 #include <print_power.h>
 
+// These next two lines must come after all other library #includes
 #define BUILD_HACK
 #include <hexbright.h>
 #include <EEPROM.h>

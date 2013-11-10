@@ -29,7 +29,8 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <print_number.h>
 
-#define BUILD_HACK // always put this right before including hexbright.h, after including libraries
+// These next two lines must come after all other library #includes
+#define BUILD_HACK
 #include <hexbright.h>
 
 // Usage notes are in the readme file in this same directory.

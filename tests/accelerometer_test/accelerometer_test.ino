@@ -1,5 +1,6 @@
 #include <print_binary.h>
 
+// These next two lines must come after all other library #includes
 #define BUILD_HACK
 #include <hexbright.h>
 

@@ -31,6 +31,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <print_number.h>
 #include <input_digit.h>
 
+// These next two lines must come after all other library #includes
 #define BUILD_HACK
 #include <hexbright.h>
 #include <Time.h>
