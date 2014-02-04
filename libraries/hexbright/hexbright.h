@@ -177,6 +177,7 @@ class hexbright {
   // 1000 = MAX_LEVEL, max high power mode
   // max change time is about 4.5 minutes ((2^15-1)*8.333 milliseconds).
   //  I have had weird issues when passing in 3*60*1000, 180000 works fine though.
+  // Specific algorithms can be customized via #defines (see set_light_level.h)
   static void set_light(int start_level, int end_level, long time);
   // get light level (before overheat protection adjustment)
   static int get_light_level();
@@ -365,7 +366,6 @@ class hexbright {
   
  private:
   static void adjust_light();
-  static void set_light_level(unsigned long level);
   static void apply_max_light_level();
   static void detect_overheating();
   static void detect_low_battery();
@@ -421,10 +421,17 @@ class hexbright {
 #include "../digitalWriteFast/digitalWriteFast.h"
 #endif
 
+
+/// set #define-based options
+
+// select the appropriate set_light_level based on #defines...
+#include "set_light_level.h"
+
 // default to no debug mode if no override has been set
 #ifndef DEBUG
 #define DEBUG DEBUG_OFF
 #endif
+
 
 ///////////////////////////////////////////////
 /////////////HARDWARE INIT, UPDATE/////////////
@@ -652,43 +659,7 @@ int hexbright::light_change_remaining() {
   return tmp*update_delay;
 }
 
-void hexbright::set_light_level(unsigned long level) {
-  // LOW 255 approximately equals HIGH 48/49.  There is a color change.
-  // Values < 4 do not provide any light.
-  // I don't know about relative power draw.
-  
-  // look at linearity_test.ino for more detail on these algorithms.
-  
-#if (DEBUG==DEBUG_LIGHT)
-  Serial.print("light level: ");
-  Serial.println(level);
-#endif
-  digitalWriteFast(DPIN_PWR, HIGH);
-  if(level == 0) {
-    // lowest possible power, but cpu still running (DPIN_PWR still high)
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, 0);
-  } else if(level == OFF_LEVEL) {
-    // power off (DPIN_PWR LOW)
-    digitalWriteFast(DPIN_PWR, LOW);
-    digitalWriteFast(DPIN_DRV_MODE, LOW);
-    analogWrite(DPIN_DRV_EN, 0);
-  } else { 
-    byte value;
-    if(level<=500) {
-      digitalWriteFast(DPIN_DRV_MODE, LOW);
-      value = (byte)(.000000633*(level*level*level)+.000632*(level*level)+.0285*level+3.98);
-    } else {
-      level -= 500;
-      digitalWriteFast(DPIN_DRV_MODE, HIGH);
-      value = (byte)(.00000052*(level*level*level)+.000365*(level*level)+.108*level+44.8);
-    }
-    analogWrite(DPIN_DRV_EN, value);
-  }
-}
-
 void hexbright::adjust_light() {
-  // sets actual light level, altering value to be perceptually linear, based on steven's area brightness (cube root)
   if(change_done<=change_duration) {
     int light_level = hexbright::get_max_light_level();
     set_light_level(light_level);

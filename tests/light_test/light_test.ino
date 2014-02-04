@@ -1,3 +1,9 @@
+#include <hexbright.h> // include DEBUG definitions
+
+// alter the default behavior of the hexbright library
+#define SET_LIGHT_LEVEL_SIMPLE
+#define DEBUG DEBUG_LIGHT
+
 // These next two lines must come after all other library #includes
 #define BUILD_HACK
 #include <hexbright.h>
@@ -25,3 +31,4 @@ void loop() {
     }
   }
 }
+
