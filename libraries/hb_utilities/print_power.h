@@ -22,7 +22,7 @@ extern void print_charge(unsigned char led);
 // I recommend the following (if using print_number()):
 //  ...code that may call print number...
 //  if(!printing_number())
-//    print_charge(GLED);
+//    print_power();
 //  ...end of loop...
 // see also print_charge for usage
 extern void print_power();
