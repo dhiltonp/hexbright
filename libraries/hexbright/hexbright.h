@@ -214,7 +214,7 @@ class hexbright {
   // on_time (0-MAXINT) = time in milliseconds before led goes to LED_WAIT state
   // wait_time (0-MAXINT) = time in ms before LED_WAIT state decays to LED_OFF state.
   //   Defaults to 100 ms.
-  // brightness (0-255) = brightness of rear led. note that rled brightness only has 2 bits of resolution and has visible flahing at the lowest setting.
+  // brightness (0-255) = brightness of rear led. note that rled brightness only has 2 bits of resolution and has visible flicker at the lowest setting.
   //   Defaults to 255 (full brightness)
   // Takes up 16 bytes.
   static void set_led(unsigned char led, int on_time, int wait_time=100, unsigned char brightness=255);
