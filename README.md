@@ -35,7 +35,7 @@ I have translated most of the original sample programs to the library here: http
 
    Be aware that this library is a work in progress.  In particular,<br>
 *  the accelerometer api will change
-*  power consumption ~~has not been optimized~~ [is about as good as it is going to get](https://github.com/dhiltonp/hexbright/tree/master/experiments/power_draw#optimizing-power-draw).
+*  power consumption has not been optimized ~~is about as good as it is going to get~~ [(see notes)](https://github.com/dhiltonp/hexbright/tree/master/experiments/power_draw#optimizing-power-draw).
 
 Enjoy!
 
