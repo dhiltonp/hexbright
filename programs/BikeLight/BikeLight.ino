@@ -78,7 +78,7 @@ void loop() {
       mode = BLINKY_MODE;
     }
   }
-  if(hb.button_pressed_time()>1000) { // if held for over 700 milliseconds (whether or not it's been released), go to OFF mode
+  if(hb.button_pressed_time()>1000) { // if held for over 1000 milliseconds (whether or not it's been released), go to OFF mode
     mode = OFF_MODE;
     hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     // in case we are under usb power, reset state
@@ -89,9 +89,12 @@ void loop() {
   //// Actions over time for a given mode
   if(mode == BLINKY_MODE) { // random blink
     static int i = 0;
-    if(!i) {      
-      hb.set_light(MAX_LEVEL,0,random(30,350)); // fade from max to 0 over a random time btwn 30 and 350 milliseconds (length flash "on")
-      i=random(50,500)/8.3333; // only light up every random number of times btwn 6 and 60 through; which should equate to 50 - 500 ms (length flash "off")
+    if(!i) {     
+     // fade from max to 0 over a random time btwn 30 and 350 milliseconds (length flash "on") 
+      hb.set_light(MAX_LEVEL,0,random(30,350)); 
+      // only light up every random number of times btwn 6 and 60 through
+      // which should equate to 50 - 500 ms (length flash "off")
+      i=random(50,500)/8.3333; 
     }
     i--;
   } else if (mode == CYCLE_MODE) { // print the current flashlight temperature
