@@ -1,7 +1,4 @@
 /*
-Copyright (c) 2014, "Matthew Sargent" <matthew.c.sargent@gmail.com>
-
-This code is a deriviative of the code up_n_down as compyrighted below:
 Copyright (c) 2013, "Whitney Battestilli" <whitney@battestilli.net>
 All rights reserved.
 
@@ -27,9 +24,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
+Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.sargent@gmail.com>
+
+This code is a direct modification of the code up_n_down as copyrighted above.
+
 Description:
 
-Single click: turn on to previously stored level.
 1 click: Turn light on (from off) at the saved level.
 2 clicks: Blink
 3 clicks: Nightlight mode, movement turns on using nightlight stored level
@@ -60,6 +60,7 @@ Click and Hold (while ON):
 #define EEPROM_LOCKED 0
 #define EEPROM_NIGHTLIGHT_BRIGHTNESS 1
 #define EEPROM_STORED_BRIGHTNESS 2
+#define EEPROM_SIGNATURE_LOC 3
 
 // Modes
 #define MODE_OFF 0
@@ -72,8 +73,9 @@ Click and Hold (while ON):
  // Defaults
 static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
-static const int nightlight_timeout = 10000; // timeout before nightlight powers down after any movement
+static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
+static const char* EEPROM_Signature = "Set_and_Remember";
 
 // State
 static unsigned long treg1=0; 
@@ -93,7 +95,7 @@ static word nightlight_brightness;
 const word blink_freq_map[] = {70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
-static byte locked;
+static byte locked = false;
 
 static word stored_brightness;
 
@@ -115,6 +117,16 @@ int adjustLED() {
   return -1;
 }
 
+//Write the bytes contained in the array to the location in EEPROM starting
+//at startAddr. WWrite numBytes number of bytes.
+boolean writebytesEEPROM(int startAddr, const byte* array, int numBytes) {
+  int i;
+  for (i = 0; i < numBytes; i++) {
+    updateEEPROM(startAddr+i,array[i]);
+  }
+  return true;
+}
+
 byte updateEEPROM(word location, byte value) {
   byte c = EEPROM.read(location);
   if(c!=value) {
@@ -124,13 +136,39 @@ byte updateEEPROM(word location, byte value) {
   return value;
 }
 
+//Check the EEPROM to see if the signature has been written, if found return true
+boolean checkEEPROMInited(word location) {
+  //read starting at location and look for the signature.
+  int i = 0;
+
+  for (i = 0; i < strlen(EEPROM_Signature); i++) {
+    if (EEPROM_Signature[i] != EEPROM.read(location+i))
+      return false; //Does not match EEPROM not initialized
+  }
+
+  return true; //The signature was found...
+}
+
 void setup() {
+
   // We just powered on!  That means either we got plugged
   // into USB, or the user is pressing the power button.
   hb = hexbright();
   hb.init_hardware();
 
+  //The following code detects if the EEPRONM has been initialized
+  //if it has not, initialize it.
+  if(!checkEEPROMInited(EEPROM_SIGNATURE_LOC)) {
 
+    updateEEPROM(EEPROM_LOCKED,0);  
+    updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, 100);
+    updateEEPROM(EEPROM_STORED_BRIGHTNESS, 150);
+
+    //now mark the firsrun as false
+    int length = strlen(EEPROM_Signature) + 1; //this will cause the nul to be written too.
+    writebytesEEPROM(EEPROM_SIGNATURE_LOC,(const byte*)EEPROM_Signature, length);
+  }
+  
   //DBG(Serial.println("Reading defaults from EEPROM"));
   locked = EEPROM.read(EEPROM_LOCKED);
   //DBG(Serial.print("Locked: "); Serial.println(locked));
@@ -138,12 +176,10 @@ void setup() {
   nightlight_brightness = nightlight_brightness==0 ? 1000 : nightlight_brightness;
   //DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 
-
   //Fetch the stored brightness from EEPROM and use it when turning on and flashing, etc.
   stored_brightness = EEPROM.read(EEPROM_STORED_BRIGHTNESS)*4;
   stored_brightness = stored_brightness==0 ? 1000 : stored_brightness; //If zero, default to 1000
   DBG(Serial.print("Stored Brightness: "); Serial.println(stored_brightness));
-
 
   DBG(Serial.println("Powered up!"));
 
@@ -219,17 +255,8 @@ void loop() {
       updateEEPROM(EEPROM_STORED_BRIGHTNESS, stored_brightness/4);
       break;
 
-    //remove this action because we want to light to just come on at the STORED level.
-    case MODE_LEVEL: //turning on the light while held at some angle.
-      //d = hb.difference_from_down();
-      //i = MAX_LEVEL;
-      //if(d <= 0.40) {
-	//if(d <= 0.10)
-	 // i = 1;
-	//else
-	 // i = MAX_LOW_LEVEL;
-      //}
-      //hb.set_light(CURRENT_LEVEL, i, NOW); 
+    case MODE_LEVEL: 
+      //just turn on the light to the saved level
       hb.set_light(CURRENT_LEVEL, stored_brightness, NOW); 
       break;
       
@@ -294,9 +321,9 @@ void loop() {
       BIT_CLEAR(bitreg,QUICKSTROBE);
     }
     break;
+
   case MODE_LEVEL:
-    //adjustLED();
-    i = adjustLED();
+    i = adjustLED(); //Adjust the led and save it
     if(i>0) {
       DBG(Serial.print("Stored Brightness: "); Serial.println(i));
       stored_brightness = i;
