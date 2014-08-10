@@ -37,11 +37,10 @@ Description:
 5 clicks: locking
 
 Click and Hold (while ON): 
-  Set level; point down lowest, point horizon highest, save this level.
+  Set level; point down = lowest, point horizon = highest, save this level.
   In Nightlight Mode; point down lowest, point horizon highest, save this as nightlight level.
   
 */
-
 
 #include <click_counter.h>
 #include <print_power.h>
@@ -75,6 +74,8 @@ static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
+
+// EEPROM signature used to verify EEPROM has been initialize
 static const char* EEPROM_Signature = "Set_and_Remember";
 
 // State
@@ -91,13 +92,12 @@ static char new_mode = MODE_OFF;
 static char submode;
 
 static word nightlight_brightness;
+static word stored_brightness;
 
 const word blink_freq_map[] = {70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
 static byte locked = false;
-
-static word stored_brightness;
 
 hexbright hb;
 
@@ -117,16 +117,17 @@ int adjustLED() {
   return -1;
 }
 
-//Write the bytes contained in the array to the location in EEPROM starting
-//at startAddr. WWrite numBytes number of bytes.
-boolean writebytesEEPROM(int startAddr, const byte* array, int numBytes) {
+//Write the bytes contained in the parameter array to the location in 
+//EEPROM starting at startAddr. Write numBytes number of bytes.
+void writebytesEEPROM(int startAddr, const byte* array, int numBytes) {
   int i;
   for (i = 0; i < numBytes; i++) {
     updateEEPROM(startAddr+i,array[i]);
   }
-  return true;
 }
 
+//Update the EEPROM, but check to make sure we actually need to update it first.
+//This saves writing to the EEPROM when it is not necessary (important).
 byte updateEEPROM(word location, byte value) {
   byte c = EEPROM.read(location);
   if(c!=value) {
@@ -136,17 +137,16 @@ byte updateEEPROM(word location, byte value) {
   return value;
 }
 
-//Check the EEPROM to see if the signature has been written, if found return true
+//Check the EEPROM to see if the signature has been written, if found, return true
 boolean checkEEPROMInited(word location) {
   //read starting at location and look for the signature.
   int i = 0;
 
   for (i = 0; i < strlen(EEPROM_Signature); i++) {
     if (EEPROM_Signature[i] != EEPROM.read(location+i))
-      return false; //Does not match EEPROM not initialized
+      return false; //EEPROM does not match Signature, so EEPROM not initialized
   }
-
-  return true; //The signature was found...
+  return true; //The signature was found, so the EEPROM is initialized...
 }
 
 void setup() {
@@ -156,19 +156,21 @@ void setup() {
   hb = hexbright();
   hb.init_hardware();
 
-  //The following code detects if the EEPRONM has been initialized
-  //if it has not, initialize it.
+  //The following code detects if the EEPROM has been initialized
+  //If it has not, initialize it.
   if(!checkEEPROMInited(EEPROM_SIGNATURE_LOC)) {
 
     updateEEPROM(EEPROM_LOCKED,0);  
     updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, 100);
     updateEEPROM(EEPROM_STORED_BRIGHTNESS, 150);
 
-    //now mark the firsrun as false
+    //now store the signature so we know the EEPROM has been initialized
     int length = strlen(EEPROM_Signature) + 1; //this will cause the nul to be written too.
     writebytesEEPROM(EEPROM_SIGNATURE_LOC,(const byte*)EEPROM_Signature, length);
   }
-  
+
+  //Initialize variables using the values stored in the EEPROM  
+
   //DBG(Serial.println("Reading defaults from EEPROM"));
   locked = EEPROM.read(EEPROM_LOCKED);
   //DBG(Serial.print("Locked: "); Serial.println(locked));
@@ -176,10 +178,10 @@ void setup() {
   nightlight_brightness = nightlight_brightness==0 ? 1000 : nightlight_brightness;
   //DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 
-  //Fetch the stored brightness from EEPROM and use it when turning on and flashing, etc.
+  //Fetch the stored brightness from EEPROM and use it when turning on.
   stored_brightness = EEPROM.read(EEPROM_STORED_BRIGHTNESS)*4;
   stored_brightness = stored_brightness==0 ? 1000 : stored_brightness; //If zero, default to 1000
-  DBG(Serial.print("Stored Brightness: "); Serial.println(stored_brightness));
+  //DBG(Serial.print("Stored Brightness: "); Serial.println(stored_brightness));
 
   DBG(Serial.println("Powered up!"));
 
@@ -227,15 +229,14 @@ void loop() {
   // Do the actual mode change
   if(new_mode>=MODE_OFF && new_mode!=mode) { // has the mdoe actually changed?
     double d;
-    int i;
 
     // we're changing mode
     switch(new_mode) {
 
     case MODE_LOCKED:
       locked=!locked;//toggle the locked mode
-      updateEEPROM(EEPROM_LOCKED,locked); //remember if we are locked.
-      new_mode=MODE_OFF; //turn off the light even when exiting the locked mode.
+      updateEEPROM(EEPROM_LOCKED,locked); //remember if we are locked or not.
+      new_mode=MODE_OFF; //keep the light off when entering or exiting lock mode.
       /* fall through */
     case MODE_OFF:
       //Glow mode means that we do not shutdown the uProcessor, this is done by
@@ -281,14 +282,14 @@ void loop() {
       break;
     }
     mode=new_mode;
-  }
-  
-  int i = 0;
-
+  } 
 
   /////////////////////////////////////////////////////////////////
   // Check for mode and do in-mode activities
   /////////////////////////////////////////////////////////////////
+  
+  int i;
+
   switch(mode) {
   case MODE_OFF:
     // glow mode
@@ -341,6 +342,7 @@ void loop() {
     } else if(time > treg1 + nightlight_timeout) {
       hb.set_light(CURRENT_LEVEL, 0, 1000);
    }
+
     i = adjustLED();
     if(i>0) {
       //DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
@@ -430,6 +432,4 @@ void loop() {
     }
     break;
   }  
-
-}
-  
+} 
