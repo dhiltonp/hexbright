@@ -1,46 +1,46 @@
 /*
 Copyright (c) 2013, "Whitney Battestilli" <whitney@battestilli.net>
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ All rights reserved.
+ 
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ 1. Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 /*
 Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.sargent@gmail.com>
-
-This code is a direct modification of the code up_n_down as copyrighted above.
-
-Description:
-
-1 click: Turn light on (from off) at the saved level.
-2 clicks: Blink
-3 clicks: Nightlight mode, movement turns on using nightlight stored level
-4 clicks: SOS using remembered level
-5 clicks: locking
-
-Click and Hold (while ON): 
-  Set level; point down = lowest, point horizon = highest, save this level.
-  In Nightlight Mode; point down lowest, point horizon highest, save this as nightlight level.
-  
-*/
+ 
+ This code is a direct modification of the code up_n_down as copyrighted above.
+ 
+ Description:
+ 
+ 1 click: Turn light on (from off) at the saved level.
+ 2 clicks: Blink
+ 3 clicks: Nightlight mode, movement turns on using nightlight stored level
+ 4 clicks: SOS using remembered level
+ 5 clicks: locking
+ 
+ Click and Hold (while ON): 
+ Set level; point down = lowest, point horizon = highest, save this level.
+ In Nightlight Mode; point down lowest, point horizon highest, save this as nightlight level.
+ 
+ */
 
 #include <click_counter.h>
 #include <print_power.h>
@@ -69,7 +69,7 @@ Click and Hold (while ON):
 #define MODE_SOS 4
 #define MODE_LOCKED 5
 
- // Defaults
+// Defaults
 static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
@@ -94,7 +94,8 @@ static char submode;
 static word nightlight_brightness;
 static word stored_brightness;
 
-const word blink_freq_map[] = {70, 650, 10000}; // in ms
+const word blink_freq_map[] = {
+  70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
 static byte locked = false;
@@ -131,7 +132,10 @@ void writebytesEEPROM(int startAddr, const byte* array, int numBytes) {
 byte updateEEPROM(word location, byte value) {
   byte c = EEPROM.read(location);
   if(c!=value) {
-    DBG(Serial.print("Write to EEPROM:"); Serial.print(value); Serial.print("to loc: "); Serial.println(location));
+    DBG(Serial.print("Write to EEPROM:"); 
+    Serial.print(value); 
+    Serial.print("to loc: "); 
+    Serial.println(location));
     EEPROM.write(location, value);
   }
   return value;
@@ -192,7 +196,7 @@ void loop() {
   const unsigned long time = millis();
 
   hb.update();
-  
+
 #ifdef PRINTING_NUMBER:
   if(!hb.printing_number()) 
 #endif
@@ -203,7 +207,7 @@ void loop() {
     // Low battery
     if(mode != MODE_OFF && hb.low_voltage_state())
       if(hb.get_led_state(RLED)==LED_OFF) 
-	hb.set_led(RLED,50,1000,1);
+        hb.set_led(RLED,50,1000,1);
   }
 
 
@@ -212,9 +216,10 @@ void loop() {
   /////////////////////////////////////////////////////////////////
   // Get the click count
   new_mode = hb.click_count();
-  
+
   if(new_mode>=MODE_OFF) {
-    DBG(Serial.print("New mode: "); Serial.println((int)new_mode));
+    DBG(Serial.print("New mode: "); 
+    Serial.println((int)new_mode));
 
     //The following causes the command after a paunse to switch the 
     //light OFF, even a valid one. For instance, while the light is on, you can not switch it into
@@ -247,10 +252,10 @@ void loop() {
       //save the brightness that should be used when the light returns on from
       //nightlight mode.
       if(mode==MODE_NIGHTLIGHT) {
-	//DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
-	updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
+        //DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
+        updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
       }
-      
+
       //Turning off, so save the stored_brightness in the EEPROM so we can use it next time
       //DBG(Serial.print("Brightness Saved: "); Serial.println(stored_brightness));
       updateEEPROM(EEPROM_STORED_BRIGHTNESS, stored_brightness/4);
@@ -260,23 +265,24 @@ void loop() {
       //just turn on the light to the saved level
       hb.set_light(CURRENT_LEVEL, stored_brightness, NOW); 
       break;
-      
+
     case MODE_NIGHTLIGHT:
-      DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
+      DBG(Serial.print("Nightlight Brightness: "); 
+      Serial.println(nightlight_brightness));
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-	hb.set_led(RLED, 100, 0, 1);
+        hb.set_led(RLED, 100, 0, 1);
       break;
-      
+
     case MODE_BLINK:
       d = hb.difference_from_down();
       blink_frequency = blink_freq_map[0];
       if(d <= 0.40) {
-	if(d <= 0.10)
-	  blink_frequency = blink_freq_map[2];
-	else
-	  blink_frequency = blink_freq_map[1];
+        if(d <= 0.10)
+          blink_frequency = blink_freq_map[2];
+        else
+          blink_frequency = blink_freq_map[1];
       }
       hb.set_light(MAX_LEVEL, 0, 20);
       break;
@@ -287,7 +293,7 @@ void loop() {
   /////////////////////////////////////////////////////////////////
   // Check for mode and do in-mode activities
   /////////////////////////////////////////////////////////////////
-  
+
   int i;
 
   switch(mode) {
@@ -296,26 +302,30 @@ void loop() {
     if(BIT_CHECK(bitreg,GLOW_MODE)) {
       hb.set_led(GLED, 100, 100, 64);
       hb.set_light(CURRENT_LEVEL, 0, NOW);
-    } else if(BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED)) {
+    } 
+    else if(BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED)) {
       hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
     }
 
     // holding the button
     if(hb.button_pressed() && !locked) {
-	double d = hb.difference_from_down();
-	if(BIT_CHECK(bitreg,QUICKSTROBE) || (hb.button_pressed_time() > click && d > 0.10 )) {
-	  BIT_SET(bitreg,QUICKSTROBE);
-	  if(treg1+blink_freq_map[0] < time) { 
-	    treg1 = time; 
-	    hb.set_light(MAX_LEVEL, 0, 20); 
-	  }
-	}
-	if(hb.button_pressed_time() >= glow_mode_time && d <= 0.1 && 
-	   !BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED) && !BIT_CHECK(bitreg,QUICKSTROBE) ) {
-	  BIT_TOGGLE(bitreg,GLOW_MODE);
-	  BIT_SET(bitreg,GLOW_MODE_JUST_CHANGED);
-	} 
-	
+      double d = hb.difference_from_down();
+      if(BIT_CHECK(bitreg,QUICKSTROBE) 
+        || (hb.button_pressed_time() > click 
+        && d > 0.10 )) {
+        BIT_SET(bitreg,QUICKSTROBE);
+        if(treg1+blink_freq_map[0] < time) { 
+          treg1 = time; 
+          hb.set_light(MAX_LEVEL, 0, 20); 
+        }
+      }
+      if(hb.button_pressed_time() >= glow_mode_time 
+        &&d <= 0.1 
+        && !BIT_CHECK(bitreg,GLOW_MODE_JUST_CHANGED) 
+        && !BIT_CHECK(bitreg,QUICKSTROBE) ) {
+        BIT_TOGGLE(bitreg,GLOW_MODE);
+        BIT_SET(bitreg,GLOW_MODE_JUST_CHANGED);
+      } 
     }
     if(hb.button_just_released()) {
       BIT_CLEAR(bitreg,GLOW_MODE_JUST_CHANGED);
@@ -326,44 +336,49 @@ void loop() {
   case MODE_LEVEL:
     i = adjustLED(); //Adjust the led and save it
     if(i>0) {
-      DBG(Serial.print("Stored Brightness: "); Serial.println(i));
+      DBG(Serial.print("Stored Brightness: "); 
+      Serial.println(i));
       stored_brightness = i;
       //The above stored brightness will be saved to EEPROM when we switch off the light
     }
     break;
 
-  case MODE_NIGHTLIGHT: {
-    if(!hb.low_voltage_state())
-      hb.set_led(RLED, 100, 0, 1);
-    if(hb.moved(nightlight_sensitivity)) {
-      //Serial.println("Nightlight Moved");
-      treg1 = time;
-      hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
-    } else if(time > treg1 + nightlight_timeout) {
-      hb.set_light(CURRENT_LEVEL, 0, 1000);
-   }
+  case MODE_NIGHTLIGHT: 
+    {
+      if(!hb.low_voltage_state())
+        hb.set_led(RLED, 100, 0, 1);
+      if(hb.moved(nightlight_sensitivity)) {
+        //Serial.println("Nightlight Moved");
+        treg1 = time;
+        hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
+      } 
+      else if(time > treg1 + nightlight_timeout) {
+        hb.set_light(CURRENT_LEVEL, 0, 1000);
+      }
 
-    i = adjustLED();
-    if(i>0) {
-      //DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
-      nightlight_brightness = i;
+      i = adjustLED();
+      if(i>0) {
+        //DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
+        nightlight_brightness = i;
+      }
+      break; 
     }
-    break; }
 
   case MODE_BLINK:
     if(hb.button_pressed()) {
       if( hb.button_pressed_time()> click) {
-	double d = hb.difference_from_down();
-	if(d>=0 && d<=0.99) {
-	  if(d>=0.25) {
-	    d = d>0.5 ? 0.5 : d;
-	    blink_frequency = blink_freq_map[0] + (word)((blink_freq_map[1] - blink_freq_map[0]) * 4 * (0.5-d));
-	  } else {
-	    blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
-	  }
-	  //DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
-	  BIT_SET(bitreg,BLOCK_TURNING_OFF);
-	}
+        double d = hb.difference_from_down();
+        if(d>=0 && d<=0.99) {
+          if(d>=0.25) {
+            d = d>0.5 ? 0.5 : d;
+            blink_frequency = blink_freq_map[0] + (word)((blink_freq_map[1] - blink_freq_map[0]) * 4 * (0.5-d));
+          } 
+          else {
+            blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
+          }
+          //DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
+          BIT_SET(bitreg,BLOCK_TURNING_OFF);
+        }
       }
     }
     if(treg1+blink_frequency < time) { 
@@ -379,12 +394,13 @@ void loop() {
       static char symbols_remaining = 0;
       static byte pattern = 0;
       const char message[] = "SOS";
-      const word morse[] = {	0x0300, // S ...
-				0x0307, // O ---
-				0x0300, // S ...
+      const word morse[] = {	
+        0x0300, // S ...
+        0x0307, // O ---
+        0x0300, // S ...
       };
       const int millisPerBeat = 150;
-      
+
       if(current_character>=sizeof(message))
       { // we've hit the end of message, turn off.
         //mode = MODE_OFF;
@@ -393,17 +409,17 @@ void loop() {
         // return now to skip the following code.
         break;
       }
-            
+
       if(symbols_remaining <= 0) // we're done printing our last character, get the next!
       {
-	// Extract the symbols and length
-	pattern = morse[current_character] & 0x00FF;
-	symbols_remaining = morse[current_character] >> 8;
-	// we count space (between dots/dashes) as a symbol to be printed;
-	symbols_remaining *= 2;
+        // Extract the symbols and length
+        pattern = morse[current_character] & 0x00FF;
+        symbols_remaining = morse[current_character] >> 8;
+        // we count space (between dots/dashes) as a symbol to be printed;
+        symbols_remaining *= 2;
         current_character++;
       }
-      
+
       if (symbols_remaining<=0)
       { // character was unrecognized, treat it as a space
         // 7 beats between words, but 3 have already passed
@@ -433,3 +449,5 @@ void loop() {
     break;
   }  
 } 
+
+
