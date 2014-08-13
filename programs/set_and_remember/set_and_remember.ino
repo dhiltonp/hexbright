@@ -34,7 +34,7 @@ Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.s
  2 clicks: Blink
  3 clicks: Nightlight mode, movement turns on using nightlight stored level
  4 clicks: SOS using remembered level
- 5 clicks: locking
+ 5 clicks: locking, flashes the switch Red or Green LED 3 times; Red entering locked, green exiting it.
  
  Click and Hold (while ON): 
  Set level; point down = lowest, point horizon = highest, save this level.
@@ -90,12 +90,12 @@ const unsigned QUICKSTROBE=3;
 static char mode = MODE_OFF;
 static char new_mode = MODE_OFF;  
 static char submode;
+static unsigned tailflash = 0;
 
 static word nightlight_brightness;
 static word stored_brightness;
 
-const word blink_freq_map[] = {
-  70, 650, 10000}; // in ms
+const word blink_freq_map[] = { 70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
 static byte locked = false;
@@ -221,10 +221,9 @@ void loop() {
     DBG(Serial.print("New mode: "); 
     Serial.println((int)new_mode));
 
-    //The following causes the command after a paunse to switch the 
-    //light OFF, even a valid one. For instance, while the light is on, you can not switch it into
-    //another mode, it just goes off. 
-    //Also, the rest of the IF says if the light is locked, for it to remain locked and in mode OFF.
+    //The following causes any number of clicks to switch the light OFF when it is currently ON.
+    //For instance, while the light is on, you can not switch it into another mode, it just goes off. 
+    //Also, this if tests if the light is currently locked, if it is, remain locked and in mode OFF.
     if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
@@ -235,6 +234,11 @@ void loop() {
   if(new_mode>=MODE_OFF && new_mode!=mode) { // has the mdoe actually changed?
     double d;
 
+    //Clear tailflash if mode is not OFF. 
+    //If the user switched to a new mode while the tail was flashing, it may not yet be zeroed
+    if (new_mode != MODE_OFF)
+      tailflash = 0;
+
     // we're changing mode
     switch(new_mode) {
 
@@ -242,23 +246,32 @@ void loop() {
       locked=!locked;//toggle the locked mode
       updateEEPROM(EEPROM_LOCKED,locked); //remember if we are locked or not.
       new_mode=MODE_OFF; //keep the light off when entering or exiting lock mode.
+      //Setup the tail light to flash...
+      tailflash = 3;
+
       /* fall through */
     case MODE_OFF:
-      //Glow mode means that we do not shutdown the uProcessor, this is done by
-      //using a level of 0 instead of the OFF_LEVEL
-      DBG(BIT_CHECK(bitreg,GLOW_MODE)?Serial.println("Stay alive"):Serial.println("Shut down"));
-      hb.set_light(CURRENT_LEVEL, BIT_CHECK(bitreg,GLOW_MODE)?0:OFF_LEVEL, NOW);
+      //While in Glow mode or while flashing the tail, do not shutdown the uProcessor, 
+      //this is done by using a level of 0 instead of the OFF_LEVEL
+      DBG(BIT_CHECK(bitreg,GLOW_MODE)||tailflash>0?Serial.println("Stay alive"):Serial.println("Shut down"));
+      if (BIT_CHECK(bitreg,GLOW_MODE)||tailflash>0)
+        hb.set_light(CURRENT_LEVEL, 0, NOW);
+      else {
+        //We are shutting down, so save off the values
+        //If we are in nightlight node, save the brightness that should be used when 
+        //the light returns on from nightlight mode.
+        if(mode==MODE_NIGHTLIGHT) {
+          //DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
+          updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
+        }
 
-      //save the brightness that should be used when the light returns on from
-      //nightlight mode.
-      if(mode==MODE_NIGHTLIGHT) {
-        //DBG(Serial.print("Nightlight Brightness Saved: "); Serial.println(nightlight_brightness));
-        updateEEPROM(EEPROM_NIGHTLIGHT_BRIGHTNESS, nightlight_brightness/4);
+        //Save the stored_brightness in the EEPROM so we can use it next time
+        //DBG(Serial.print("Brightness Saved: "); Serial.println(stored_brightness));
+        updateEEPROM(EEPROM_STORED_BRIGHTNESS, stored_brightness/4);
+
+        //Shut her down...
+        hb.set_light(CURRENT_LEVEL, OFF_LEVEL, NOW);
       }
-
-      //Turning off, so save the stored_brightness in the EEPROM so we can use it next time
-      //DBG(Serial.print("Brightness Saved: "); Serial.println(stored_brightness));
-      updateEEPROM(EEPROM_STORED_BRIGHTNESS, stored_brightness/4);
       break;
 
     case MODE_LEVEL: 
@@ -298,8 +311,13 @@ void loop() {
 
   switch(mode) {
   case MODE_OFF:
-    // glow mode
-    if(BIT_CHECK(bitreg,GLOW_MODE)) {
+    if (tailflash > 0) { //flashing tail
+      if (hb.get_led_state(locked?RLED:GLED)==LED_OFF) {
+        tailflash--;
+        hb.set_led(locked?RLED:GLED, 300, 300, 255);
+      }
+    } 
+    else if(BIT_CHECK(bitreg,GLOW_MODE)) { //glow mode
       hb.set_led(GLED, 100, 100, 64);
       hb.set_light(CURRENT_LEVEL, 0, NOW);
     } 
@@ -332,6 +350,7 @@ void loop() {
       BIT_CLEAR(bitreg,QUICKSTROBE);
     }
     break;
+
 
   case MODE_LEVEL:
     i = adjustLED(); //Adjust the led and save it
@@ -436,12 +455,12 @@ void loop() {
       }
       else if (pattern & 1)
       { // dash, 3 beats
-        hb.set_light(MAX_LEVEL, stored_brightness, millisPerBeat * 3);
+        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat * 3);
         pattern >>= 1;
       }
       else 
       { // dot, by elimination
-        hb.set_light(MAX_LEVEL, stored_brightness, millisPerBeat);
+        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat);
         pattern >>= 1;
       }
       symbols_remaining--;
@@ -449,5 +468,6 @@ void loop() {
     break;
   }  
 } 
+
 
 
