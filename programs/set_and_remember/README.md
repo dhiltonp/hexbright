@@ -31,7 +31,7 @@ Basic Operation
     *   Light blinks SOS repeatedly in Morse code
 
 *   5 Clicks-Lock mode
-    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light.
+    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light. After locking or unlocking the switch leds will flash 3 times. Red for locked and green for unlocked.
 
 Extras
 ----------------
