@@ -30,15 +30,22 @@ Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.s
  
  Description:
  
- 1 click: Turn light on (from off) at the saved level.
+ 1 click:  Turn light on (from off) at the saved level.
  2 clicks: Blink
- 3 clicks: Nightlight mode, movement turns on using nightlight stored level
- 4 clicks: SOS using remembered level
- 5 clicks: locking, flashes the switch Red or Green LED 3 times; Red entering locked, green exiting it.
+ 3 clicks: Nightlight mode, movement turns on the main light and turns off the green tailcap. 
+           Sitting still does the opposite.
+ 4 clicks: SOS using the stored brightness from Mode 1.
+ 5 clicks: lock/unlock, flashes the switch LEDs (Red or Green) 3 times; Red when entering locked, 
+           green when exiting it.
  
+ Other Features:
  Click and Hold (while ON): 
  Set level; point down = lowest, point horizon = highest, save this level.
  In Nightlight Mode; point down lowest, point horizon highest, save this as nightlight level.
+
+ Click and Hold (while OFF)
+ If pointing straight down after 3 seconds: Enter glow mode - the tailcap glows when the light is off. 
+ If not pointing straight down: Start Flashing 
  
  */
 
@@ -74,6 +81,10 @@ static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
+const static byte sos_pattern[] = {0xA8, 0xEE, 0xE2, 0xA0};
+static int sos_cursor = 0;
+const static int singleMorseBeat = 150;
+
 
 // EEPROM signature used to verify EEPROM has been initialize
 static const char* EEPROM_Signature = "Set_and_Remember";
@@ -280,13 +291,19 @@ void loop() {
       break;
 
     case MODE_NIGHTLIGHT:
-      DBG(Serial.print("Nightlight Brightness: "); 
-      Serial.println(nightlight_brightness));
+      DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-        hb.set_led(RLED, 100, 0, 1);
+        hb.set_led(GLED, 100, 0, 64);
       break;
+
+    case MODE_SOS:
+      //Entering SOS mode, so set the cursor at the beginning of the pattern
+      sos_cursor = 0;
+      break;
+  
+    
 
     case MODE_BLINK:
       d = hb.difference_from_down();
@@ -364,15 +381,16 @@ void loop() {
 
   case MODE_NIGHTLIGHT: 
     {
-      if(!hb.low_voltage_state())
-        hb.set_led(RLED, 100, 0, 1);
+
       if(hb.moved(nightlight_sensitivity)) {
         //Serial.println("Nightlight Moved");
         treg1 = time;
         hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
+        hb.set_led(GLED, 0, 0, 0); //turn off the LED while the light is on...
       } 
       else if(time > treg1 + nightlight_timeout) {
         hb.set_light(CURRENT_LEVEL, 0, 1000);
+        hb.set_led(GLED, 1000, 0, 64);
       }
 
       i = adjustLED();
@@ -407,63 +425,40 @@ void loop() {
     break;
 
   case MODE_SOS:
-    if(!hb.light_change_remaining())
-    { // we're not currently doing anything, start the next step
-      static int current_character = 0;
-      static char symbols_remaining = 0;
-      static byte pattern = 0;
-      const char message[] = "SOS";
-      const word morse[] = {	
-        0x0300, // S ...
-        0x0307, // O ---
-        0x0300, // S ...
-      };
-      const int millisPerBeat = 150;
+    //Send the international distress signal.  
+    //... --- ...   ... --- ...
+    //Dit  150 = 1 beat
+    //Dah  450 = 3 beats
+    //Inter dit/dah  = 1 beat
+    //Inter character = 3 beats = <ic>
+    //Inter word  = 7 beats = <iw>
 
-      if(current_character>=sizeof(message))
-      { // we've hit the end of message, turn off.
-        //mode = MODE_OFF;
-        // reset the current_character, so if we're connected to USB, next printing will still work.
-        current_character = 0;
-        // return now to skip the following code.
-        break;
-      }
+    //From left to right, the pattern is encoded:
+    //<-S-> <ic> <----O-----> <ic> <-S-> <-iw----->
+    //10101 000  11101110111  000  10101 00000
+    //
+    //10101000 11101110 11100010 10100000
+    //    0xA8     0xEE     0xE2     0xA0     
 
-      if(symbols_remaining <= 0) // we're done printing our last character, get the next!
-      {
-        // Extract the symbols and length
-        pattern = morse[current_character] & 0x00FF;
-        symbols_remaining = morse[current_character] >> 8;
-        // we count space (between dots/dashes) as a symbol to be printed;
-        symbols_remaining *= 2;
-        current_character++;
-      }
+    //See if the last command to the main light is complete. 
+    //This should happen every singleMorseBeat, except on the last bit
+    if(hb.light_change_remaining()==0){
+      int whichByte = sos_cursor/8; //0/8 = 0 1/8=0...
+      int whichBit = 7 - sos_cursor%8; //7 - 0%8 = 7; 7-30%8 = 6
+      int onOffAmount = BIT_CHECK(sos_pattern[whichByte],whichBit)?stored_brightness:0;
 
-      if (symbols_remaining<=0)
-      { // character was unrecognized, treat it as a space
-        // 7 beats between words, but 3 have already passed
-        // at the end of the last character
-        hb.set_light(0,0, millisPerBeat * 4);
+      //if this is the last bit, then make the delay a bit longer
+      int onOrOffTime = sos_cursor<31?singleMorseBeat:singleMorseBeat*4; 
+      
+      hb.set_light(onOffAmount,onOffAmount, onOrOffTime);
+      
+      DBG(Serial.print("SOS Data; byte#/bit#: "); Serial.print(whichByte); Serial.print("/"); Serial.println(whichBit));
+      DBG(Serial.print("SOS Data; onOff#: "); Serial.println(onOff));
+      sos_cursor++;
+
+      if (sos_cursor>31 || sos_cursor<0) {
+        sos_cursor = 0;
       }
-      else if (symbols_remaining==1) 
-      { // last symbol in character, long pause
-        hb.set_light(0, 0, millisPerBeat * 3);
-      }
-      else if(symbols_remaining%2==1) 
-      { // even symbol, print space!
-        hb.set_light(0,0, millisPerBeat);
-      }
-      else if (pattern & 1)
-      { // dash, 3 beats
-        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat * 3);
-        pattern >>= 1;
-      }
-      else 
-      { // dot, by elimination
-        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat);
-        pattern >>= 1;
-      }
-      symbols_remaining--;
     }
     break;
   }  
