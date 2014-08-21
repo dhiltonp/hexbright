@@ -23,15 +23,15 @@ Basic Operation
     *   Holding the button and point and changing the angle of the light with the ground you can speed up or slow down the frequency of the light.
 
 *   3 Clicks-Nightlight mode
-    *   When sitting still, the tailcap glows red.  When picked up, the light turns on to the brightest setting.  
-    *   If not moved for 10 seconds it dims and the tailcap glows red again.
-    *   Holding the button will allow adjustment of the brightness of the light. This brightness will be saved in EEPROM and be remembered when the light is turned off.
+    *   When sitting still, the tailcap glows green.  When picked up, the light turns on to the saved nightlight setting and the tail cap stops glowing.  
+    *   If not moved for 5 seconds the main light dims and the tailcap glows green again.
+    *   Holding the button will allow adjustment of the brightness of the light. This brightness will be saved in EEPROM and be remembered when the light enters this mode again or is moved again. The level saved level is stored in EEPROM so it is used from run to run.
 
 *   4 Clicks-SOS mode
-    *   Light blinks SOS repeatedly in Morse code
+    *   Light blinks the morce code for SOS
 
 *   5 Clicks-Lock mode
-    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light. After locking or unlocking the switch leds will flash 3 times. Red for locked and green for unlocked.
+    *   When locked, the light will not turn on.  5 clicks when locked will unlock the light. After locking or unlocking the tail cap leds will flash 3 times. Red for locked and green for unlocked.
 
 Extras
 ----------------
