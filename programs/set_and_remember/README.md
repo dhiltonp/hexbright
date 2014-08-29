@@ -10,9 +10,9 @@ Set_and_Remember is intended to be an everyday, useful program.  It requires Dav
 
 *   1. Instead of setting the brightness when the light is first turned on based on the level to which it is pointing, it reads a previously stored level from EEPROM. 
 *   2. Added code to solve the initial lock mode problem. 
-*   3. Nightlight mode glows the tailcap green and turn it off when the main light is on.
+*   3. Nightlight mode glows the tailcap green and turns it off when the main light is on.
 *   4. When entering or exiting locked mode, the tailcap is flashed 3 times to confirm. While in locked mode, any click besides unlock results in the tail flashing red 2 times.
-*   5. The implementation for morse code signalling has been rewritten to save space.
+*   5. The implementation for morse code signalling has been rewritten to save space. It also uses the brightness stored in mode 1 for the flashes.
 
 Basic Operation
 ----------------
