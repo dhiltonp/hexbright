@@ -30,15 +30,22 @@ Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.s
  
  Description:
  
- 1 click: Turn light on (from off) at the saved level.
+ 1 click:  Turn light on (from off) at the saved level.
  2 clicks: Blink
- 3 clicks: Nightlight mode, movement turns on using nightlight stored level
- 4 clicks: SOS using remembered level
- 5 clicks: locking, flashes the switch Red or Green LED 3 times; Red entering locked, green exiting it.
+ 3 clicks: Nightlight mode, movement turns on the main light and turns off the green tailcap. 
+           Sitting still does the opposite.
+ 4 clicks: SOS using the stored brightness from Mode 1.
+ 5 clicks: lock/unlock, flashes the switch LEDs (Red or Green) 3 times; Red when entering locked, 
+           green when exiting it.
  
+ Other Features:
  Click and Hold (while ON): 
  Set level; point down = lowest, point horizon = highest, save this level.
  In Nightlight Mode; point down lowest, point horizon highest, save this as nightlight level.
+
+ Click and Hold (while OFF)
+ If pointing straight down after 3 seconds: Enter glow mode - the tailcap glows when the light is off. 
+ If not pointing straight down: Start Flashing 
  
  */
 
@@ -62,18 +69,24 @@ Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.s
 #define EEPROM_SIGNATURE_LOC 3
 
 // Modes
-#define MODE_OFF 0
-#define MODE_LEVEL 1
-#define MODE_BLINK 2
+#define MODE_OFF        0
+#define MODE_LEVEL      1
+#define MODE_BLINK      2
 #define MODE_NIGHTLIGHT 3
-#define MODE_SOS 4
-#define MODE_LOCKED 5
+#define MODE_SOS        4
+#define MODE_LOCKED     5
 
-// Defaults
+// Constants
 static const int glow_mode_time = 3000;
 static const int click = 350; // maximum time for a "short" click
 static const int nightlight_timeout = 5000; // timeout before nightlight powers down after any movement
 static const unsigned char nightlight_sensitivity = 20; // measured in 100's of a G.
+static const byte sos_pattern[] = {0xA8, 0xEE, 0xE2, 0xA0};
+static const int singleMorseBeat = 150;
+static const word blink_freq_map[] = { 70, 650, 10000}; // in ms
+static const unsigned GLOW_MODE=0;
+static const unsigned GLOW_MODE_JUST_CHANGED=1;
+static const unsigned QUICKSTROBE=2;
 
 // EEPROM signature used to verify EEPROM has been initialize
 static const char* EEPROM_Signature = "Set_and_Remember";
@@ -81,24 +94,21 @@ static const char* EEPROM_Signature = "Set_and_Remember";
 // State
 static unsigned long treg1=0; 
 
+// Submode Storage
 static int bitreg=0;
-const unsigned BLOCK_TURNING_OFF=0;
-const unsigned GLOW_MODE=1;
-const unsigned GLOW_MODE_JUST_CHANGED=2;
-const unsigned QUICKSTROBE=3;
 
-static char mode = MODE_OFF;
+static char mode     = MODE_OFF;
 static char new_mode = MODE_OFF;  
-static char submode;
-static unsigned tailflash = 0;
+static unsigned tailflashesLeft = 0;
 
 static word nightlight_brightness;
 static word stored_brightness;
 
-const word blink_freq_map[] = { 70, 650, 10000}; // in ms
 static word blink_frequency; // in ms;
 
 static byte locked = false;
+static int sos_cursor = 0;
+unsigned long time;
 
 hexbright hb;
 
@@ -112,7 +122,6 @@ int adjustLED() {
     i = i<=0 ? 1 : i;
 
     hb.set_light(CURRENT_LEVEL, i, 100);
-    BIT_SET(bitreg,BLOCK_TURNING_OFF);
     return i;
   }
   return -1;
@@ -145,7 +154,6 @@ byte updateEEPROM(word location, byte value) {
 boolean checkEEPROMInited(word location) {
   //read starting at location and look for the signature.
   int i = 0;
-
   for (i = 0; i < strlen(EEPROM_Signature); i++) {
     if (EEPROM_Signature[i] != EEPROM.read(location+i))
       return false; //EEPROM does not match Signature, so EEPROM not initialized
@@ -174,7 +182,6 @@ void setup() {
   }
 
   //Initialize variables using the values stored in the EEPROM  
-
   //DBG(Serial.println("Reading defaults from EEPROM"));
   locked = EEPROM.read(EEPROM_LOCKED);
   //DBG(Serial.print("Locked: "); Serial.println(locked));
@@ -193,7 +200,7 @@ void setup() {
 } 
 
 void loop() {
-  const unsigned long time = millis();
+  time = millis();
 
   hb.update();
 
@@ -221,25 +228,31 @@ void loop() {
     DBG(Serial.print("New mode: "); 
     Serial.println((int)new_mode));
 
-    //The following causes any number of clicks to switch the light OFF when it is currently ON.
-    //For instance, while the light is on, you can not switch it into another mode, it just goes off. 
-    //Also, this if tests if the light is currently locked, if it is, remain locked and in mode OFF.
-    if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
+    //If the light is on now, any new mode request is converted to a MODE_OFF.
+    //While the light is on, you can not switch it into another mode, it just goes off. 
+    if(mode!=MODE_OFF) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
-    } 
+    
+    //The following keeps the light locked and off until the light is unlocked.
+    //Flash the tailcap 2 times to indicate the light is locked.
+    } else if (locked && new_mode!=MODE_LOCKED){
+      new_mode=MODE_OFF;
+      DBG(Serial.println("Locked, flash tailcap 2 times."));
+      tailflashesLeft = 2;
+    }
   }
 
   // Do the actual mode change
   if(new_mode>=MODE_OFF && new_mode!=mode) { // has the mdoe actually changed?
     double d;
 
-    //Clear tailflash if mode is not OFF. 
+    //Clear tailflashesLeft if mode is not OFF. 
     //If the user switched to a new mode while the tail was flashing, it may not yet be zeroed
     if (new_mode != MODE_OFF)
-      tailflash = 0;
+      tailflashesLeft = 0;
 
-    // we're changing mode
+    // Do the preliminary work when switching to a new mode first
     switch(new_mode) {
 
     case MODE_LOCKED:
@@ -247,14 +260,14 @@ void loop() {
       updateEEPROM(EEPROM_LOCKED,locked); //remember if we are locked or not.
       new_mode=MODE_OFF; //keep the light off when entering or exiting lock mode.
       //Setup the tail light to flash...
-      tailflash = 3;
+      tailflashesLeft = 3;
 
       /* fall through */
     case MODE_OFF:
       //While in Glow mode or while flashing the tail, do not shutdown the uProcessor, 
       //this is done by using a level of 0 instead of the OFF_LEVEL
-      DBG(BIT_CHECK(bitreg,GLOW_MODE)||tailflash>0?Serial.println("Stay alive"):Serial.println("Shut down"));
-      if (BIT_CHECK(bitreg,GLOW_MODE)||tailflash>0)
+      DBG(BIT_CHECK(bitreg,GLOW_MODE)||tailflashesLeft>0?Serial.println("Stay alive"):Serial.println("Shut down"));
+      if (BIT_CHECK(bitreg,GLOW_MODE)||tailflashesLeft>0)
         hb.set_light(CURRENT_LEVEL, 0, NOW);
       else {
         //We are shutting down, so save off the values
@@ -280,12 +293,20 @@ void loop() {
       break;
 
     case MODE_NIGHTLIGHT:
-      DBG(Serial.print("Nightlight Brightness: "); 
-      Serial.println(nightlight_brightness));
+      DBG(Serial.print("Nightlight Brightness: "); Serial.println(nightlight_brightness));
 #ifdef PRINTING_NUMBER:
       if(!hb.printing_number())
 #endif
-        hb.set_led(RLED, 100, 0, 1);
+        hb.set_led(GLED, 100, 0, 64);
+      break;
+
+    case MODE_SOS:
+      //Entering SOS mode, so set the cursor at the beginning of the pattern
+      sos_cursor = 0;
+      
+      //Give a light change command with time of NOW so it finishes right away 
+      //making the SOS pattern start without much delay.
+      hb.set_light(0, 0, NOW); 
       break;
 
     case MODE_BLINK:
@@ -304,16 +325,16 @@ void loop() {
   } 
 
   /////////////////////////////////////////////////////////////////
-  // Check for mode and do in-mode activities
+  // Done with new mode activities. Now do the 
+  // stuff that we do while in a mode.
   /////////////////////////////////////////////////////////////////
-
   int i;
 
   switch(mode) {
   case MODE_OFF:
-    if (tailflash > 0) { //flashing tail
+    if (tailflashesLeft > 0) { //flashing tail
       if (hb.get_led_state(locked?RLED:GLED)==LED_OFF) {
-        tailflash--;
+        tailflashesLeft--;
         hb.set_led(locked?RLED:GLED, 300, 300, 255);
       }
     } 
@@ -355,8 +376,7 @@ void loop() {
   case MODE_LEVEL:
     i = adjustLED(); //Adjust the led and save it
     if(i>0) {
-      DBG(Serial.print("Stored Brightness: "); 
-      Serial.println(i));
+      DBG(Serial.print("Stored Brightness: "); Serial.println(i));
       stored_brightness = i;
       //The above stored brightness will be saved to EEPROM when we switch off the light
     }
@@ -364,20 +384,20 @@ void loop() {
 
   case MODE_NIGHTLIGHT: 
     {
-      if(!hb.low_voltage_state())
-        hb.set_led(RLED, 100, 0, 1);
       if(hb.moved(nightlight_sensitivity)) {
-        //Serial.println("Nightlight Moved");
+        DBG(Serial.println("Nightlight Moved"));
         treg1 = time;
         hb.set_light(CURRENT_LEVEL, nightlight_brightness, 1000);
+        hb.set_led(GLED, 0, 0, 0); //turn off the LED while the light is on...
       } 
       else if(time > treg1 + nightlight_timeout) {
         hb.set_light(CURRENT_LEVEL, 0, 1000);
+        hb.set_led(GLED, 1000, 0, 64);
       }
 
       i = adjustLED();
       if(i>0) {
-        //DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
+        DBG(Serial.print("Nightlight Brightness: "); Serial.println(i));
         nightlight_brightness = i;
       }
       break; 
@@ -395,8 +415,7 @@ void loop() {
           else {
             blink_frequency = blink_freq_map[1] + (word)((blink_freq_map[2] - blink_freq_map[1]) * 4 * (0.25-d));
           }
-          //DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
-          BIT_SET(bitreg,BLOCK_TURNING_OFF);
+          DBG(Serial.print("Blink Freq: "); Serial.println(blink_frequency));
         }
       }
     }
@@ -407,63 +426,44 @@ void loop() {
     break;
 
   case MODE_SOS:
-    if(!hb.light_change_remaining())
-    { // we're not currently doing anything, start the next step
-      static int current_character = 0;
-      static char symbols_remaining = 0;
-      static byte pattern = 0;
-      const char message[] = "SOS";
-      const word morse[] = {	
-        0x0300, // S ...
-        0x0307, // O ---
-        0x0300, // S ...
-      };
-      const int millisPerBeat = 150;
+    //Send the international distress signal.  
+    //... --- ...   ... --- ...
+    //Dit  150 = 1 beat
+    //Dah  450 = 3 beats
+    //Inter dit/dah  = 1 beat
+    //Inter character = 3 beats = <ic>
+    //Inter word  = 7 beats = <iw>
 
-      if(current_character>=sizeof(message))
-      { // we've hit the end of message, turn off.
-        //mode = MODE_OFF;
-        // reset the current_character, so if we're connected to USB, next printing will still work.
-        current_character = 0;
-        // return now to skip the following code.
-        break;
-      }
+    //From left to right, the pattern is encoded with bits, each bit being
+    //a singleMorseBeat long (except the last one, as in:
+    //<-S-> <inter-char> <----O----> <inter-char> <-S-> <-inter word->
+    //10101     000      11101110111      000     10101  0xxx
+    //
+    //10101000 11101110 11100010 1010xxxx
+    //    0xA8     0xEE     0xE2     0xA0     
 
-      if(symbols_remaining <= 0) // we're done printing our last character, get the next!
-      {
-        // Extract the symbols and length
-        pattern = morse[current_character] & 0x00FF;
-        symbols_remaining = morse[current_character] >> 8;
-        // we count space (between dots/dashes) as a symbol to be printed;
-        symbols_remaining *= 2;
-        current_character++;
-      }
+    //At the end of each completed light change, move to the next bit.
+    //In this case the light change will be from ON to ON or from Off to Off, so
+    //that is how we get our flashing. This should happen every singleMorseBeat, except 
+    //on the last bit where we cause the delay to be longer (x7) to mark the between word space
+    if(hb.light_change_remaining()==0){
+      int whichByte = sos_cursor/8; //0/8 = 0 1/8=0...
+      int whichBit = 7 - sos_cursor%8; //7 - 0%8 = 7; 7-30%8 = 6
+      int onOffAmount = BIT_CHECK(sos_pattern[whichByte],whichBit)?stored_brightness:0;
 
-      if (symbols_remaining<=0)
-      { // character was unrecognized, treat it as a space
-        // 7 beats between words, but 3 have already passed
-        // at the end of the last character
-        hb.set_light(0,0, millisPerBeat * 4);
+      //if this is the last bit, then make the delay an interword amount (x7)
+      int onOrOffTime = sos_cursor<27?singleMorseBeat:singleMorseBeat*7; 
+      
+      hb.set_light(onOffAmount,onOffAmount, onOrOffTime);
+      
+      DBG(Serial.print("SOS Data; byte#/bit#: "); Serial.print(whichByte); Serial.print("/"); Serial.println(whichBit));
+      DBG(Serial.print("SOS Data; onOffAmount#: "); Serial.println(onOffAmount));
+      DBG(Serial.print("SOS Data; onOrOffTime: "); Serial.println(onOrOffTime));
+      sos_cursor++;
+
+      if (sos_cursor>27 || sos_cursor<0) {
+        sos_cursor = 0;
       }
-      else if (symbols_remaining==1) 
-      { // last symbol in character, long pause
-        hb.set_light(0, 0, millisPerBeat * 3);
-      }
-      else if(symbols_remaining%2==1) 
-      { // even symbol, print space!
-        hb.set_light(0,0, millisPerBeat);
-      }
-      else if (pattern & 1)
-      { // dash, 3 beats
-        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat * 3);
-        pattern >>= 1;
-      }
-      else 
-      { // dot, by elimination
-        hb.set_light(MAX_LEVEL, MAX_LEVEL, millisPerBeat);
-        pattern >>= 1;
-      }
-      symbols_remaining--;
     }
     break;
   }  
