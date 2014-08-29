@@ -228,13 +228,19 @@ void loop() {
     DBG(Serial.print("New mode: "); 
     Serial.println((int)new_mode));
 
-    //The following causes any number of clicks to switch the light OFF when it is currently ON.
-    //For instance, while the light is on, you can not switch it into another mode, it just goes off. 
-    //Also, this if tests if the light is currently locked, if it is, remain locked and in mode OFF.
-    if(mode!=MODE_OFF || (locked && new_mode!=MODE_LOCKED) ) {
+    //If the light is on now, any new mode request is converted to a MODE_OFF.
+    //While the light is on, you can not switch it into another mode, it just goes off. 
+    if(mode!=MODE_OFF) {
       DBG(Serial.println("Forcing MODE_OFF"));
       new_mode=MODE_OFF;
-    } 
+    
+    //The following keeps the light locked and off until the light is unlocked.
+    //Flash the tailcap 2 times to indicate the light is locked.
+    } else if (locked && new_mode!=MODE_LOCKED){
+      new_mode=MODE_OFF;
+      DBG(Serial.println("Locked, flash tailcap 2 times."));
+      tailflashesLeft = 2;
+    }
   }
 
   // Do the actual mode change
