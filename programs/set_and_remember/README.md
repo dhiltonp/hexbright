@@ -37,7 +37,7 @@ Basic Operation
     *   Light blinks the morse code for SOS using the brightness level set in mode 1.
 
 *   5 Clicks-Lock mode
-    *   When locked, the light will not turn on.  Any clicks while locked will cause the tail cap to flash red 2 times. Clicking 5 time when locked will unlock the light. After locking or unlocking the tail cap leds will flash 3 times as confirmation. Red for entering locked mode and green for exiting locked mode.
+    *   When locked, the light will not turn on.  Any clicks while locked will cause the tail cap to flash red 2 times. Clicking 5 times when locked will unlock the light. After locking or unlocking the tail cap leds will flash 3 times as confirmation. Red for entering locked mode and green for exiting locked mode.
 
 Extras
 ----------------
