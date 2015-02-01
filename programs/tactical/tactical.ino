@@ -40,7 +40,7 @@ hexbright hb;
 
 #define BRIGHTNESS_COUNT 4
 #define BRIGHTNESS_OFF BRIGHTNESS_COUNT-1
-int brightness[BRIGHTNESS_COUNT] = {1000, 600, 300, OFF_LEVEL};
+int brightness[BRIGHTNESS_COUNT] = {300, 600, 1000, OFF_LEVEL};
 int current_brightness = BRIGHTNESS_OFF; // start on the last mode (off)
 
 unsigned long short_press_time = 0;
