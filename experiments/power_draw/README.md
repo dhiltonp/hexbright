@@ -23,14 +23,9 @@ Optimizing Power Draw
 
 Optimizations could increase standby time by 2x (maybe 35-40 days instead of 18 or 19 days), 
 or extend battery life from 74.3 to 74.9 hours on brightness level 150. Given
-the small change for a given amount of complexity/code size, it's not worth it. Significant
-optimization would require changes to the electrical design. I believe the voltage regulator 
-consumes 50% of the 5.4 mA in standby (see below calculations). This would vary based on the difference between the input and output voltage.
-
-I believe Christian put the power regulator at its point in order to prevent any power draw when the light is off,
-but as a consequence the standby time is 5-10x shorter than it would otherwise be.
-
-I need to run some numbers, calculating the difference between expected and observed power loss.
+the small change for a given amount of complexity/code size, I'm not planning on making this change. Further
+optimization could be done by changing the electrical design. I believe the voltage regulator 
+consumes 50% of the 5.4 mA in standby (see below calculations).
 
 Formula for power loss in the voltage regulator: [(4.2 - 3.3) * .500 + (4.2*.09)](http://en.wikipedia.org/wiki/Low-dropout_regulator#Efficiency_and_Heat_Dissipation)<br>
 .5 milliamps consumed by other components would cause a power loss of .83 milliamps, with 1.33 milliamps used<br>
