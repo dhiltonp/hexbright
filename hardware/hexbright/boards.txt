@@ -6,7 +6,7 @@ hexbright.upload.protocol=arduino
 hexbright.upload.maximum_size=14336
 hexbright.upload.speed=19200
 
-hexbright.bootloader.low_fuses=0xe2
+hexbright.bootloader.low_fuses=0xff
 hexbright.bootloader.high_fuses=0xdd
 hexbright.bootloader.extended_fuses=0x00
 hexbright.bootloader.path=hexbright:atmega
@@ -28,7 +28,7 @@ hexbright_tiny.upload.protocol=arduino
 hexbright_tiny.upload.maximum_size=15360
 hexbright_tiny.upload.speed=19200
 
-hexbright_tiny.bootloader.low_fuses=0xe2
+hexbright_tiny.bootloader.low_fuses=0xff
 hexbright_tiny.bootloader.high_fuses=0xdd
 hexbright_tiny.bootloader.extended_fuses=0x02
 hexbright_tiny.bootloader.path=hexbright:atmega
