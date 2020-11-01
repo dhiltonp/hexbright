@@ -716,14 +716,7 @@ void hexbright::enable_accelerometer() {
   // pinModeFast(DPIN_ACC_INT,  INPUT);
   // digitalWriteFast(DPIN_ACC_INT,  HIGH);
 }
-void print_binary(byte value) {
-  String s = String(value, BIN);
 
-  while(s.length()<8) {
-    s = "0"+s;
-  }
-  Serial.println(s);
-}
 void hexbright::read_accelerometer() {
   /*unsigned long time = 0;
     if((millis()-init_time)>*/
