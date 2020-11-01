@@ -69,7 +69,6 @@ either expressed or implied, of the FreeBSD Project.
 #endif
 
 // debugging related definitions
-#define DEBUG 0
 // Some debug modes set the light.  Your control code may reset it, causing weird flashes at startup.
 #define DEBUG_OFF 0 // no extra code is compiled in
 #define DEBUG_PRINT 1 // initialize printing only
@@ -83,6 +82,10 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_NUMBER 9 // number printing utility
 #define DEBUG_CHARGE 10 // charge state
 #define DEBUG_PROGRAM 11 // use this to enable/disable print statements in the program rather than the library
+
+// DEBUG is always off. I tried using an ifndef wrapper to make it conditional on not being set but failed.
+// You'll need to edit this file and set DEBUG to your preferred mode here.
+#define DEBUG DEBUG_OFF
 
 #if (DEBUG==DEBUG_TEMP)
 #define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
