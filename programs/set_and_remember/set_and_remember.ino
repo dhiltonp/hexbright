@@ -147,7 +147,7 @@ void setup() {
 
   DBG(Serial.println("Powered up!"));
 
-  config_click_count(click);
+  hb.config_click_count(click);
 } 
 
 void loop() {
@@ -160,7 +160,7 @@ void loop() {
 #endif
   {
     // Charging
-    print_charge(GLED);
+    hb.print_charge(GLED);
 
     // Low battery
     if(mode != MODE_OFF && hb.low_voltage_state())
@@ -173,7 +173,7 @@ void loop() {
   // Check for the requested new mode and do the mode switching activities
   /////////////////////////////////////////////////////////////////
   // Get the click count
-  new_mode = click_count();
+  new_mode = hb.click_count();
   
   if(new_mode>=MODE_OFF) {
     DBG(Serial.print("New mode: "); Serial.println((int)new_mode));
