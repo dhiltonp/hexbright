@@ -3,6 +3,7 @@
 hexbright.name=Hexbright
 
 hexbright.upload.protocol=arduino
+hexbright.upload.tool=arduino:avrdude
 hexbright.upload.maximum_size=14336
 hexbright.upload.speed=19200
 
@@ -26,6 +27,7 @@ hexbright.build.variant=arduino:standard
 hexbright_tiny.name=Hexbright Tinyboot
 
 hexbright_tiny.upload.protocol=arduino
+hexbright_tiny.upload.tool=arduino:avrdude
 hexbright_tiny.upload.maximum_size=15360
 hexbright_tiny.upload.speed=19200
 
