@@ -1,3 +1,5 @@
+# boards.txt format is specified here:
+#  https://arduino.github.io/arduino-cli/platform-specification/
 ##############################################################
 
 hexbright.name=Hexbright
