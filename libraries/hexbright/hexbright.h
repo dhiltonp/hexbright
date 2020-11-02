@@ -83,9 +83,12 @@ either expressed or implied, of the FreeBSD Project.
 #define DEBUG_CHARGE 10 // charge state
 #define DEBUG_PROGRAM 11 // use this to enable/disable print statements in the program rather than the library
 
-// DEBUG is always off. I tried using an ifndef wrapper to make it conditional on not being set but failed.
-// You'll need to edit this file and set DEBUG to your preferred mode here.
+// You'll probably want to set your debug mode here.
+// In order to allow DEBUG from *.ino files to matter,
+// I'd need to inline hexbright.cpp into this file.
+#ifndef DEBUG
 #define DEBUG DEBUG_OFF
+#endif
 
 #if (DEBUG==DEBUG_TEMP)
 #define OVERHEAT_TEMPERATURE 265 // something lower, to more easily verify algorithms
