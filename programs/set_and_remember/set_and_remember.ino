@@ -49,11 +49,6 @@ Changes and modifications are Copyright (c) 2014, "Matthew Sargent" <matthew.c.s
  
  */
 
-#include <click_counter.h>
-#include <print_power.h>
-
-// These next two lines must come after all other library #includes
-#define BUILD_HACK
 #include <hexbright.h>
 #include <EEPROM.h>
 
@@ -464,7 +459,3 @@ void loop() {
     break;
   }  
 } 
-
-
-
-
