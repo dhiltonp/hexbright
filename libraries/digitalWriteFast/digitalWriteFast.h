@@ -1,9 +1,9 @@
 #include "Arduino.h"
 
-#define BIT_READ(value, bit) (((value) >> (bit)) & 0x01)
-#define BIT_SET(value, bit) ((value) |= (1UL << (bit)))
-#define BIT_CLEAR(value, bit) ((value) &= ~(1UL << (bit)))
-#define BIT_WRITE(value, bit, bitvalue) (bitvalue ? BIT_SET(value, bit) : BIT_CLEAR(value, bit))
+#define DWF_BIT_READ(value, bit) (((value) >> (bit)) & 0x01)
+#define DWF_BIT_SET(value, bit) ((value) |= (1UL << (bit)))
+#define DWF_BIT_CLEAR(value, bit) ((value) &= ~(1UL << (bit)))
+#define DWF_BIT_WRITE(value, bit, bitvalue) (bitvalue ? DWF_BIT_SET(value, bit) : DWF_BIT_CLEAR(value, bit))
 
 #if !defined(digitalPinToPortReg)
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
@@ -153,7 +153,7 @@ else pinMode((P), (V)); \
 	#define digitalReadFast(P) ( (int) _digitalReadFast_((P)) )
 	#define _digitalReadFast_(P ) \
 	(__builtin_constant_p(P) ) ? ( \
-	( BIT_READ(*digitalPinToPINReg(P), __digitalPinToBit(P))) ) : \
+	( DWF_BIT_READ(*digitalPinToPINReg(P), __digitalPinToBit(P))) ) : \
 	digitalRead((P))
 #endif
 
