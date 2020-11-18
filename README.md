@@ -1,7 +1,7 @@
 hexbright
 =========
 
-This is the easiest way to get started with programming your [hexbright](http://hexbright.com/).
+This is the easiest way to get started with programming your [hexbright](https://www.kickstarter.com/projects/christian-carlberg/hexbright-an-open-source-light).
 
 Key Features
 ------------
